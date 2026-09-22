@@ -23,13 +23,20 @@ The system is designed so that models estimate probabilities and market state, w
 
 No production broker credentials or live-order path should be added until the test suite, walk-forward validation, sandbox execution, reconciliation, and kill-switch requirements are complete.
 
-## Initial components
+## Implemented components
 
 - `engine/decision.py` — hard-gate trade approval
 - `engine/risk.py` — log-growth sizing, fractional Kelly, CVaR and drawdown controls
-- `engine/models.py` — typed market/model/trade inputs
-- `engine/paper_broker.py` — deterministic paper fills and account state
-- `tests/` — mathematical and safety invariants
+- `engine/market.py` — normalized SPY and option quote types
+- `engine/ensemble.py` — reliability-weighted forecast aggregation
+- `engine/scenario.py` — deterministic return/IV scenario generation
+- `engine/opportunity.py` — option EV, uncertainty penalty, and candidate ranking
+- `engine/broker.py` / `engine/webull.py` — sandbox execution boundary
+- `engine/data.py` — provider-neutral historical quote ingestion
+- `engine/backtest.py` — next-frame fills, modeled slippage/fees, and T+1 cash settlement
+- `engine/metrics.py` — geometric growth, drawdown, profit factor, CVaR, and bootstrap ruin diagnostics
+- `engine/walkforward.py` — purged chronological train/validation/test splits
+- `tests/` — mathematical, execution, no-lookahead, settlement, and safety invariants
 
 ## Objective
 
