@@ -36,7 +36,26 @@ No production broker credentials or live-order path should be added until the te
 - `engine/backtest.py` — next-frame fills, modeled slippage/fees, and T+1 cash settlement
 - `engine/metrics.py` — geometric growth, drawdown, profit factor, CVaR, and bootstrap ruin diagnostics
 - `engine/walkforward.py` — purged chronological train/validation/test splits
-- `tests/` — mathematical, execution, no-lookahead, settlement, and safety invariants
+- `engine/providers/thetadata.py` — ThetaData Pro SPY 0DTE historical NBBO/Greeks adapter
+- `tests/` — mathematical, execution, no-lookahead, settlement, provider, and safety invariants
+
+## Historical data provider
+
+The preferred research feed is ThetaData Pro because it exposes same-day SPY option NBBO, implied volatility, delta, gamma, theta, vega, and the contemporaneous underlying midpoint at intraday resolution. Provider code is isolated from the strategy engine.
+
+Install the optional provider dependency with:
+
+```bash
+pip install -e '.[thetadata]'
+```
+
+Set the API key only in the runtime environment:
+
+```bash
+export THETADATA_API_KEY='...'
+```
+
+Never commit the key to GitHub or package it inside the Android app.
 
 ## Objective
 
