@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import sqlite3
-from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 from typing import Iterable, Tuple
@@ -13,12 +12,17 @@ from .providers.webull_free import FreeOptionSnapshot
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS option_snapshots (
     timestamp TEXT NOT NULL,
+    received_at TEXT,
+    timestamp_quality TEXT,
+    feed_delay_seconds REAL,
     option_symbol TEXT NOT NULL,
     expiration TEXT NOT NULL,
     right TEXT NOT NULL,
     strike REAL NOT NULL,
     bid REAL NOT NULL,
     ask REAL NOT NULL,
+    bid_size INTEGER NOT NULL DEFAULT 0,
+    ask_size INTEGER NOT NULL DEFAULT 0,
     underlying_price REAL NOT NULL,
     minutes_to_expiry REAL NOT NULL,
     volume INTEGER NOT NULL,
@@ -35,6 +39,15 @@ CREATE TABLE IF NOT EXISTS option_snapshots (
 """
 
 
+_MIGRATIONS = {
+    "received_at": "TEXT",
+    "timestamp_quality": "TEXT",
+    "feed_delay_seconds": "REAL",
+    "bid_size": "INTEGER NOT NULL DEFAULT 0",
+    "ask_size": "INTEGER NOT NULL DEFAULT 0",
+}
+
+
 class SnapshotStore:
     """Small zero-cost SQLite store for our self-built options dataset."""
 
@@ -43,7 +56,19 @@ class SnapshotStore:
         self.connection = sqlite3.connect(self.path)
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute(SCHEMA)
+        self._migrate_if_needed()
         self.connection.commit()
+
+    def _migrate_if_needed(self) -> None:
+        existing = {
+            str(row[1])
+            for row in self.connection.execute("PRAGMA table_info(option_snapshots)").fetchall()
+        }
+        for column, definition in _MIGRATIONS.items():
+            if column not in existing:
+                self.connection.execute(
+                    f"ALTER TABLE option_snapshots ADD COLUMN {column} {definition}"
+                )
 
     def close(self) -> None:
         self.connection.close()
@@ -55,12 +80,17 @@ class SnapshotStore:
             rows.append(
                 (
                     item.timestamp.isoformat(),
+                    item.received_at.isoformat(),
+                    item.timestamp_quality,
+                    item.feed_delay_seconds,
                     item.option_symbol,
                     item.expiration.isoformat(),
                     item.right,
                     item.strike,
                     item.bid,
                     item.ask,
+                    item.bid_size,
+                    item.ask_size,
                     item.underlying_price,
                     item.minutes_to_expiry,
                     item.volume,
@@ -78,8 +108,33 @@ class SnapshotStore:
             return 0
         self.connection.executemany(
             """
-            INSERT OR REPLACE INTO option_snapshots VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO option_snapshots (
+                timestamp,
+                received_at,
+                timestamp_quality,
+                feed_delay_seconds,
+                option_symbol,
+                expiration,
+                right,
+                strike,
+                bid,
+                ask,
+                bid_size,
+                ask_size,
+                underlying_price,
+                minutes_to_expiry,
+                volume,
+                open_interest,
+                implied_volatility,
+                delta,
+                gamma,
+                theta,
+                vega,
+                greek_model,
+                source
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )
             """,
             rows,
         )
@@ -89,6 +144,16 @@ class SnapshotStore:
     def count(self) -> int:
         row = self.connection.execute("SELECT COUNT(*) FROM option_snapshots").fetchone()
         return int(row[0]) if row else 0
+
+    def timestamp_quality_counts(self) -> dict[str, int]:
+        rows = self.connection.execute(
+            """
+            SELECT COALESCE(timestamp_quality, 'legacy_unknown'), COUNT(*)
+            FROM option_snapshots
+            GROUP BY COALESCE(timestamp_quality, 'legacy_unknown')
+            """
+        ).fetchall()
+        return {str(name): int(count) for name, count in rows}
 
     def export_csv(self, path: str | Path, *, trade_date: date | None = None) -> int:
         query = "SELECT * FROM option_snapshots"

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
-from typing import Any, Iterable, Mapping, Sequence, Tuple
+from typing import Any, Mapping, Tuple
 from zoneinfo import ZoneInfo
 
 from ..greeks import ModelGreeks, model_greeks_from_quote
@@ -13,7 +13,12 @@ EASTERN = ZoneInfo("America/New_York")
 
 @dataclass(frozen=True)
 class FreeOptionSnapshot:
+    # timestamp is the best estimate of the market time represented by the quote,
+    # not the collector wall clock. received_at records when our process saw it.
     timestamp: datetime
+    received_at: datetime
+    timestamp_quality: str
+    feed_delay_seconds: float
     option_symbol: str
     expiration: date
     right: str
@@ -22,6 +27,8 @@ class FreeOptionSnapshot:
     ask: float
     underlying_price: float
     minutes_to_expiry: float
+    bid_size: int = 0
+    ask_size: int = 0
     volume: int = 0
     open_interest: int = 0
     greeks: ModelGreeks | None = None
@@ -35,6 +42,13 @@ class WebullFreeDataProvider:
     today's listed SPY contracts, snapshots the underlying and options, then
     derives IV/Greeks locally from bid/ask quotes. Sandbox/delayed observations
     are tagged by source and must not be treated as live execution data.
+
+    Timestamp integrity is deliberately conservative. If an option snapshot
+    exposes its own quote/update timestamp, that timestamp is used. Otherwise we
+    anchor the option snapshot to SPY's last-trade timestamp from the same delayed
+    feed. SPY is sufficiently active for that timestamp to be a useful delayed
+    market clock. If neither timestamp exists, the row is retained but marked
+    receive_time_only so research code can exclude it.
     """
 
     def __init__(self, app_key: str | None = None, app_secret: str | None = None, *, data_client: Any | None = None) -> None:
@@ -70,18 +84,33 @@ class WebullFreeDataProvider:
         return tuple(out)
 
     def collect_once(self, trade_date: date, *, observed_at: datetime | None = None) -> Tuple[FreeOptionSnapshot, ...]:
-        now = observed_at or datetime.now(timezone.utc)
-        if now.tzinfo is None:
+        received_at = observed_at or datetime.now(timezone.utc)
+        if received_at.tzinfo is None:
             raise ValueError("observed_at must be timezone-aware")
-        now = now.astimezone(timezone.utc)
+        received_at = received_at.astimezone(timezone.utc)
 
         stock = self.client.market_data.get_snapshot("SPY", "US_STOCK")
         stock_rows = _response_rows(stock)
         if not stock_rows:
             raise RuntimeError("Webull returned no SPY snapshot")
-        spot = _float_any(stock_rows[0], "last_price", "last", "price", "close", "latest_price")
+        stock_row = stock_rows[0]
+        spot = _float_any(stock_row, "last_price", "last", "price", "close", "latest_price")
         if spot <= 0:
             raise ValueError("invalid SPY price")
+
+        # Webull documents stock snapshot last_trade_time as a Unix millisecond
+        # timestamp. We prefer any quote/update timestamp if present, then fall
+        # back to last_trade_time as the delayed-feed market clock.
+        underlying_market_time = _timestamp_any(
+            stock_row,
+            "timestamp",
+            "quote_time",
+            "quoteTime",
+            "update_time",
+            "updateTime",
+            "last_trade_time",
+            "lastTradeTime",
+        )
 
         contracts = self.list_zero_dte_contracts(trade_date)
         symbols = [str(_first(row, "symbol", "option_symbol", "optionSymbol")) for row in contracts]
@@ -105,9 +134,31 @@ class WebullFreeDataProvider:
                 if bid < 0 or ask <= 0 or ask < bid:
                     continue
 
+                option_market_time = _timestamp_any(
+                    row,
+                    "timestamp",
+                    "quote_time",
+                    "quoteTime",
+                    "update_time",
+                    "updateTime",
+                )
+                if option_market_time is not None:
+                    market_time = option_market_time
+                    timestamp_quality = "option_quote_timestamp"
+                elif underlying_market_time is not None:
+                    market_time = underlying_market_time
+                    timestamp_quality = "underlying_trade_anchor"
+                else:
+                    # Fail visibly rather than silently pretending delayed data
+                    # were current. Downstream research must exclude these rows.
+                    market_time = received_at
+                    timestamp_quality = "receive_time_only"
+
+                feed_delay_seconds = max(0.0, (received_at - market_time).total_seconds())
+
                 strike = _float_any(contract, "strike_price", "strike", "strikePrice")
                 right = _right(_first(contract, "option_type", "right", "optionType"))
-                minutes = _minutes_to_expiry(trade_date, now)
+                minutes = _minutes_to_expiry(trade_date, market_time)
                 if minutes <= 0:
                     continue
 
@@ -128,7 +179,10 @@ class WebullFreeDataProvider:
 
                 snapshots.append(
                     FreeOptionSnapshot(
-                        timestamp=now,
+                        timestamp=market_time,
+                        received_at=received_at,
+                        timestamp_quality=timestamp_quality,
+                        feed_delay_seconds=feed_delay_seconds,
                         option_symbol=symbol,
                         expiration=trade_date,
                         right=right,
@@ -137,6 +191,8 @@ class WebullFreeDataProvider:
                         ask=ask,
                         underlying_price=spot,
                         minutes_to_expiry=minutes,
+                        bid_size=_int_any(row, "bid_size", "bidSize", "best_bid_size", default=0),
+                        ask_size=_int_any(row, "ask_size", "askSize", "best_ask_size", default=0),
                         volume=_int_any(row, "volume", "trade_volume", default=0),
                         open_interest=_int_any(row, "open_interest", "openInterest", default=0),
                         greeks=greeks,
@@ -188,6 +244,31 @@ def _int_any(row: Mapping[str, Any], *keys: str, default: int = 0) -> int:
     return int(float(value))
 
 
+def _timestamp_any(row: Mapping[str, Any], *keys: str) -> datetime | None:
+    value = _first(row, *keys, default=None)
+    if value in (None, ""):
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    if isinstance(value, (int, float)) or (isinstance(value, str) and value.strip().replace(".", "", 1).isdigit()):
+        number = float(value)
+        # Webull response timestamps are documented as Unix milliseconds. Keep
+        # seconds support for injected/future providers as well.
+        seconds = number / 1000.0 if abs(number) >= 100_000_000_000 else number
+        return datetime.fromtimestamp(seconds, tz=timezone.utc)
+
+    text = str(value).strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _date_value(value: Any) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -205,6 +286,6 @@ def _right(value: Any) -> str:
     raise ValueError(f"invalid option right: {value!r}")
 
 
-def _minutes_to_expiry(expiration: date, observed_at: datetime) -> float:
+def _minutes_to_expiry(expiration: date, market_time: datetime) -> float:
     expiry = datetime.combine(expiration, time(16, 0), tzinfo=EASTERN).astimezone(timezone.utc)
-    return max(0.0, (expiry - observed_at.astimezone(timezone.utc)).total_seconds() / 60.0)
+    return max(0.0, (expiry - market_time.astimezone(timezone.utc)).total_seconds() / 60.0)
