@@ -8,12 +8,12 @@ val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse(
 
 android {
     namespace = "app.spy0dte.mobile"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
 
