@@ -301,7 +301,7 @@ def status_payload() -> dict[str, Any]:
         "mode": store.get_mode().value,
         "research_only": not _env_bool("LIVE_ORDER_EXECUTOR_READY", False),
         "cadence": {
-            "engine_tick_seconds": cadence.engine_tick_seconds,
+            "engine_tick_seconds": cadence.decision_tick_seconds,
             "sandbox_active_option_refresh_seconds": cadence.sandbox_active_option_refresh_seconds,
             "production_active_option_refresh_seconds": cadence.production_active_option_refresh_seconds,
             "full_chain_refresh_seconds": cadence.full_chain_refresh_seconds,
