@@ -18,7 +18,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DarkColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -447,7 +446,6 @@ private fun SettingsScreen(status: LiveStatus, backend: BackendClient) {
     ) {
         Text("Broker settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text("Credentials are sent over HTTPS and encrypted on Railway. They are not stored in the APK.")
-
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("sandbox", "production").forEach { item ->
                 if (environment == item) Button(onClick = { environment = item }) { Text(item.uppercase()) }
