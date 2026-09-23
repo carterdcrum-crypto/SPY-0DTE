@@ -3,7 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val apiBaseUrl = providers.gradleProperty("SPY_API_BASE_URL").orElse("").get()
+val apiBaseUrl = providers.gradleProperty("SPY_API_BASE_URL")
+    .orElse("https://spy-0dte-collector-production.up.railway.app")
+    .get()
 val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse("").get()
 
 android {
