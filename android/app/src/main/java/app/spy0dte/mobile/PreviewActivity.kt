@@ -97,6 +97,20 @@ private data class PreviewStatus(
     val closedTradeRealizedPnl: Double? = null,
     val closedTradeReason: String? = null,
     val closedTradeSettlementDate: String? = null,
+    val riskProfile: String? = null,
+    val riskAllowed: Boolean? = null,
+    val riskReason: String? = null,
+    val riskContracts: Int = 0,
+    val riskSizingMode: String? = null,
+    val riskExpectedEvPerContract: Double? = null,
+    val riskEs99PerContract: Double? = null,
+    val riskPositiveEdgeProbability: Double? = null,
+    val riskRawKellyFraction: Double? = null,
+    val riskFractionalKellyFraction: Double? = null,
+    val riskHardLimitContracts: Int? = null,
+    val riskDrawdownMultiplier: Double? = null,
+    val riskEventMultiplier: Double? = null,
+    val riskModelHealthMultiplier: Double? = null,
 )
 
 private class PreviewBackend {
@@ -187,6 +201,7 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
     val automation = root.optJSONObject("paper_automation") ?: JSONObject()
     val position = automation.optJSONObject("position")
     val closedTrade = automation.optJSONObject("closed_trade")
+    val risk = automation.optJSONObject("risk")
 
     fun nullableDouble(obj: JSONObject?, key: String): Double? =
         if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
@@ -196,6 +211,9 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
 
     fun nullableString(obj: JSONObject?, key: String): String? =
         obj?.optString(key)?.takeIf { it.isNotBlank() }
+
+    fun nullableBoolean(obj: JSONObject?, key: String): Boolean? =
+        if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optBoolean(key)
 
     return PreviewStatus(
         mode = root.optString("mode", "PAPER"),
@@ -231,6 +249,20 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
         closedTradeRealizedPnl = nullableDouble(closedTrade, "realized_pnl"),
         closedTradeReason = nullableString(closedTrade, "reason"),
         closedTradeSettlementDate = nullableString(closedTrade, "settlement_date"),
+        riskProfile = nullableString(risk, "profile") ?: nullableString(automation, "risk_profile"),
+        riskAllowed = nullableBoolean(risk, "allowed"),
+        riskReason = nullableString(risk, "reason"),
+        riskContracts = risk?.optInt("contracts", 0) ?: 0,
+        riskSizingMode = nullableString(risk, "sizing_mode"),
+        riskExpectedEvPerContract = nullableDouble(risk, "expected_net_ev_per_contract"),
+        riskEs99PerContract = nullableDouble(risk, "es99_per_contract"),
+        riskPositiveEdgeProbability = nullableDouble(risk, "positive_edge_probability"),
+        riskRawKellyFraction = nullableDouble(risk, "raw_kelly_fraction"),
+        riskFractionalKellyFraction = nullableDouble(risk, "fractional_kelly_fraction"),
+        riskHardLimitContracts = nullableInt(risk, "hard_limited_contracts"),
+        riskDrawdownMultiplier = nullableDouble(risk, "drawdown_multiplier"),
+        riskEventMultiplier = nullableDouble(risk, "event_multiplier"),
+        riskModelHealthMultiplier = nullableDouble(risk, "model_health_multiplier"),
     )
 }
 
@@ -358,6 +390,33 @@ private fun PreviewLive(
             }
         }
 
+        if (status.riskAllowed != null || status.riskReason != null) {
+            Card {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("DYNAMIC RISK ENGINE", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Profile: ${status.riskProfile ?: "dynamic_posterior_proxy_v1"}")
+                    Text(
+                        "Risk decision: ${if (status.riskAllowed == true) "APPROVED" else "REJECTED"}",
+                        fontWeight = FontWeight.Bold,
+                        color = if (status.riskAllowed == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    )
+                    Text("Final size: ${status.riskContracts} contract(s)")
+                    Text("Sizing mode: ${status.riskSizingMode ?: "—"}")
+                    Text("P(net edge > 0): ${status.riskPositiveEdgeProbability?.let { "%.1f%%".format(it * 100.0) } ?: "—"}")
+                    Text("Expected net EV: ${signedMoney(status.riskExpectedEvPerContract)} / contract")
+                    Text("ES99: ${money(status.riskEs99PerContract)} / contract")
+                    Text("Raw Kelly: ${percent(status.riskRawKellyFraction)}")
+                    Text("Fractional Kelly: ${percent(status.riskFractionalKellyFraction)}")
+                    Text("Hard size ceiling: ${status.riskHardLimitContracts ?: 0} contract(s)")
+                    Text("Drawdown multiplier: ${multiplier(status.riskDrawdownMultiplier)}")
+                    Text("Event multiplier: ${multiplier(status.riskEventMultiplier)}")
+                    Text("Model-health multiplier: ${multiplier(status.riskModelHealthMultiplier)}")
+                    Text("Why: ${status.riskReason ?: "approved"}")
+                }
+            }
+        }
+
         if (status.positionSymbol != null && status.paperOpenPositions > 0) {
             Card {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
@@ -464,6 +523,10 @@ private fun signedMoney(value: Double?): String = value?.let {
     val sign = if (it >= 0.0) "+" else "-"
     "$sign$${"%.2f".format(kotlin.math.abs(it))}"
 } ?: "—"
+
+private fun percent(value: Double?): String = value?.let { "%.2f%%".format(it * 100.0) } ?: "—"
+
+private fun multiplier(value: Double?): String = value?.let { "×%.2f".format(it) } ?: "—"
 
 @Composable
 private fun PreviewMetric(label: String, value: String) {
