@@ -10,7 +10,7 @@ from typing import Mapping
 from zoneinfo import ZoneInfo
 
 from .collector import SnapshotStore, collect_and_store
-from .providers.webull_free import WebullFreeDataProvider
+from .market_data_factory import provider_from_env, provider_source
 
 EASTERN = ZoneInfo("America/New_York")
 
@@ -72,22 +72,6 @@ def is_collection_window(now: datetime, settings: CollectorRunnerSettings) -> bo
     return settings.market_open <= clock < settings.market_close
 
 
-def _credentials_from_env() -> tuple[str, str]:
-    app_key = os.environ.get("WEBULL_APP_KEY", "").strip()
-    app_secret = os.environ.get("WEBULL_APP_SECRET", "").strip()
-    missing = [
-        name
-        for name, value in (
-            ("WEBULL_APP_KEY", app_key),
-            ("WEBULL_APP_SECRET", app_secret),
-        )
-        if not value
-    ]
-    if missing:
-        raise RuntimeError("missing required secret environment variables: " + ", ".join(missing))
-    return app_key, app_secret
-
-
 def _backoff_seconds(settings: CollectorRunnerSettings, consecutive_failures: int) -> int:
     if consecutive_failures <= 0:
         return settings.interval_seconds
@@ -102,21 +86,21 @@ def run_forever() -> None:
     )
     log = logging.getLogger("spy0dte.collector")
 
-    # The Webull SDK includes signed request headers in some exception logs.
-    # Suppress those internals so credentials/signatures never spill into Railway logs.
+    # Broker SDK internals can include signed request headers in exception logs.
+    # Suppress them so credentials/signatures never spill into Railway logs.
     for logger_name in ("webull", "webull.core", "webull.core.client"):
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)
 
     settings = settings_from_env()
-    app_key, app_secret = _credentials_from_env()
-
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
-    provider = WebullFreeDataProvider(app_key=app_key, app_secret=app_secret)
+    provider = provider_from_env()
+    source = provider_source(provider)
     store = SnapshotStore(settings.db_path)
     consecutive_failures = 0
 
     log.info(
-        "collector started source=webull_sandbox_delayed db=%s interval=%ss window=%s-%s ET",
+        "collector started source=%s db=%s interval=%ss window=%s-%s ET",
+        source,
         settings.db_path,
         settings.interval_seconds,
         settings.market_open.strftime("%H:%M"),
@@ -136,20 +120,26 @@ def run_forever() -> None:
                         observed_at=now,
                     )
                     consecutive_failures = 0
+                    max_delay = max(
+                        (float(item.feed_delay_seconds) for item in snapshots),
+                        default=float("nan"),
+                    )
                     log.info(
-                        "collection complete trade_date=%s rows=%d total_rows=%d",
+                        "collection complete trade_date=%s rows=%d total_rows=%d max_feed_delay=%.3fs",
                         trade_date.isoformat(),
                         len(snapshots),
                         store.count(),
+                        max_delay,
                     )
                     sleep_seconds = settings.interval_seconds
                 except Exception as exc:
-                    # Transient 429/network failures should slow the collector instead
-                    # of hammering the provider or terminating the service.
+                    # Transient rate/network failures slow the collector instead of
+                    # hammering the provider or terminating the service.
                     consecutive_failures += 1
                     sleep_seconds = _backoff_seconds(settings, consecutive_failures)
                     log.warning(
-                        "collection cycle failed type=%s retry_in=%ss failures=%d",
+                        "collection cycle failed source=%s type=%s retry_in=%ss failures=%d",
+                        source,
                         type(exc).__name__,
                         sleep_seconds,
                         consecutive_failures,
