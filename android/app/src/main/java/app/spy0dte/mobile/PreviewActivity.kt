@@ -1,5 +1,6 @@
 package app.spy0dte.mobile
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,15 +24,27 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONObject
 
 class PreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,17 +52,157 @@ class PreviewActivity : ComponentActivity() {
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    LoginFreePreview()
+                    WorkingPreviewApp(this)
                 }
             }
         }
     }
 }
 
+private data class PreviewStatus(
+    val mode: String = "PAPER",
+    val decision: String = "CONNECTING",
+    val decisionReason: String = "Connecting to Railway backend",
+    val spot: Double? = null,
+    val rows: Int = 0,
+    val dataAgeSeconds: Double? = null,
+    val feedDelaySeconds: Double? = null,
+    val engineTickSeconds: Double = 1.0,
+    val optionRefreshSeconds: Double = 2.0,
+    val fullChainRefreshSeconds: Double = 60.0,
+    val paperStartingCash: Double = 115.0,
+    val paperSettledCash: Double = 115.0,
+    val paperUnsettledCash: Double = 0.0,
+    val paperRealizedPnl: Double = 0.0,
+    val paperOpenPositions: Int = 0,
+    val paperTradeCount: Int = 0,
+)
+
+private class PreviewBackend {
+    private val http = OkHttpClient()
+    private val baseUrl = BuildConfig.API_BASE_URL.trim().trimEnd('/')
+
+    fun connectLive(
+        onStatus: (PreviewStatus) -> Unit,
+        onError: (String) -> Unit,
+    ): WebSocket? {
+        if (baseUrl.isBlank()) {
+            onError("Backend URL is not configured")
+            return null
+        }
+        val wsBase = when {
+            baseUrl.startsWith("https://") -> "wss://${baseUrl.removePrefix("https://")}"
+            baseUrl.startsWith("http://") -> "ws://${baseUrl.removePrefix("http://")}"
+            else -> baseUrl
+        }
+        val request = Request.Builder().url("$wsBase/v1/live").build()
+        return http.newWebSocket(
+            request,
+            object : WebSocketListener() {
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    try {
+                        onStatus(parsePreviewStatus(text))
+                    } catch (error: Exception) {
+                        onError("Bad backend message: ${error.message}")
+                    }
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    onError(t.message ?: "Live connection failed")
+                }
+            },
+        )
+    }
+
+    suspend fun setMode(mode: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (mode == "LIVE") {
+            return@withContext Result.failure(IllegalStateException("LIVE is locked while login is off"))
+        }
+        post("/v1/mode", JSONObject().put("mode", mode))
+    }
+
+    suspend fun resetPaperAccount(startingCash: Double): Result<Unit> = withContext(Dispatchers.IO) {
+        post(
+            "/v1/paper/reset",
+            JSONObject()
+                .put("starting_cash", startingCash)
+                .put("confirmation", "RESET PAPER ACCOUNT"),
+        )
+    }
+
+    private fun post(path: String, json: JSONObject): Result<Unit> {
+        if (baseUrl.isBlank()) {
+            return Result.failure(IllegalStateException("Backend URL is not configured"))
+        }
+        val request = Request.Builder()
+            .url("$baseUrl$path")
+            .post(json.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+        return try {
+            http.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    Result.success(Unit)
+                } else {
+                    Result.failure(
+                        IllegalStateException(response.body?.string()?.take(220) ?: "HTTP ${response.code}"),
+                    )
+                }
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+}
+
+private fun parsePreviewStatus(text: String): PreviewStatus {
+    val root = JSONObject(text)
+    val market = root.optJSONObject("market") ?: JSONObject()
+    val cadence = root.optJSONObject("cadence") ?: JSONObject()
+    val decision = root.optJSONObject("decision") ?: JSONObject()
+    val paper = root.optJSONObject("paper") ?: JSONObject()
+
+    fun nullableDouble(obj: JSONObject, key: String): Double? =
+        if (!obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
+
+    return PreviewStatus(
+        mode = root.optString("mode", "PAPER"),
+        decision = decision.optString("state", "RESEARCH_ONLY"),
+        decisionReason = decision.optString("reason", ""),
+        spot = nullableDouble(market, "spot"),
+        rows = market.optInt("rows", 0),
+        dataAgeSeconds = nullableDouble(market, "data_age_seconds"),
+        feedDelaySeconds = nullableDouble(market, "feed_delay_seconds"),
+        engineTickSeconds = cadence.optDouble("engine_tick_seconds", 1.0),
+        optionRefreshSeconds = cadence.optDouble("sandbox_active_option_refresh_seconds", 2.0),
+        fullChainRefreshSeconds = cadence.optDouble("full_chain_refresh_seconds", 60.0),
+        paperStartingCash = paper.optDouble("starting_cash", 115.0),
+        paperSettledCash = paper.optDouble("settled_cash", 115.0),
+        paperUnsettledCash = paper.optDouble("unsettled_cash", 0.0),
+        paperRealizedPnl = paper.optDouble("realized_pnl", 0.0),
+        paperOpenPositions = paper.optInt("open_positions", 0),
+        paperTradeCount = paper.optInt("trade_count", 0),
+    )
+}
+
 @Composable
-private fun LoginFreePreview() {
+private fun WorkingPreviewApp(activity: Activity) {
+    val backend = remember { PreviewBackend() }
+    var status by remember { mutableStateOf(PreviewStatus()) }
+    var connectionError by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf("LIVE") }
-    var mode by remember { mutableStateOf("PAPER") }
+
+    DisposableEffect(Unit) {
+        val socket = backend.connectLive(
+            onStatus = { next ->
+                activity.runOnUiThread {
+                    status = next
+                    connectionError = null
+                }
+            },
+            onError = { message -> activity.runOnUiThread { connectionError = message } },
+        )
+        onDispose { socket?.close(1000, "app closed") }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -59,9 +212,9 @@ private fun LoginFreePreview() {
         ) {
             Column {
                 Text("SPY 0DTE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text("PREVIEW BUILD • LOGIN OFF")
+                Text(if (connectionError == null) "● PAPER PREVIEW CONNECTED" else "○ BACKEND DISCONNECTED")
             }
-            Text(mode, fontWeight = FontWeight.Bold)
+            Text(status.mode, fontWeight = FontWeight.Bold)
         }
 
         Row(
@@ -69,50 +222,56 @@ private fun LoginFreePreview() {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             listOf("LIVE", "SETTINGS").forEach { name ->
-                if (tab == name) {
-                    Button(onClick = { tab = name }) { Text(name) }
-                } else {
-                    OutlinedButton(onClick = { tab = name }) { Text(name) }
-                }
+                if (tab == name) Button(onClick = { tab = name }) { Text(name) }
+                else OutlinedButton(onClick = { tab = name }) { Text(name) }
             }
         }
 
         if (tab == "LIVE") {
-            PreviewLive(mode = mode, onModeChange = { mode = it })
+            PreviewLive(status, connectionError, backend)
         } else {
-            PreviewSettings()
+            PreviewSettings(status, backend)
         }
     }
 }
 
 @Composable
-private fun PreviewLive(mode: String, onModeChange: (String) -> Unit) {
+private fun PreviewLive(
+    status: PreviewStatus,
+    connectionError: String?,
+    backend: PreviewBackend,
+) {
+    val scope = rememberCoroutineScope()
+    var actionMessage by remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        connectionError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                Text("LOGIN TEMPORARILY REMOVED", fontWeight = FontWeight.Bold)
-                Text("This build opens directly into the app so you can inspect the Android UI before we wire authentication back in.")
+                Text("LOGIN TEMPORARILY OFF", fontWeight = FontWeight.Bold)
+                Text("This is connected to the real paper backend. LIVE stays server-locked until authentication is restored.")
             }
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            PreviewMetric("SPY", "—")
-            PreviewMetric("Data", "—")
-            PreviewMetric("Engine", "1s")
-            PreviewMetric("Rows", "0")
+            PreviewMetric("SPY", status.spot?.let { "$%.2f".format(it) } ?: "—")
+            PreviewMetric("Data", status.dataAgeSeconds?.let { "%.1fs".format(it) } ?: "—")
+            PreviewMetric("Engine", "${status.engineTickSeconds.toInt()}s")
+            PreviewMetric("Rows", status.rows.toString())
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.fillMaxWidth().padding(18.dp)) {
                 Text("CURRENT DECISION", style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(8.dp))
-                Text("PREVIEW", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(status.decision, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                Text("Live backend data is intentionally not authenticated in this preview build.")
-                Text("Feed delay: —")
+                Text(status.decisionReason)
+                Text("Feed delay: ${status.feedDelaySeconds?.let { "%.0fs".format(it) } ?: "—"}")
             }
         }
 
@@ -120,40 +279,43 @@ private fun PreviewLive(mode: String, onModeChange: (String) -> Unit) {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("PAPER ACCOUNT", fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text("Starting cash: $115.00")
-                Text("Settled cash: $115.00")
-                Text("Unsettled cash: $0.00")
-                Text("Realized P&L: $0.00")
-                Text("Open positions: 0")
-                Text("Trades: 0")
+                Text("Starting cash: $${"%.2f".format(status.paperStartingCash)}")
+                Text("Settled cash: $${"%.2f".format(status.paperSettledCash)}")
+                Text("Unsettled cash: $${"%.2f".format(status.paperUnsettledCash)}")
+                Text("Realized P&L: $${"%.2f".format(status.paperRealizedPnl)}")
+                Text("Open positions: ${status.paperOpenPositions}")
+                Text("Trades: ${status.paperTradeCount}")
             }
         }
 
         Text("MODE", fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("SHADOW", "PAPER").forEach { item ->
-                if (mode == item) {
-                    Button(onClick = { onModeChange(item) }) { Text(item) }
+                if (status.mode == item) {
+                    Button(onClick = {}) { Text(item) }
                 } else {
-                    OutlinedButton(onClick = { onModeChange(item) }) { Text(item) }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                backend.setMode(item)
+                                    .onSuccess { actionMessage = "$item selected on backend" }
+                                    .onFailure { actionMessage = it.message }
+                            }
+                        },
+                    ) { Text(item) }
                 }
             }
             OutlinedButton(onClick = {}, enabled = false) { Text("LIVE 🔒") }
         }
-
-        Text(
-            "Live stays locked in this preview build. No real orders can be sent.",
-            style = MaterialTheme.typography.bodySmall,
-        )
+        actionMessage?.let { Text(it) }
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("RUNTIME", fontWeight = FontWeight.Bold)
-                Text("Decision loop target: every 1s")
-                Text("Active option target: every 2s")
-                Text("Full chain target: every 60s")
-                Text("Sandbox Webull: preview only")
-                Text("Production Webull: not configured")
+                Text("Decision loop: every ${status.engineTickSeconds}s")
+                Text("Active option refresh: every ${status.optionRefreshSeconds}s")
+                Text("Full chain refresh: every ${status.fullChainRefreshSeconds}s")
+                Text("Backend: ${BuildConfig.API_BASE_URL}")
             }
         }
     }
@@ -168,11 +330,11 @@ private fun PreviewMetric(label: String, value: String) {
 }
 
 @Composable
-private fun PreviewSettings() {
-    var environment by remember { mutableStateOf("sandbox") }
-    var paperCash by remember { mutableStateOf("115.00") }
-    var appKey by remember { mutableStateOf("") }
-    var appSecret by remember { mutableStateOf("") }
+private fun PreviewSettings(status: PreviewStatus, backend: PreviewBackend) {
+    val scope = rememberCoroutineScope()
+    var paperCash by remember(status.paperStartingCash) {
+        mutableStateOf("%.2f".format(status.paperStartingCash))
+    }
     var message by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -187,44 +349,30 @@ private fun PreviewSettings() {
             label = { Text("Starting paper cash") },
             singleLine = true,
         )
-        Button(onClick = { message = "Preview only — paper account was not changed." }) {
-            Text("Reset paper account")
-        }
+        Button(
+            onClick = {
+                val amount = paperCash.toDoubleOrNull()
+                if (amount == null || amount <= 0.0) {
+                    message = "Enter a valid paper balance"
+                } else {
+                    scope.launch {
+                        backend.resetPaperAccount(amount)
+                            .onSuccess { message = "Paper account reset to $${"%.2f".format(amount)}" }
+                            .onFailure { message = it.message ?: "Paper reset failed" }
+                    }
+                }
+            },
+            enabled = (paperCash.toDoubleOrNull() ?: 0.0) > 0.0,
+        ) { Text("Reset paper account") }
+        Text("This changes the real simulated paper account on Railway; it does not touch real money.")
 
         Spacer(Modifier.height(8.dp))
         Text("Broker settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("These controls are visible so you can inspect the flow. This preview does not send credentials anywhere.")
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("sandbox", "production").forEach { item ->
-                if (environment == item) {
-                    Button(onClick = { environment = item }) { Text(item.uppercase()) }
-                } else {
-                    OutlinedButton(onClick = { environment = item }) { Text(item.uppercase()) }
-                }
+        Card {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Text("Temporarily locked while login is off", fontWeight = FontWeight.Bold)
+                Text("Webull keys are not accepted by the anonymous preview backend. We can turn credential entry back on after you approve the app UI and authentication returns.")
             }
-        }
-
-        OutlinedTextField(
-            value = appKey,
-            onValueChange = { appKey = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Webull App Key") },
-            singleLine = true,
-        )
-        OutlinedTextField(
-            value = appSecret,
-            onValueChange = { appSecret = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Webull App Secret") },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true,
-        )
-        Button(
-            onClick = { message = "Preview only — credentials were not saved." },
-            enabled = appKey.length >= 8 && appSecret.length >= 8,
-        ) {
-            Text("Save Webull credentials")
         }
 
         message?.let { Text(it) }
