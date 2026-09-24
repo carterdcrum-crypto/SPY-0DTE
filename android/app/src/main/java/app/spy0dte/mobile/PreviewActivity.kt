@@ -26,6 +26,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,7 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -79,7 +83,10 @@ private data class PreviewStatus(
 )
 
 private class PreviewBackend {
-    private val http = OkHttpClient()
+    private val http = OkHttpClient.Builder()
+        .pingInterval(15, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
+        .build()
     private val baseUrl = BuildConfig.API_BASE_URL.trim().trimEnd('/')
 
     fun connectLive(
@@ -187,21 +194,48 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
 @Composable
 private fun WorkingPreviewApp(activity: Activity) {
     val backend = remember { PreviewBackend() }
+    val reconnectScope = rememberCoroutineScope()
     var status by remember { mutableStateOf(PreviewStatus()) }
     var connectionError by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf("LIVE") }
+    var reconnectNonce by remember { mutableIntStateOf(0) }
+    var retryAttempt by remember { mutableIntStateOf(0) }
+    var reconnectJob by remember { mutableStateOf<Job?>(null) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(reconnectNonce) {
+        var disposed = false
         val socket = backend.connectLive(
             onStatus = { next ->
                 activity.runOnUiThread {
-                    status = next
-                    connectionError = null
+                    if (!disposed) {
+                        status = next
+                        connectionError = null
+                        retryAttempt = 0
+                        reconnectJob?.cancel()
+                        reconnectJob = null
+                    }
                 }
             },
-            onError = { message -> activity.runOnUiThread { connectionError = message } },
+            onError = { message ->
+                activity.runOnUiThread {
+                    if (!disposed) {
+                        connectionError = message
+                        reconnectJob?.cancel()
+                        val delayMillis = 1_000L * (1L shl minOf(retryAttempt, 5))
+                        retryAttempt = minOf(retryAttempt + 1, 6)
+                        reconnectJob = reconnectScope.launch {
+                            delay(delayMillis)
+                            reconnectNonce += 1
+                        }
+                    }
+                }
+            },
         )
-        onDispose { socket?.close(1000, "app closed") }
+        onDispose {
+            disposed = true
+            reconnectJob?.cancel()
+            socket?.close(1000, "reconnecting or app closed")
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -212,7 +246,7 @@ private fun WorkingPreviewApp(activity: Activity) {
         ) {
             Column {
                 Text("SPY 0DTE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(if (connectionError == null) "● PAPER PREVIEW CONNECTED" else "○ BACKEND DISCONNECTED")
+                Text(if (connectionError == null) "● PAPER PREVIEW CONNECTED" else "◌ RECONNECTING TO BACKEND")
             }
             Text(status.mode, fontWeight = FontWeight.Bold)
         }
@@ -248,7 +282,12 @@ private fun PreviewLive(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        connectionError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        connectionError?.let {
+            Text(
+                "$it — retrying automatically",
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
 
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.fillMaxWidth().padding(14.dp)) {

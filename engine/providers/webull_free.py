@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 from typing import Any, Mapping, Tuple
@@ -38,20 +39,21 @@ class FreeOptionSnapshot:
 class WebullFreeDataProvider:
     """Zero-cost SPY 0DTE collector using Webull's sandbox market-data surface.
 
-    The provider intentionally does not require a paid options feed. It discovers
-    today's listed SPY contracts, snapshots the underlying and options, then
-    derives IV/Greeks locally from bid/ask quotes. Sandbox/delayed observations
-    are tagged by source and must not be treated as live execution data.
-
-    Timestamp integrity is deliberately conservative. If an option snapshot
-    exposes its own quote/update timestamp, that timestamp is used. Otherwise we
-    anchor the option snapshot to SPY's last-trade timestamp from the same delayed
-    feed. SPY is sufficiently active for that timestamp to be a useful delayed
-    market clock. If neither timestamp exists, the row is retained but marked
-    receive_time_only so research code can exclude it.
+    The fast path deliberately polls a small near-the-money contract set rather
+    than blasting the whole chain every couple seconds. The full 0DTE contract
+    list is cached and refreshed periodically, which keeps the request cadence
+    useful for the decision loop without repeatedly tripping sandbox rate limits.
     """
 
-    def __init__(self, app_key: str | None = None, app_secret: str | None = None, *, data_client: Any | None = None) -> None:
+    def __init__(
+        self,
+        app_key: str | None = None,
+        app_secret: str | None = None,
+        *,
+        data_client: Any | None = None,
+        active_contract_limit: int | None = None,
+        contract_refresh_seconds: int | None = None,
+    ) -> None:
         if data_client is None:
             if not app_key or not app_secret:
                 raise ValueError("app_key and app_secret are required when data_client is not injected")
@@ -65,7 +67,35 @@ class WebullFreeDataProvider:
             data_client = DataClient(api_client)
         self.client = data_client
 
+        self.active_contract_limit = int(
+            active_contract_limit
+            if active_contract_limit is not None
+            else os.environ.get("WEBULL_ACTIVE_CONTRACT_LIMIT", "20")
+        )
+        self.contract_refresh_seconds = int(
+            contract_refresh_seconds
+            if contract_refresh_seconds is not None
+            else os.environ.get("WEBULL_CONTRACT_REFRESH_SECONDS", "60")
+        )
+        if self.active_contract_limit <= 0:
+            raise ValueError("active_contract_limit must be positive")
+        if self.contract_refresh_seconds <= 0:
+            raise ValueError("contract_refresh_seconds must be positive")
+
+        self._contract_cache_date: date | None = None
+        self._contract_cache_at: datetime | None = None
+        self._contract_cache: Tuple[Mapping[str, Any], ...] = ()
+
     def list_zero_dte_contracts(self, trade_date: date) -> Tuple[Mapping[str, Any], ...]:
+        now = datetime.now(timezone.utc)
+        if (
+            self._contract_cache_date == trade_date
+            and self._contract_cache_at is not None
+            and (now - self._contract_cache_at).total_seconds() < self.contract_refresh_seconds
+            and self._contract_cache
+        ):
+            return self._contract_cache
+
         response = self.client.instrument.list_option_contracts(
             category="US_OPTION",
             underlying_symbols="SPY",
@@ -77,13 +107,30 @@ class WebullFreeDataProvider:
         out = []
         for row in rows:
             symbol = _first(row, "symbol", "option_symbol", "optionSymbol")
-            expiration = _date_value(_first(row, "expiration_date", "expire_date", "expirationDate", default=trade_date))
+            expiration = _date_value(
+                _first(
+                    row,
+                    "expiration_date",
+                    "expire_date",
+                    "expirationDate",
+                    default=trade_date,
+                )
+            )
             if not symbol or expiration != trade_date:
                 continue
             out.append(row)
-        return tuple(out)
 
-    def collect_once(self, trade_date: date, *, observed_at: datetime | None = None) -> Tuple[FreeOptionSnapshot, ...]:
+        self._contract_cache_date = trade_date
+        self._contract_cache_at = now
+        self._contract_cache = tuple(out)
+        return self._contract_cache
+
+    def collect_once(
+        self,
+        trade_date: date,
+        *,
+        observed_at: datetime | None = None,
+    ) -> Tuple[FreeOptionSnapshot, ...]:
         received_at = observed_at or datetime.now(timezone.utc)
         if received_at.tzinfo is None:
             raise ValueError("observed_at must be timezone-aware")
@@ -112,17 +159,31 @@ class WebullFreeDataProvider:
             "lastTradeTime",
         )
 
-        contracts = self.list_zero_dte_contracts(trade_date)
+        all_contracts = self.list_zero_dte_contracts(trade_date)
+        contracts = _nearest_contracts(
+            all_contracts,
+            spot=spot,
+            limit=self.active_contract_limit,
+        )
         symbols = [str(_first(row, "symbol", "option_symbol", "optionSymbol")) for row in contracts]
         if not symbols:
             return ()
 
-        contract_by_symbol = {str(_first(row, "symbol", "option_symbol", "optionSymbol")): row for row in contracts}
+        contract_by_symbol = {
+            str(_first(row, "symbol", "option_symbol", "optionSymbol")): row
+            for row in contracts
+        }
         snapshots: list[FreeOptionSnapshot] = []
 
+        # Webull accepts up to 20 option symbols in this sandbox snapshot call.
+        # Keeping active_contract_limit at 20 means the normal 2-second loop needs
+        # only one option request rather than a burst across the entire chain.
         for start in range(0, len(symbols), 20):
             batch = symbols[start : start + 20]
-            response = self.client.option_market_data.get_option_snapshot(",".join(batch), "US_OPTION")
+            response = self.client.option_market_data.get_option_snapshot(
+                ",".join(batch),
+                "US_OPTION",
+            )
             for row in _response_rows(response):
                 symbol = str(_first(row, "symbol", "option_symbol", "optionSymbol", default=""))
                 contract = contract_by_symbol.get(symbol)
@@ -199,7 +260,32 @@ class WebullFreeDataProvider:
                     )
                 )
 
-        return tuple(sorted(snapshots, key=lambda item: (item.strike, item.right, item.option_symbol)))
+        return tuple(
+            sorted(
+                snapshots,
+                key=lambda item: (item.strike, item.right, item.option_symbol),
+            )
+        )
+
+
+def _nearest_contracts(
+    contracts: Tuple[Mapping[str, Any], ...],
+    *,
+    spot: float,
+    limit: int,
+) -> Tuple[Mapping[str, Any], ...]:
+    if limit <= 0:
+        return ()
+
+    def sort_key(row: Mapping[str, Any]) -> tuple[float, float, str]:
+        try:
+            strike = _float_any(row, "strike_price", "strike", "strikePrice")
+        except (TypeError, ValueError):
+            strike = float("inf")
+        symbol = str(_first(row, "symbol", "option_symbol", "optionSymbol", default=""))
+        return (abs(strike - spot), strike, symbol)
+
+    return tuple(sorted(contracts, key=sort_key)[:limit])
 
 
 def _response_rows(response: Any) -> Tuple[Mapping[str, Any], ...]:
@@ -253,7 +339,9 @@ def _timestamp_any(row: Mapping[str, Any], *keys: str) -> datetime | None:
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
 
-    if isinstance(value, (int, float)) or (isinstance(value, str) and value.strip().replace(".", "", 1).isdigit()):
+    if isinstance(value, (int, float)) or (
+        isinstance(value, str) and value.strip().replace(".", "", 1).isdigit()
+    ):
         number = float(value)
         # Webull response timestamps are documented as Unix milliseconds. Keep
         # seconds support for injected/future providers as well.
@@ -288,4 +376,7 @@ def _right(value: Any) -> str:
 
 def _minutes_to_expiry(expiration: date, market_time: datetime) -> float:
     expiry = datetime.combine(expiration, time(16, 0), tzinfo=EASTERN).astimezone(timezone.utc)
-    return max(0.0, (expiry - market_time.astimezone(timezone.utc)).total_seconds() / 60.0)
+    return max(
+        0.0,
+        (expiry - market_time.astimezone(timezone.utc)).total_seconds() / 60.0,
+    )

@@ -4,6 +4,7 @@ import pytest
 
 from engine.collector_runner import (
     CollectorRunnerSettings,
+    _backoff_seconds,
     _parse_hhmm,
     is_collection_window,
     settings_from_env,
@@ -20,6 +21,11 @@ def test_collection_window_uses_eastern_market_time():
     assert not is_collection_window(datetime(2026, 9, 26, 14, 0, tzinfo=timezone.utc), settings)
 
 
+def test_default_market_cadence_is_two_seconds():
+    assert CollectorRunnerSettings().interval_seconds == 2
+    assert settings_from_env({}).interval_seconds == 2
+
+
 def test_settings_are_configurable_without_credentials():
     settings = settings_from_env(
         {
@@ -28,6 +34,7 @@ def test_settings_are_configurable_without_credentials():
             "COLLECTOR_IDLE_SLEEP_SECONDS": "600",
             "COLLECTOR_MARKET_OPEN_ET": "10:00",
             "COLLECTOR_MARKET_CLOSE_ET": "15:30",
+            "COLLECTOR_MAX_BACKOFF_SECONDS": "90",
         }
     )
     assert str(settings.db_path) == "/tmp/test.sqlite"
@@ -35,10 +42,23 @@ def test_settings_are_configurable_without_credentials():
     assert settings.idle_sleep_seconds == 600
     assert settings.market_open == _parse_hhmm("10:00")
     assert settings.market_close == _parse_hhmm("15:30")
+    assert settings.maximum_backoff_seconds == 90
+
+
+def test_backoff_grows_and_caps():
+    settings = CollectorRunnerSettings(interval_seconds=2, maximum_backoff_seconds=20)
+    assert _backoff_seconds(settings, 0) == 2
+    assert _backoff_seconds(settings, 1) == 4
+    assert _backoff_seconds(settings, 2) == 8
+    assert _backoff_seconds(settings, 3) == 16
+    assert _backoff_seconds(settings, 4) == 20
+    assert _backoff_seconds(settings, 10) == 20
 
 
 def test_invalid_runner_values_fail_closed():
     with pytest.raises(ValueError):
         settings_from_env({"COLLECTOR_INTERVAL_SECONDS": "0"})
+    with pytest.raises(ValueError):
+        settings_from_env({"COLLECTOR_MAX_BACKOFF_SECONDS": "0"})
     with pytest.raises(ValueError):
         _parse_hhmm("25:00")
