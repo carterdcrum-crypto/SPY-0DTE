@@ -29,10 +29,18 @@ def _ensure_encryption_key() -> None:
     os.environ["APP_ENCRYPTION_KEY"] = key
 
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def main() -> None:
     _ensure_encryption_key()
     port = int(os.environ.get("PORT", "8080"))
-    uvicorn.run("engine.api_v2:app", host="0.0.0.0", port=port)
+    app_module = "engine.preview_api:app" if _env_bool("APP_PREVIEW_MODE", False) else "engine.api_v2:app"
+    uvicorn.run(app_module, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
