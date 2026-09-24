@@ -91,6 +91,12 @@ private data class PreviewStatus(
     val positionTargetPrice: Double? = null,
     val positionHeldSeconds: Double? = null,
     val positionMaxHoldSeconds: Int? = null,
+    val closedTradeSymbol: String? = null,
+    val closedTradeQuantity: Int = 0,
+    val closedTradeFillPrice: Double? = null,
+    val closedTradeRealizedPnl: Double? = null,
+    val closedTradeReason: String? = null,
+    val closedTradeSettlementDate: String? = null,
 )
 
 private class PreviewBackend {
@@ -180,12 +186,16 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
     val paper = root.optJSONObject("paper") ?: JSONObject()
     val automation = root.optJSONObject("paper_automation") ?: JSONObject()
     val position = automation.optJSONObject("position")
+    val closedTrade = automation.optJSONObject("closed_trade")
 
     fun nullableDouble(obj: JSONObject?, key: String): Double? =
         if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
 
     fun nullableInt(obj: JSONObject?, key: String): Int? =
         if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optInt(key)
+
+    fun nullableString(obj: JSONObject?, key: String): String? =
+        obj?.optString(key)?.takeIf { it.isNotBlank() }
 
     return PreviewStatus(
         mode = root.optString("mode", "PAPER"),
@@ -205,7 +215,7 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
         paperRealizedPnl = paper.optDouble("realized_pnl", 0.0),
         paperOpenPositions = paper.optInt("open_positions", 0),
         paperTradeCount = paper.optInt("trade_count", 0),
-        positionSymbol = position?.optString("symbol")?.takeIf { it.isNotBlank() },
+        positionSymbol = nullableString(position, "symbol"),
         positionQuantity = position?.optInt("quantity", 0) ?: 0,
         positionAverageCost = nullableDouble(position, "average_cost"),
         positionMarkValue = nullableDouble(position, "mark_value"),
@@ -215,6 +225,12 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
         positionTargetPrice = nullableDouble(position, "target_price"),
         positionHeldSeconds = nullableDouble(position, "held_seconds"),
         positionMaxHoldSeconds = nullableInt(position, "max_hold_seconds"),
+        closedTradeSymbol = nullableString(closedTrade, "symbol"),
+        closedTradeQuantity = closedTrade?.optInt("quantity", 0) ?: 0,
+        closedTradeFillPrice = nullableDouble(closedTrade, "fill_price"),
+        closedTradeRealizedPnl = nullableDouble(closedTrade, "realized_pnl"),
+        closedTradeReason = nullableString(closedTrade, "reason"),
+        closedTradeSettlementDate = nullableString(closedTrade, "settlement_date"),
     )
 }
 
@@ -372,6 +388,26 @@ private fun PreviewLive(
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
                     Text("ACTIVE PAPER POSITION", fontWeight = FontWeight.Bold)
                     Text("No open position. The engine is scanning today's SPY 0DTE contracts.")
+                }
+            }
+        }
+
+        if (status.closedTradeSymbol != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("LAST CLOSED TRADE", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(status.closedTradeSymbol, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Quantity: ${status.closedTradeQuantity}")
+                    Text("Exit fill: ${money(status.closedTradeFillPrice)}")
+                    val realized = status.closedTradeRealizedPnl
+                    Text(
+                        "Realized P&L: ${signedMoney(realized)}",
+                        color = if ((realized ?: 0.0) < 0.0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text("Exit reason: ${status.closedTradeReason ?: "—"}")
+                    Text("Settlement: ${status.closedTradeSettlementDate ?: "—"}")
                 }
             }
         }
