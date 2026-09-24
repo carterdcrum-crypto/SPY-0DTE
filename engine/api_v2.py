@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, HTTPException, Query
@@ -26,9 +27,23 @@ def _default_paper_cash() -> float:
     return value
 
 
+def _paper_db_path() -> str:
+    explicit = os.environ.get("PAPER_DB_PATH", "").strip()
+    if explicit:
+        return explicit
+
+    # Railway keeps control state on its /data volume. Tests and local runs often
+    # override CONTROL_DB_PATH, so colocating paper state beside that database
+    # avoids assuming /data is writable outside Railway.
+    control_path = os.environ.get("CONTROL_DB_PATH", "").strip()
+    if control_path:
+        return str(Path(control_path).with_name("spy_paper.sqlite"))
+    return "/data/spy_paper.sqlite"
+
+
 def _paper_store() -> PaperAccountStore:
     return PaperAccountStore(
-        os.environ.get("PAPER_DB_PATH", "/data/spy_paper.sqlite"),
+        _paper_db_path(),
         default_starting_cash=_default_paper_cash(),
     )
 
