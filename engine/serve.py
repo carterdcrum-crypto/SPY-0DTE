@@ -25,7 +25,6 @@ def _ensure_encryption_key() -> None:
         temp_path.replace(key_path)
         os.chmod(key_path, 0o600)
 
-    # Validate before exposing it to the API process.
     Fernet(key.encode("ascii"))
     os.environ["APP_ENCRYPTION_KEY"] = key
 
@@ -33,7 +32,7 @@ def _ensure_encryption_key() -> None:
 def main() -> None:
     _ensure_encryption_key()
     port = int(os.environ.get("PORT", "8080"))
-    uvicorn.run("engine.api:app", host="0.0.0.0", port=port)
+    uvicorn.run("engine.api_v2:app", host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
