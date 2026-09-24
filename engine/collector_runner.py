@@ -18,10 +18,11 @@ EASTERN = ZoneInfo("America/New_York")
 @dataclass(frozen=True)
 class CollectorRunnerSettings:
     db_path: Path = Path("/data/spy_0dte.sqlite")
-    interval_seconds: int = 60
+    interval_seconds: int = 2
     idle_sleep_seconds: int = 300
     market_open: time = time(9, 45)
     market_close: time = time(16, 0)
+    maximum_backoff_seconds: int = 120
 
 
 def _parse_hhmm(value: str) -> time:
@@ -45,7 +46,7 @@ def settings_from_env(env: Mapping[str, str] | None = None) -> CollectorRunnerSe
     return CollectorRunnerSettings(
         db_path=Path(values.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite")),
         interval_seconds=_positive_int(
-            values.get("COLLECTOR_INTERVAL_SECONDS", "60"),
+            values.get("COLLECTOR_INTERVAL_SECONDS", "2"),
             name="COLLECTOR_INTERVAL_SECONDS",
         ),
         idle_sleep_seconds=_positive_int(
@@ -54,6 +55,10 @@ def settings_from_env(env: Mapping[str, str] | None = None) -> CollectorRunnerSe
         ),
         market_open=_parse_hhmm(values.get("COLLECTOR_MARKET_OPEN_ET", "09:45")),
         market_close=_parse_hhmm(values.get("COLLECTOR_MARKET_CLOSE_ET", "16:00")),
+        maximum_backoff_seconds=_positive_int(
+            values.get("COLLECTOR_MAX_BACKOFF_SECONDS", "120"),
+            name="COLLECTOR_MAX_BACKOFF_SECONDS",
+        ),
     )
 
 
@@ -83,6 +88,13 @@ def _credentials_from_env() -> tuple[str, str]:
     return app_key, app_secret
 
 
+def _backoff_seconds(settings: CollectorRunnerSettings, consecutive_failures: int) -> int:
+    if consecutive_failures <= 0:
+        return settings.interval_seconds
+    multiplier = 2 ** min(consecutive_failures, 6)
+    return min(settings.maximum_backoff_seconds, settings.interval_seconds * multiplier)
+
+
 def run_forever() -> None:
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO").upper(),
@@ -90,12 +102,18 @@ def run_forever() -> None:
     )
     log = logging.getLogger("spy0dte.collector")
 
+    # The Webull SDK includes signed request headers in some exception logs.
+    # Suppress those internals so credentials/signatures never spill into Railway logs.
+    for logger_name in ("webull", "webull.core", "webull.core.client"):
+        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
+
     settings = settings_from_env()
     app_key, app_secret = _credentials_from_env()
 
     settings.db_path.parent.mkdir(parents=True, exist_ok=True)
     provider = WebullFreeDataProvider(app_key=app_key, app_secret=app_secret)
     store = SnapshotStore(settings.db_path)
+    consecutive_failures = 0
 
     log.info(
         "collector started source=webull_sandbox_delayed db=%s interval=%ss window=%s-%s ET",
@@ -117,18 +135,27 @@ def run_forever() -> None:
                         trade_date,
                         observed_at=now,
                     )
+                    consecutive_failures = 0
                     log.info(
                         "collection complete trade_date=%s rows=%d total_rows=%d",
                         trade_date.isoformat(),
                         len(snapshots),
                         store.count(),
                     )
-                except Exception:
-                    # Do not terminate the service for a transient broker/data error.
-                    # Secrets are never interpolated into this log message.
-                    log.exception("collection cycle failed")
-                sleep_seconds = settings.interval_seconds
+                    sleep_seconds = settings.interval_seconds
+                except Exception as exc:
+                    # Transient 429/network failures should slow the collector instead
+                    # of hammering the provider or terminating the service.
+                    consecutive_failures += 1
+                    sleep_seconds = _backoff_seconds(settings, consecutive_failures)
+                    log.warning(
+                        "collection cycle failed type=%s retry_in=%ss failures=%d",
+                        type(exc).__name__,
+                        sleep_seconds,
+                        consecutive_failures,
+                    )
             else:
+                consecutive_failures = 0
                 sleep_seconds = settings.idle_sleep_seconds
 
             time_module.sleep(sleep_seconds)
