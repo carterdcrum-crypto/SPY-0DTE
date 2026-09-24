@@ -82,7 +82,7 @@ base.status_payload = status_payload
 
 @asynccontextmanager
 async def lifespan(app):
-    if _env_bool("START_PAPER_AUTOTRADER", True):
+    if _env_bool("START_PAPER_AUTOTRADER", False):
         thread = threading.Thread(
             target=run_paper_autotrader,
             args=(lambda: base._control_store().get_mode().value,),
