@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field
 
 from . import api as base
 from .paper_account import PaperAccountStore
-from .paper_autotrader import automation_status, run_forever as run_paper_autotrader
+from .paper_autotrader import automation_status
+from .paper_dynamic_autotrader import run_forever as run_paper_autotrader
 
 
 class PaperResetRequest(BaseModel):
