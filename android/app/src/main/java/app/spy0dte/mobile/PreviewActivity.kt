@@ -67,6 +67,7 @@ private data class PreviewStatus(
     val mode: String = "PAPER",
     val decision: String = "CONNECTING",
     val decisionReason: String = "Connecting to Railway backend",
+    val strategy: String = "bootstrap_momentum_v1",
     val spot: Double? = null,
     val rows: Int = 0,
     val dataAgeSeconds: Double? = null,
@@ -80,6 +81,22 @@ private data class PreviewStatus(
     val paperRealizedPnl: Double = 0.0,
     val paperOpenPositions: Int = 0,
     val paperTradeCount: Int = 0,
+    val positionSymbol: String? = null,
+    val positionQuantity: Int = 0,
+    val positionAverageCost: Double? = null,
+    val positionMarkValue: Double? = null,
+    val positionUnrealizedPnl: Double? = null,
+    val positionEntrySpot: Double? = null,
+    val positionStopPrice: Double? = null,
+    val positionTargetPrice: Double? = null,
+    val positionHeldSeconds: Double? = null,
+    val positionMaxHoldSeconds: Int? = null,
+    val closedTradeSymbol: String? = null,
+    val closedTradeQuantity: Int = 0,
+    val closedTradeFillPrice: Double? = null,
+    val closedTradeRealizedPnl: Double? = null,
+    val closedTradeReason: String? = null,
+    val closedTradeSettlementDate: String? = null,
 )
 
 private class PreviewBackend {
@@ -167,14 +184,24 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
     val cadence = root.optJSONObject("cadence") ?: JSONObject()
     val decision = root.optJSONObject("decision") ?: JSONObject()
     val paper = root.optJSONObject("paper") ?: JSONObject()
+    val automation = root.optJSONObject("paper_automation") ?: JSONObject()
+    val position = automation.optJSONObject("position")
+    val closedTrade = automation.optJSONObject("closed_trade")
 
-    fun nullableDouble(obj: JSONObject, key: String): Double? =
-        if (!obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
+    fun nullableDouble(obj: JSONObject?, key: String): Double? =
+        if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
+
+    fun nullableInt(obj: JSONObject?, key: String): Int? =
+        if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optInt(key)
+
+    fun nullableString(obj: JSONObject?, key: String): String? =
+        obj?.optString(key)?.takeIf { it.isNotBlank() }
 
     return PreviewStatus(
         mode = root.optString("mode", "PAPER"),
-        decision = decision.optString("state", "RESEARCH_ONLY"),
-        decisionReason = decision.optString("reason", ""),
+        decision = decision.optString("state", automation.optString("state", "RESEARCH_ONLY")),
+        decisionReason = decision.optString("reason", automation.optString("reason", "")),
+        strategy = automation.optString("strategy", "bootstrap_momentum_v1"),
         spot = nullableDouble(market, "spot"),
         rows = market.optInt("rows", 0),
         dataAgeSeconds = nullableDouble(market, "data_age_seconds"),
@@ -188,6 +215,22 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
         paperRealizedPnl = paper.optDouble("realized_pnl", 0.0),
         paperOpenPositions = paper.optInt("open_positions", 0),
         paperTradeCount = paper.optInt("trade_count", 0),
+        positionSymbol = nullableString(position, "symbol"),
+        positionQuantity = position?.optInt("quantity", 0) ?: 0,
+        positionAverageCost = nullableDouble(position, "average_cost"),
+        positionMarkValue = nullableDouble(position, "mark_value"),
+        positionUnrealizedPnl = nullableDouble(position, "unrealized_pnl"),
+        positionEntrySpot = nullableDouble(position, "entry_spot"),
+        positionStopPrice = nullableDouble(position, "stop_price"),
+        positionTargetPrice = nullableDouble(position, "target_price"),
+        positionHeldSeconds = nullableDouble(position, "held_seconds"),
+        positionMaxHoldSeconds = nullableInt(position, "max_hold_seconds"),
+        closedTradeSymbol = nullableString(closedTrade, "symbol"),
+        closedTradeQuantity = closedTrade?.optInt("quantity", 0) ?: 0,
+        closedTradeFillPrice = nullableDouble(closedTrade, "fill_price"),
+        closedTradeRealizedPnl = nullableDouble(closedTrade, "realized_pnl"),
+        closedTradeReason = nullableString(closedTrade, "reason"),
+        closedTradeSettlementDate = nullableString(closedTrade, "settlement_date"),
     )
 }
 
@@ -246,7 +289,7 @@ private fun WorkingPreviewApp(activity: Activity) {
         ) {
             Column {
                 Text("SPY 0DTE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(if (connectionError == null) "● PAPER PREVIEW CONNECTED" else "◌ RECONNECTING TO BACKEND")
+                Text(if (connectionError == null) "● PAPER ENGINE CONNECTED" else "◌ RECONNECTING TO BACKEND")
             }
             Text(status.mode, fontWeight = FontWeight.Bold)
         }
@@ -292,7 +335,7 @@ private fun PreviewLive(
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Column(Modifier.fillMaxWidth().padding(14.dp)) {
                 Text("LOGIN TEMPORARILY OFF", fontWeight = FontWeight.Bold)
-                Text("This is connected to the real paper backend. LIVE stays server-locked until authentication is restored.")
+                Text("Connected to the real Railway paper engine. LIVE stays server-locked until authentication is restored.")
             }
         }
 
@@ -310,7 +353,62 @@ private fun PreviewLive(
                 Text(status.decision, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
                 Text(status.decisionReason)
+                Text("Strategy: ${status.strategy}")
                 Text("Feed delay: ${status.feedDelaySeconds?.let { "%.0fs".format(it) } ?: "—"}")
+            }
+        }
+
+        if (status.positionSymbol != null && status.paperOpenPositions > 0) {
+            Card {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("ACTIVE PAPER POSITION", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(status.positionSymbol, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Quantity: ${status.positionQuantity}")
+                    Text("Entry cost: ${money(status.positionAverageCost)}")
+                    Text("Live mark: ${money(status.positionMarkValue)}")
+                    val pnl = status.positionUnrealizedPnl
+                    Text(
+                        "Unrealized P&L: ${signedMoney(pnl)}",
+                        color = if ((pnl ?: 0.0) < 0.0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text("SPY at entry: ${status.positionEntrySpot?.let { "%.2f".format(it) } ?: "—"}")
+                    Text("Stop: ${money(status.positionStopPrice)}")
+                    Text("Target: ${money(status.positionTargetPrice)}")
+                    Text(
+                        "Held: ${status.positionHeldSeconds?.let { "%.0fs".format(it) } ?: "—"} / " +
+                            "${status.positionMaxHoldSeconds?.let { "${it}s" } ?: "—"}",
+                    )
+                    Text("Exit monitoring is automatic in PAPER mode.")
+                }
+            }
+        } else {
+            Card {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("ACTIVE PAPER POSITION", fontWeight = FontWeight.Bold)
+                    Text("No open position. The engine is scanning today's SPY 0DTE contracts.")
+                }
+            }
+        }
+
+        if (status.closedTradeSymbol != null) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                    Text("LAST CLOSED TRADE", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text(status.closedTradeSymbol, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Quantity: ${status.closedTradeQuantity}")
+                    Text("Exit fill: ${money(status.closedTradeFillPrice)}")
+                    val realized = status.closedTradeRealizedPnl
+                    Text(
+                        "Realized P&L: ${signedMoney(realized)}",
+                        color = if ((realized ?: 0.0) < 0.0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text("Exit reason: ${status.closedTradeReason ?: "—"}")
+                    Text("Settlement: ${status.closedTradeSettlementDate ?: "—"}")
+                }
             }
         }
 
@@ -321,7 +419,7 @@ private fun PreviewLive(
                 Text("Starting cash: $${"%.2f".format(status.paperStartingCash)}")
                 Text("Settled cash: $${"%.2f".format(status.paperSettledCash)}")
                 Text("Unsettled cash: $${"%.2f".format(status.paperUnsettledCash)}")
-                Text("Realized P&L: $${"%.2f".format(status.paperRealizedPnl)}")
+                Text("Realized P&L: ${signedMoney(status.paperRealizedPnl)}")
                 Text("Open positions: ${status.paperOpenPositions}")
                 Text("Trades: ${status.paperTradeCount}")
             }
@@ -359,6 +457,13 @@ private fun PreviewLive(
         }
     }
 }
+
+private fun money(value: Double?): String = value?.let { "$${"%.2f".format(it)}" } ?: "—"
+
+private fun signedMoney(value: Double?): String = value?.let {
+    val sign = if (it >= 0.0) "+" else "-"
+    "$sign$${"%.2f".format(kotlin.math.abs(it))}"
+} ?: "—"
 
 @Composable
 private fun PreviewMetric(label: String, value: String) {
@@ -403,14 +508,14 @@ private fun PreviewSettings(status: PreviewStatus, backend: PreviewBackend) {
             },
             enabled = (paperCash.toDoubleOrNull() ?: 0.0) > 0.0,
         ) { Text("Reset paper account") }
-        Text("This changes the real simulated paper account on Railway; it does not touch real money.")
+        Text("This changes the simulated paper account on Railway; it does not touch real money.")
 
         Spacer(Modifier.height(8.dp))
         Text("Broker settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Temporarily locked while login is off", fontWeight = FontWeight.Bold)
-                Text("Webull keys are not accepted by the anonymous preview backend. We can turn credential entry back on after you approve the app UI and authentication returns.")
+                Text("Webull keys are not accepted by the anonymous preview backend. Credential entry can return after the app UI is approved and authentication is restored.")
             }
         }
 
