@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Callable
 
 from .paper_account import PaperAccountStore
-from .paper_ai_autotrader import AIAugmentedDynamicExitTrader, AI_PROFILE
+from .paper_ai_autotrader import AI_PROFILE
+from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
 from .paper_autotrader import (
     PaperAutoSettings,
     SnapshotReader,
@@ -22,13 +23,13 @@ from .paper_delayed_simulation import (
     representative_feed_delay,
 )
 from .paper_dynamic_autotrader import risk_config_from_env
-from .paper_dynamic_exit import EXIT_PROFILE
 from .paper_ensemble_autotrader import RISK_PROFILE, SIGNAL_STRATEGY, _feed_delay_limit
+from .paper_exit_policy_v2 import SAFER_EXIT_PROFILE
 
 log = logging.getLogger("spy0dte.paper.ai_delayed")
 
 
-class AIDelayedSimulationPaperAutoTrader(AIAugmentedDynamicExitTrader):
+class AIDelayedSimulationPaperAutoTrader(SaferAIAugmentedDynamicExitTrader):
     """AI-augmented ensemble running strictly on the delayed paper tape."""
 
     def __init__(
@@ -130,7 +131,7 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
         ),
         strategy=SIGNAL_STRATEGY,
         risk_profile=RISK_PROFILE,
-        exit_profile=EXIT_PROFILE,
+        exit_profile=SAFER_EXIT_PROFILE,
         ai_profile=AI_PROFILE,
         ai_advisory=trader.ai_engine.status(),
         data_mode=DATA_MODE,
@@ -139,7 +140,7 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
         "delayed AI paper simulator started signal=%s risk=%s exit=%s ai=%s providers=%s tick=%.2fs",
         SIGNAL_STRATEGY,
         RISK_PROFILE,
-        EXIT_PROFILE,
+        SAFER_EXIT_PROFILE,
         AI_PROFILE,
         ",".join(provider.name for provider in trader.ai_engine.providers) or "none",
         settings.tick_seconds,
@@ -155,7 +156,7 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
                 state="ERROR",
                 reason=f"{type(exc).__name__}: {exc}",
                 data_mode=DATA_MODE,
-                exit_profile=EXIT_PROFILE,
+                exit_profile=SAFER_EXIT_PROFILE,
                 ai_profile=AI_PROFILE,
                 last_tick=datetime.now(timezone.utc).isoformat(),
             )
