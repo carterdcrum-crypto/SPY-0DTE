@@ -4,21 +4,33 @@ import os
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from . import api as base
+from .broker import OptionOrderRequest
 from .paper_account import PaperAccountStore
 from .paper_ai_autotrader import run_forever as run_realtime_paper_autotrader
 from .paper_ai_delayed_simulation import run_forever as run_delayed_paper_autotrader
 from .paper_autotrader import automation_status
+from .tradier_live import TradierLiveClient, TradierLiveError, tradier_env_status
 
 
 class PaperResetRequest(BaseModel):
     starting_cash: float = Field(gt=0, le=1_000_000)
     confirmation: str
+
+
+class TradierPreviewRequest(BaseModel):
+    client_order_id: str = Field(min_length=1, max_length=32)
+    strike_price: float = Field(gt=0)
+    expiration_date: str
+    option_type: Literal["CALL", "PUT"]
+    position_intent: Literal["BUY_TO_OPEN", "SELL_TO_CLOSE"]
+    quantity: int = Field(ge=1, le=10)
+    limit_price: float = Field(gt=0, le=1000)
 
 
 def _default_paper_cash() -> float:
@@ -57,6 +69,45 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _selected_live_broker() -> str:
+    return os.environ.get("LIVE_BROKER", "webull").strip().lower() or "webull"
+
+
+_original_live_gate = base._live_gate
+
+
+def _live_gate(store: base.ControlStore) -> dict[str, Any]:
+    if _selected_live_broker() != "tradier":
+        return _original_live_gate(store)
+
+    reasons: list[str] = []
+    if not _env_bool("ALLOW_LIVE_ORDERS", False):
+        reasons.append("live_orders_disabled")
+    if not _env_bool("LIVE_ORDER_EXECUTOR_READY", False):
+        reasons.append("live_order_executor_not_ready")
+
+    status = tradier_env_status()
+    if not status["token_configured"]:
+        reasons.append("tradier_production_token_missing")
+    if not status["account_configured"]:
+        reasons.append("tradier_account_id_missing")
+
+    # The current APK intentionally removed Google sign-in for paper-preview use.
+    # Do not let that unauthenticated preview build become a real-money control
+    # surface. A dedicated owner-authenticated build is required before LIVE can
+    # ever become selectable.
+    if _env_bool("APP_PREVIEW_MODE", False):
+        reasons.append("owner_auth_required_for_live")
+
+    return {
+        "ready": not reasons,
+        "provider": "tradier",
+        "execution": "preview_only",
+        "reasons": reasons,
+    }
+
+
+base._live_gate = _live_gate
 _original_status_payload = base.status_payload
 _original_lifespan = base.app.router.lifespan_context
 
@@ -67,6 +118,11 @@ def status_payload() -> dict[str, Any]:
     automation = automation_status()
     payload["paper"] = paper
     payload["paper_automation"] = automation
+    payload["live_broker"] = {
+        **tradier_env_status(),
+        "selected": _selected_live_broker() == "tradier",
+        "real_order_submission": False,
+    }
 
     decision = payload.get("decision")
     if isinstance(decision, dict):
@@ -140,3 +196,77 @@ def reset_paper_account(
     if request.confirmation != "RESET PAPER ACCOUNT":
         raise HTTPException(status_code=400, detail="explicit paper-account reset confirmation required")
     return _paper_store().reset(request.starting_cash).as_dict()
+
+
+@app.get("/v1/broker/tradier/readiness")
+def tradier_readiness(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
+    status = tradier_env_status()
+    result: dict[str, Any] = {**status, "connected": False}
+    if not status["configured"]:
+        return result
+
+    try:
+        client = TradierLiveClient.from_env()
+        account = client.account_profile()
+        balances_payload = client.balances(account.account_number)
+    except (TradierLiveError, ValueError) as exc:
+        result["error"] = str(exc)
+        return result
+
+    balances = balances_payload.get("balances")
+    if not isinstance(balances, dict):
+        balances = {}
+    safe_balance_keys = (
+        "total_cash",
+        "option_buying_power",
+        "total_equity",
+        "open_pl",
+        "close_pl",
+    )
+    result.update(
+        {
+            "connected": True,
+            "account": account.as_dict(),
+            "balances": {key: balances.get(key) for key in safe_balance_keys},
+        }
+    )
+    return result
+
+
+@app.post("/v1/broker/tradier/preview")
+def preview_tradier_option_order(
+    request: TradierPreviewRequest,
+    _: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    account_id = os.environ.get("TRADIER_ACCOUNT_ID", "").strip()
+    if not account_id:
+        raise HTTPException(status_code=409, detail="Tradier account is not configured")
+    if base._control_store().get_mode() is base.TradingMode.LIVE:
+        # Preview remains safe in LIVE, but make the response explicit that this
+        # endpoint never submits to the market.
+        pass
+
+    order = OptionOrderRequest(
+        account_id=account_id,
+        client_order_id=request.client_order_id,
+        underlying="SPY",
+        strike_price=request.strike_price,
+        expiration_date=request.expiration_date,
+        option_type=request.option_type,
+        side="BUY" if request.position_intent == "BUY_TO_OPEN" else "SELL",
+        position_intent=request.position_intent,
+        quantity=request.quantity,
+        limit_price=request.limit_price,
+    )
+    try:
+        payload = TradierLiveClient.from_env().preview_option_order(order)
+    except TradierLiveError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {
+        "provider": "tradier",
+        "preview": True,
+        "submitted": False,
+        "result": payload,
+    }
