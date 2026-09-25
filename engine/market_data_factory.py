@@ -28,6 +28,19 @@ def _required(name: str) -> str:
     return value
 
 
+def _tradier_token() -> str:
+    """Use one production Tradier token for both market data and account reads.
+
+    TRADIER_MARKET_DATA_TOKEN remains supported as an optional market-data-only
+    override, but ordinary personal deployments only need TRADIER_ACCESS_TOKEN.
+    """
+
+    return (
+        os.environ.get("TRADIER_MARKET_DATA_TOKEN", "").strip()
+        or os.environ.get("TRADIER_ACCESS_TOKEN", "").strip()
+    )
+
+
 def _webull_provider(*, production: bool) -> Any:
     app_key = _required("WEBULL_APP_KEY")
     app_secret = _required("WEBULL_APP_SECRET")
@@ -54,25 +67,29 @@ def provider_from_env() -> Any:
     """Build the configured market-data-only provider.
 
     MARKET_DATA_PROVIDER values:
-      auto              Prefer Tradier production real-time when its token exists,
-                        otherwise use the existing Webull sandbox collector.
+      auto              Prefer Tradier production real-time when a production
+                        Tradier token exists, otherwise use Webull sandbox.
       tradier           Require a Tradier Brokerage production token.
       webull-production Try Webull's production OpenAPI market-data host. Real-time
                         options still require the user's OpenAPI OPRA entitlement.
       webull-sandbox    Explicit delayed sandbox fallback.
 
+    The normal Tradier setup uses TRADIER_ACCESS_TOKEN for both account access and
+    production market data. TRADIER_MARKET_DATA_TOKEN can optionally override it.
     This factory exposes market data only. It never creates a broker order client.
     """
 
     requested = os.environ.get("MARKET_DATA_PROVIDER", "auto").strip().lower()
     if requested == "auto":
-        if os.environ.get("TRADIER_MARKET_DATA_TOKEN", "").strip():
-            requested = "tradier"
-        else:
-            requested = "webull-sandbox"
+        requested = "tradier" if _tradier_token() else "webull-sandbox"
 
     if requested == "tradier":
-        return TradierRealtimeDataProvider(_required("TRADIER_MARKET_DATA_TOKEN"))
+        token = _tradier_token()
+        if not token:
+            raise RuntimeError(
+                "missing required market-data credential: TRADIER_ACCESS_TOKEN"
+            )
+        return TradierRealtimeDataProvider(token)
     if requested in {"webull-production", "webull_production"}:
         return _webull_provider(production=True)
     if requested in {"webull-sandbox", "webull_sandbox", "sandbox"}:
