@@ -23,6 +23,10 @@ class PaperResetRequest(BaseModel):
     confirmation: str
 
 
+class PaperAutonomyRequest(BaseModel):
+    armed: bool
+
+
 class TradierPreviewRequest(BaseModel):
     client_order_id: str = Field(min_length=1, max_length=32)
     strike_price: float = Field(gt=0)
@@ -73,6 +77,33 @@ def _selected_live_broker() -> str:
     return os.environ.get("LIVE_BROKER", "webull").strip().lower() or "webull"
 
 
+def _paper_autonomy_payload() -> dict[str, Any]:
+    """Describe the credential-free autonomous simulation control plane.
+
+    PAPER arms autonomous simulated entries and exits. SHADOW disarms new paper
+    entries while the paper runner keeps managing any already-open simulated
+    position so disarming cannot orphan a position. This path writes only to the
+    local paper ledger and never calls a production broker order endpoint.
+    """
+
+    mode = base._control_store().get_mode()
+    runner_enabled = _env_bool("START_PAPER_AUTOTRADER", False)
+    armed = mode is base.TradingMode.PAPER
+    return {
+        "armed": armed,
+        "mode": mode.value,
+        "engine_running": runner_enabled,
+        "execution": "local_paper_ledger",
+        "broker_credentials_required": False,
+        "live_order_submission": False,
+        "production_isolated": True,
+        "new_entries_enabled": runner_enabled and armed,
+        "existing_position_management_enabled": runner_enabled,
+        "dynamic_exits_enabled": runner_enabled,
+        "disarmed_behavior": "block_new_entries_manage_existing_positions",
+    }
+
+
 _original_live_gate = base._live_gate
 
 
@@ -118,6 +149,7 @@ def status_payload() -> dict[str, Any]:
     automation = automation_status()
     payload["paper"] = paper
     payload["paper_automation"] = automation
+    payload["paper_autonomy"] = _paper_autonomy_payload()
     payload["live_broker"] = {
         **tradier_env_status(),
         "selected": _selected_live_broker() == "tradier",
@@ -183,6 +215,21 @@ def paper_trades(
 @app.get("/v1/paper/automation")
 def paper_automation(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
     return automation_status()
+
+
+@app.get("/v1/paper/autonomy")
+def paper_autonomy(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
+    return _paper_autonomy_payload()
+
+
+@app.post("/v1/paper/autonomy")
+def set_paper_autonomy(
+    request: PaperAutonomyRequest,
+    _: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    store = base._control_store()
+    store.set_mode(base.TradingMode.PAPER if request.armed else base.TradingMode.SHADOW)
+    return _paper_autonomy_payload()
 
 
 @app.post("/v1/paper/reset")
