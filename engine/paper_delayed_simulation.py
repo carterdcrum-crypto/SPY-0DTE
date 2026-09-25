@@ -19,10 +19,10 @@ from .paper_autotrader import (
     _publish,
 )
 from .paper_dynamic_autotrader import risk_config_from_env
+from .paper_dynamic_exit import DynamicExitEnsemblePaperAutoTrader, EXIT_PROFILE
 from .paper_ensemble_autotrader import (
     RISK_PROFILE,
     SIGNAL_STRATEGY,
-    EnsemblePaperAutoTrader,
     _feed_delay_limit,
 )
 
@@ -77,7 +77,7 @@ class DelayedSimulationReader:
         return None if row is None else _neutralize_row(row)
 
 
-class DelayedSimulationPaperAutoTrader(EnsemblePaperAutoTrader):
+class DelayedSimulationPaperAutoTrader(DynamicExitEnsemblePaperAutoTrader):
     """Run the ensemble against delayed quotes on their own simulated clock."""
 
     def __init__(
@@ -180,17 +180,19 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
         enabled=True,
         state="STARTING",
         reason=(
-            "zero-cost delayed-tape SHADOW/PAPER loop starting; source delay is "
-            "time-shifted and never treated as live execution data"
+            "zero-cost delayed-tape SHADOW/PAPER loop starting with dynamic remaining-edge exits; "
+            "source delay is time-shifted and never treated as live execution data"
         ),
         strategy=SIGNAL_STRATEGY,
         risk_profile=RISK_PROFILE,
+        exit_profile=EXIT_PROFILE,
         data_mode=DATA_MODE,
     )
     log.info(
-        "delayed paper simulator started signal=%s risk=%s tick=%.2fs market_db=%s",
+        "delayed paper simulator started signal=%s risk=%s exit=%s tick=%.2fs market_db=%s",
         SIGNAL_STRATEGY,
         RISK_PROFILE,
+        EXIT_PROFILE,
         settings.tick_seconds,
         market_path,
     )
@@ -205,6 +207,7 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
                 state="ERROR",
                 reason=f"{type(exc).__name__}: {exc}",
                 data_mode=DATA_MODE,
+                exit_profile=EXIT_PROFILE,
                 last_tick=datetime.now(timezone.utc).isoformat(),
             )
         elapsed = time.monotonic() - started
