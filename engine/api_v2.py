@@ -12,7 +12,8 @@ from pydantic import BaseModel, Field
 from . import api as base
 from .paper_account import PaperAccountStore
 from .paper_autotrader import automation_status
-from .paper_ensemble_autotrader import run_forever as run_paper_autotrader
+from .paper_delayed_simulation import run_forever as run_delayed_paper_autotrader
+from .paper_ensemble_autotrader import run_forever as run_realtime_paper_autotrader
 
 
 class PaperResetRequest(BaseModel):
@@ -84,8 +85,13 @@ base.status_payload = status_payload
 @asynccontextmanager
 async def lifespan(app):
     if _env_bool("START_PAPER_AUTOTRADER", False):
+        runner = (
+            run_delayed_paper_autotrader
+            if _env_bool("PAPER_DELAYED_SIMULATION", False)
+            else run_realtime_paper_autotrader
+        )
         thread = threading.Thread(
-            target=run_paper_autotrader,
+            target=runner,
             args=(lambda: base._control_store().get_mode().value,),
             name="spy0dte-paper-autotrader",
             daemon=True,
