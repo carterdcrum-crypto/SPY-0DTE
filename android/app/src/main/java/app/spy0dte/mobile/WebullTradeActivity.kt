@@ -10,25 +10,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -75,68 +63,16 @@ class WebullTradeActivity : ComponentActivity() {
             )
         }
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(Modifier.fillMaxSize()) { WebullTradeApp(this) }
+            MatrixTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = MatrixColors.Background) {
+                    WebullTradeApp(this)
+                }
             }
         }
     }
 }
 
-private data class RiskState(
-    val armed: Boolean = false,
-    val loss: Double? = null,
-    val gain: Double? = null,
-    val exposure: Double? = null,
-    val contracts: Int? = null,
-)
-
-private data class LiveAlert(
-    val symbol: String,
-    val right: String,
-    val bid: Double?,
-    val ask: Double?,
-    val contracts: Int,
-    val maxDebit: Double?,
-)
-
-private data class ScreenStatus(
-    val mode: String = "PAPER",
-    val connected: Boolean = false,
-    val decision: String = "CONNECTING",
-    val reason: String = "Waiting for Railway",
-    val strategy: String = "—",
-    val riskProfile: String = "—",
-    val exitProfile: String = "—",
-    val spot: Double? = null,
-    val dataAge: Double? = null,
-    val feedDelay: Double? = null,
-    val liveReady: Boolean = false,
-    val liveReasons: List<String> = emptyList(),
-    val broker: String = "webull",
-    val brokerConfigured: Boolean = false,
-    val brokerConnected: Boolean = false,
-    val risk: RiskState = RiskState(),
-    val alert: LiveAlert? = null,
-    val paperCash: Double? = null,
-    val paperPnl: Double? = null,
-    val paperPositions: Int = 0,
-    val paperTrades: Int = 0,
-    val paperArmed: Boolean = false,
-)
-
-private data class PreparedTrade(
-    val ticket: String,
-    val expiresSeconds: Int,
-    val orderJson: String,
-    val optionType: String,
-    val strike: Double,
-    val expiration: String,
-    val quantity: Int,
-    val limitPrice: Double,
-    val maxDebit: Double,
-)
-
-private class TradeBackend(private val token: String) {
+internal class TradeBackend(private val token: String) {
     private val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
     private val http = OkHttpClient.Builder()
         .pingInterval(15, TimeUnit.SECONDS)
@@ -160,9 +96,9 @@ private class TradeBackend(private val token: String) {
                 .build(),
             object : WebSocketListener() {
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    runCatching { parseStatus(text) }.onSuccess(onStatus).onFailure {
-                        onError("Bad Railway status: ${it.message}")
-                    }
+                    runCatching { parseStatus(text) }
+                        .onSuccess(onStatus)
+                        .onFailure { onError("Bad Railway status: ${it.message}") }
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -285,6 +221,55 @@ private fun parseStatus(text: String): ScreenStatus {
         )
     }
 
+    val guard = broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
+    val brokerState = BrokerState(
+        connected = guard.optBoolean("connected", broker.optBoolean("connected", false)),
+        entryAllowed = guard.optBoolean("entry_allowed", false),
+        cashAvailable = number(guard, "cash_available"),
+        totalEquity = number(guard, "total_equity"),
+        dailyPnl = number(guard, "daily_total_pnl"),
+        openPnl = number(guard, "daily_open_pnl"),
+        openPositions = guard.optInt("open_positions", 0),
+        pendingOrders = guard.optInt("pending_orders_count", 0),
+        maxEntryDebit = number(guard, "max_entry_debit"),
+    )
+
+    val aiDecision = automation.optJSONObject("ai_decision") ?: JSONObject()
+    val blend = aiDecision.optJSONObject("blend") ?: JSONObject()
+    val directConsensus = aiDecision.optJSONObject("consensus")
+    val advisoryConsensus = automation
+        .optJSONObject("ai_advisory")
+        ?.optJSONObject("latest")
+    val consensus = directConsensus ?: advisoryConsensus ?: JSONObject()
+
+    val providerStates = buildList {
+        consensus.optJSONArray("providers")?.let { values ->
+            for (index in 0 until values.length()) {
+                val provider = values.optJSONObject(index) ?: continue
+                val name = provider.optString("provider").trim()
+                if (name.isBlank()) continue
+                add(
+                    AiProviderState(
+                        provider = name,
+                        probabilityUp = number(provider, "probability_up"),
+                        confidence = number(provider, "confidence"),
+                    ),
+                )
+            }
+        }
+    }
+
+    val ai = AiDecisionState(
+        active = aiDecision.optBoolean("active", false),
+        quantProbabilityUp = number(blend, "quant_probability_up"),
+        aiProbabilityUp = number(blend, "ai_probability_up") ?: number(consensus, "probability_up"),
+        hybridProbabilityUp = number(blend, "hybrid_probability_up"),
+        effectiveWeight = number(blend, "effective_weight"),
+        consensusConfidence = number(consensus, "confidence"),
+        disagreement = number(consensus, "disagreement"),
+        providers = providerStates,
+    )
+
     return ScreenStatus(
         mode = root.optString("mode", "PAPER"),
         connected = true,
@@ -310,6 +295,8 @@ private fun parseStatus(text: String): ScreenStatus {
                 risk.optInt("max_contracts")
             } else null,
         ),
+        brokerState = brokerState,
+        ai = ai,
         alert = alert,
         paperCash = number(paper, "settled_cash"),
         paperPnl = number(paper, "realized_pnl"),
@@ -364,8 +351,8 @@ private fun WebullTradeApp(activity: Activity) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("SPY 0DTE", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-            Text("Railway AI + Webull confirmed trading")
+            Text("SPY 0DTE", color = MatrixColors.Neon, fontWeight = FontWeight.Black)
+            Text("MATRIX · Railway AI + Webull")
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 scope.launch {
@@ -375,7 +362,7 @@ private fun WebullTradeApp(activity: Activity) {
             }) { Text("SIGN IN AS OWNER") }
             loginError?.let {
                 Spacer(Modifier.height(10.dp))
-                Text(it, color = MaterialTheme.colorScheme.error)
+                Text(it, color = MatrixColors.Red)
             }
         }
         return
@@ -399,7 +386,6 @@ private fun TradeConsole(
     val backend = remember(token) { TradeBackend(token) }
     var status by remember { mutableStateOf(ScreenStatus()) }
     var connectionError by remember { mutableStateOf<String?>(null) }
-    var tab by remember { mutableStateOf("LIVE") }
 
     DisposableEffect(token) {
         startWatcher(activity, token)
@@ -410,256 +396,35 @@ private fun TradeConsole(
         onDispose { socket?.close(1000, "screen closed") }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column {
-                Text("SPY 0DTE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(if (status.connected && connectionError == null) "● RAILWAY CONNECTED" else "○ RECONNECTING")
-            }
-            Text(status.mode, fontWeight = FontWeight.Bold)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            listOf("LIVE", "PAPER", "SETTINGS").forEach { name ->
-                if (tab == name) Button(onClick = { tab = name }) { Text(name) }
-                else OutlinedButton(onClick = { tab = name }) { Text(name) }
-            }
-            onSignOut?.let { TextButton(onClick = it) { Text("SIGN OUT") } }
-        }
-        when (tab) {
-            "PAPER" -> PaperPanel(status, backend, connectionError)
-            "SETTINGS" -> SettingsPanel(status, backend, preview)
-            else -> LivePanel(status, backend, preview, connectionError)
-        }
-    }
-}
-
-@Composable
-private fun LivePanel(
-    status: ScreenStatus,
-    backend: TradeBackend,
-    preview: Boolean,
-    connectionError: String?,
-) {
-    val scope = rememberCoroutineScope()
-    var prepared by remember { mutableStateOf<PreparedTrade?>(null) }
-    var message by remember { mutableStateOf<String?>(null) }
-    var submitting by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        connectionError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-        if (preview) {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                    Text("PREVIEW BUILD", fontWeight = FontWeight.Bold)
-                    Text("The LIVE trade controls are visible, but broker submission stays locked until owner sign-in is configured.")
-                }
-            }
-        }
-
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("RAILWAY AI BRAIN", fontWeight = FontWeight.Bold)
-                Text("${status.strategy} • ${status.riskProfile}")
-                Text("Exit: ${status.exitProfile}")
-                Text("Decision: ${status.decision}")
-                Text(status.reason)
-            }
-        }
-
-        Card {
-            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("MARKET + BROKER", fontWeight = FontWeight.Bold)
-                Text("SPY: ${status.spot?.let { "$%.2f".format(it) } ?: "—"}")
-                Text("Data age: ${status.dataAge?.let { "%.1fs".format(it) } ?: "—"}")
-                Text("Feed delay: ${status.feedDelay?.let { "%.0fs".format(it) } ?: "—"}")
-                Text("Broker: ${status.broker.uppercase()}")
-                Text("Webull API: ${if (status.brokerConfigured) "configured" else "not configured"}")
-                Text("Webull account: ${if (status.brokerConnected) "connected" else "not connected"}")
-                Text("Daily envelope: ${if (status.risk.armed) "armed" else "not armed"}")
-                if (!status.liveReady) Text("Locked: ${status.liveReasons.joinToString().ifBlank { "waiting for live prerequisites" }}")
-            }
-        }
-
-        val alert = status.alert
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                Text("LIVE TRADE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                if (alert == null) {
-                    Text("Waiting for a qualified Railway strategy alert.")
-                } else {
-                    Text(alert.symbol, fontWeight = FontWeight.Bold)
-                    Text("${alert.right} • ${alert.contracts} contract(s)")
-                    Text("Bid ${price(alert.bid)} • Ask ${price(alert.ask)}")
-                    alert.maxDebit?.let { Text("Bounded debit: $%.2f".format(it)) }
-                }
-                Spacer(Modifier.height(10.dp))
-                val canTrade = !preview && status.liveReady && status.mode == "LIVE" && alert != null && !submitting
-                Button(
-                    enabled = canTrade,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        scope.launch {
-                            message = "Preparing exact Webull preview…"
-                            backend.prepareTrade()
-                                .onSuccess { prepared = it; message = null }
-                                .onFailure { message = it.message }
-                        }
-                    },
-                ) { Text(if (preview) "TRADE — OWNER LOGIN REQUIRED" else "TRADE") }
-
-                if (!preview && status.mode != "LIVE") {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            scope.launch {
-                                backend.setMode("LIVE")
-                                    .onSuccess { message = "LIVE mode requested" }
-                                    .onFailure { message = it.message }
-                            }
-                        },
-                    ) { Text("ENABLE LIVE MODE") }
-                }
-            }
-        }
-        message?.let { Text(it) }
-    }
-
-    prepared?.let { trade ->
-        AlertDialog(
-            onDismissRequest = { if (!submitting) prepared = null },
-            title = { Text("Confirm Webull trade") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("SPY ${trade.optionType} ${trade.strike}")
-                    Text("Expiration: ${trade.expiration}")
-                    Text("Quantity: ${trade.quantity}")
-                    Text("Limit: $%.2f".format(trade.limitPrice))
-                    Text("Maximum debit: $%.2f".format(trade.maxDebit))
-                    Text("Authorization expires in ${trade.expiresSeconds}s")
-                    Text("Only this exact order can use this confirmation.")
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = !submitting,
-                    onClick = {
-                        submitting = true
-                        scope.launch {
-                            backend.submitTrade(trade)
-                                .onSuccess { result ->
-                                    val state = result.optJSONObject("order_detail")?.optString("status")
-                                    message = "Webull submission: ${state?.ifBlank { "received" } ?: "received"}"
-                                    prepared = null
-                                }
-                                .onFailure { message = it.message ?: "Trade submission failed" }
-                            submitting = false
-                        }
-                    },
-                ) { Text(if (submitting) "SUBMITTING…" else "CONFIRM TRADE") }
-            },
-            dismissButton = {
-                TextButton(enabled = !submitting, onClick = { prepared = null }) { Text("CANCEL") }
-            },
-        )
-    }
-}
-
-@Composable
-private fun PaperPanel(status: ScreenStatus, backend: TradeBackend, connectionError: String?) {
-    val scope = rememberCoroutineScope()
-    var message by remember { mutableStateOf<String?>(null) }
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        connectionError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Card {
-            Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                Text("AUTONOMOUS PAPER", fontWeight = FontWeight.Bold)
-                Text("Cash: ${money(status.paperCash)}")
-                Text("Realized P&L: ${money(status.paperPnl)}")
-                Text("Open positions: ${status.paperPositions}")
-                Text("Trades: ${status.paperTrades}")
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        scope.launch {
-                            backend.setPaperAutonomy(!status.paperArmed)
-                                .onSuccess { message = if (status.paperArmed) "Paper entries disarmed" else "Paper autonomy armed" }
-                                .onFailure { message = it.message }
-                        }
-                    },
-                ) { Text(if (status.paperArmed) "STOP NEW PAPER ENTRIES" else "ARM AUTONOMOUS PAPER") }
-            }
-        }
-        message?.let { Text(it) }
-    }
-}
-
-@Composable
-private fun SettingsPanel(status: ScreenStatus, backend: TradeBackend, preview: Boolean) {
-    val scope = rememberCoroutineScope()
-    var loss by remember { mutableStateOf(status.risk.loss?.toString() ?: "25") }
-    var gain by remember { mutableStateOf(status.risk.gain?.toString() ?: "40") }
-    var exposure by remember { mutableStateOf(status.risk.exposure?.let { (it * 100).toString() } ?: "20") }
-    var contracts by remember { mutableStateOf(status.risk.contracts?.toString() ?: "1") }
-    var message by remember { mutableStateOf<String?>(null) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text("DAILY LIVE ENVELOPE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text("These are ceilings, not targets. New entries are also blocked while a position or broker order is open.")
-        OutlinedTextField(loss, { loss = it }, label = { Text("Daily loss stop ($)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(gain, { gain = it }, label = { Text("Daily gain stop ($)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(exposure, { exposure = it }, label = { Text("Max account exposure (%)") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(contracts, { contracts = it }, label = { Text("Max contracts") }, modifier = Modifier.fillMaxWidth())
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                val l = loss.toDoubleOrNull()
-                val g = gain.toDoubleOrNull()
-                val e = exposure.toDoubleOrNull()?.div(100.0)
-                val c = contracts.toIntOrNull()
-                if (l == null || g == null || e == null || c == null) {
-                    message = "Enter valid numeric limits"
-                } else {
-                    scope.launch {
-                        backend.armRisk(l, g, e, c)
-                            .onSuccess { message = "Today's live limits are armed" }
-                            .onFailure { message = it.message }
+    MatrixDashboard(
+        status = status,
+        preview = preview,
+        connectionError = connectionError,
+        actions = remember(backend) {
+            MatrixActions(
+                prepareTrade = { backend.prepareTrade() },
+                submitTrade = { trade ->
+                    backend.submitTrade(trade).map { result ->
+                        val state = result.optJSONObject("order_detail")?.optString("status")
+                        "WEBULL SUBMISSION · ${state?.ifBlank { "RECEIVED" }?.uppercase() ?: "RECEIVED"}"
                     }
-                }
-            },
-        ) { Text("ARM TODAY'S LIMITS") }
-        OutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                scope.launch {
-                    backend.disarmRisk()
-                        .onSuccess { message = "Live envelope disarmed" }
-                        .onFailure { message = it.message }
-                }
-            },
-        ) { Text("DISARM LIVE") }
-        if (preview) Text("Owner sign-in is not configured in this APK, so Webull submission remains locked.")
-        message?.let { Text(it) }
-    }
+                },
+                setMode = { mode ->
+                    backend.setMode(mode).map { "MODE · $mode" }
+                },
+                setPaperAutonomy = { armed ->
+                    backend.setPaperAutonomy(armed).map {
+                        if (armed) "AUTONOMOUS PAPER · ARMED" else "AUTONOMOUS PAPER · NEW ENTRIES STOPPED"
+                    }
+                },
+                armRisk = { loss, gain, exposure, contracts ->
+                    backend.armRisk(loss, gain, exposure, contracts).map { "TODAY'S LIVE LIMITS · ARMED" }
+                },
+                disarmRisk = {
+                    backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" }
+                },
+            )
+        },
+        onSignOut = onSignOut,
+    )
 }
-
-private fun money(value: Double?): String = value?.let { "$%.2f".format(it) } ?: "—"
-private fun price(value: Double?): String = value?.let { "$%.2f".format(it) } ?: "—"
