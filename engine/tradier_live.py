@@ -46,14 +46,9 @@ class TradierAccountProfile:
 class TradierLiveClient:
     """Production Tradier connectivity with real-order submission intentionally absent.
 
-    This adapter is the live-readiness bridge for the SPY 0DTE project. It can
-    validate a production token, read account/market data, and ask Tradier to
-    *preview* a single-leg option order. Preview requests run Tradier's buying
-    power and order validation without sending an order to the market.
-
-    There is deliberately no ``submit_order`` method here. The autonomous paper
-    engine must never gain a real-money execution path by simply importing this
-    client.
+    This adapter validates a production token, reads account/market/order state,
+    and asks Tradier to preview a single-leg option order. The autonomous paper
+    engine cannot gain a real-money execution path by importing this client.
     """
 
     def __init__(
@@ -173,6 +168,31 @@ class TradierLiveClient:
     def positions(self, account_id: str | None = None) -> dict[str, Any]:
         resolved = (account_id or self.account_id or self.account_profile().account_number).strip()
         return self._request("GET", f"/accounts/{resolved}/positions")
+
+    def account_orders(
+        self,
+        account_id: str | None = None,
+        *,
+        status: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        if limit < 1 or limit > 1500:
+            raise ValueError("limit must be between 1 and 1500")
+        resolved = (account_id or self.account_id or self.account_profile().account_number).strip()
+        params: dict[str, Any] = {"limit": limit}
+        if status:
+            params["status"] = status
+        return self._request("GET", f"/accounts/{resolved}/orders", params=params)
+
+    def order_status(self, order_id: int, account_id: str | None = None) -> dict[str, Any]:
+        if order_id <= 0:
+            raise ValueError("order_id must be positive")
+        resolved = (account_id or self.account_id or self.account_profile().account_number).strip()
+        return self._request(
+            "GET",
+            f"/accounts/{resolved}/orders/{order_id}",
+            params={"includeTags": "true"},
+        )
 
     def quote(self, symbol: str) -> dict[str, Any]:
         normalized = symbol.strip().upper()
