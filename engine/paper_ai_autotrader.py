@@ -4,13 +4,16 @@ import logging
 import math
 import os
 import statistics
+import threading
 import time
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from . import paper_ensemble_autotrader as ensemble_module
 from .ai_consensus import AIAdvisoryEngine, AIContext
+from .ai_decision import AIDecisionBlend, blend_ai_consensus_into_forecast
 from .ensemble import EnsembleForecast
 from .opportunity import OpportunityResult
 from .paper_account import PaperAccountStore
@@ -38,11 +41,16 @@ from .paper_ensemble_autotrader import (
 )
 
 log = logging.getLogger("spy0dte.paper.ai")
-AI_PROFILE = "multi_provider_advisory_v1"
+AI_PROFILE = "multi_provider_decision_v2"
+_ENSEMBLE_SELECTION_LOCK = threading.Lock()
 
 
 def _min_ai_confidence() -> float:
     return _env_float("PAPER_AI_MIN_CONFIDENCE", 0.45, minimum=0.0, maximum=1.0)
+
+
+def _maximum_ai_decision_weight() -> float:
+    return _env_float("PAPER_AI_DECISION_WEIGHT", 0.35, minimum=0.0, maximum=0.75)
 
 
 def _veto_support_threshold() -> float:
@@ -75,16 +83,20 @@ def _median_option_moves(latest: MarketCycle, previous: MarketCycle) -> tuple[fl
 
 
 class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
-    """Quant-first PAPER trader with AI consensus as a one-way risk overlay.
+    """Quant + configured-AI hybrid PAPER/SHADOW decision engine.
 
-    AI can veto a candidate or reduce its model-health/risk allowance. It cannot
-    create a trade that the quantitative stack did not select, increase a hard
-    risk limit, choose contract count directly, or submit an order.
+    The configured AI consensus is blended into the directional forecast before
+    call/put selection, scenario generation, option ranking and dynamic sizing.
+    Confidence, provider disagreement and the AI risk multiplier bound its
+    effective weight. AI can also veto a candidate or reduce exit confidence,
+    but it never bypasses account/risk rails or submits broker orders.
     """
 
     def __init__(self, *args, ai_engine: AIAdvisoryEngine | None = None, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.ai_engine = ai_engine or AIAdvisoryEngine()
+        self._last_decision_blend: AIDecisionBlend | None = None
+        self._last_decision_consensus = None
 
     def _context(
         self,
@@ -124,19 +136,77 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
             event_state="unknown",
         )
 
-    def _ai_overlay(
+    def _hybrid_decision_forecast(
         self,
         forecast: EnsembleForecast,
-        signal: PaperSignal,
         cycles: tuple[MarketCycle, ...],
         eastern: datetime,
         horizon: float,
-    ) -> tuple[PaperSignal, EnsembleForecast] | None:
+    ) -> AIDecisionBlend:
         advice = self.ai_engine.latest_or_request(
             self._context(cycles, forecast, eastern, horizon)
         )
+        blend = blend_ai_consensus_into_forecast(
+            forecast,
+            advice,
+            minimum_confidence=_min_ai_confidence(),
+            maximum_ai_weight=_maximum_ai_decision_weight(),
+        )
+        self._last_decision_blend = blend
+        self._last_decision_consensus = advice
+        return blend
+
+    def _select_ensemble_opportunity(
+        self,
+        latest: MarketCycle,
+        previous: MarketCycle,
+        cycles: tuple[MarketCycle, ...],
+        settled_cash: float,
+        receive_age: float,
+        eastern: datetime,
+    ) -> tuple[PaperSignal, OpportunityResult, EnsembleForecast] | None:
+        horizon = min(
+            _env_float(
+                "PAPER_ENSEMBLE_HORIZON_MINUTES",
+                5.0,
+                minimum=0.5,
+                maximum=30.0,
+            ),
+            max(0.5, self._minutes_to_close(eastern) - 1.0),
+        )
+        quant_forecast = build_market_ensemble(cycles, horizon)
+        blend = self._hybrid_decision_forecast(
+            quant_forecast,
+            cycles,
+            eastern,
+            horizon,
+        )
+
+        # EnsemblePaperAutoTrader owns the full execution-aware candidate
+        # selection path. Feed it the hybrid forecast for this one selection so
+        # AI affects direction, scenarios, option ranking and downstream sizing
+        # without duplicating that logic or giving the AI any execution path.
+        original_builder = ensemble_module.build_market_ensemble
+        with _ENSEMBLE_SELECTION_LOCK:
+            ensemble_module.build_market_ensemble = lambda _cycles, _horizon: blend.forecast
+            try:
+                selected = super()._select_ensemble_opportunity(
+                    latest,
+                    previous,
+                    cycles,
+                    settled_cash,
+                    receive_age,
+                    eastern,
+                )
+            finally:
+                ensemble_module.build_market_ensemble = original_builder
+
+        if selected is None:
+            return None
+        signal, opportunity, forecast = selected
+        advice = self._last_decision_consensus
         if advice is None or advice.confidence < _min_ai_confidence():
-            return signal, forecast
+            return signal, opportunity, forecast
 
         direction_support = (
             advice.probability_up
@@ -154,69 +224,17 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
             )
             return None
 
-        directional_multiplier = _clip(0.35 + direction_support, 0.35, 1.0)
-        throttle = min(1.0, advice.risk_multiplier, directional_multiplier)
-        forecast = replace(
-            forecast,
-            agreement_score=min(
-                forecast.agreement_score,
-                forecast.agreement_score * throttle,
-            ),
-            calibration_score=min(
-                forecast.calibration_score,
-                forecast.calibration_score * (0.75 + 0.25 * throttle),
-            ),
-            regime_match_score=min(
-                forecast.regime_match_score,
-                forecast.regime_match_score * throttle,
-            ),
-            model_weights=forecast.model_weights
-            + tuple((f"ai_advisory:{item.provider}", 0.0) for item in advice.signals),
-        )
         providers = ",".join(item.provider for item in advice.signals)
         signal = replace(
             signal,
             reason=(
-                f"{signal.reason}; ai_advisory p_up={advice.probability_up:.3f} "
-                f"confidence={advice.confidence:.2f} riskx={throttle:.2f} "
-                f"providers={providers}"
+                f"{signal.reason}; ai_decision quant_p_up={blend.quant_probability_up:.3f} "
+                f"ai_p_up={blend.ai_probability_up:.3f} "
+                f"hybrid_p_up={blend.forecast.probability_up:.3f} "
+                f"ai_weight={blend.effective_weight:.3f} "
+                f"confidence={advice.confidence:.2f} providers={providers}"
             ),
         )
-        return signal, forecast
-
-    def _select_ensemble_opportunity(
-        self,
-        latest: MarketCycle,
-        previous: MarketCycle,
-        cycles: tuple[MarketCycle, ...],
-        settled_cash: float,
-        receive_age: float,
-        eastern: datetime,
-    ) -> tuple[PaperSignal, OpportunityResult, EnsembleForecast] | None:
-        selected = super()._select_ensemble_opportunity(
-            latest,
-            previous,
-            cycles,
-            settled_cash,
-            receive_age,
-            eastern,
-        )
-        if selected is None:
-            return None
-        signal, opportunity, forecast = selected
-        horizon = min(
-            _env_float(
-                "PAPER_ENSEMBLE_HORIZON_MINUTES",
-                5.0,
-                minimum=0.5,
-                maximum=30.0,
-            ),
-            max(0.5, self._minutes_to_close(eastern) - 1.0),
-        )
-        overlaid = self._ai_overlay(forecast, signal, cycles, eastern, horizon)
-        if overlaid is None:
-            return None
-        signal, forecast = overlaid
         return signal, opportunity, forecast
 
     def _remaining_edge(
@@ -266,10 +284,20 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
         )
 
     def _finish(self, now: datetime, values: dict[str, object]) -> dict[str, object]:
+        blend = self._last_decision_blend
+        consensus = self._last_decision_consensus
         enriched = {
             **values,
             "ai_profile": AI_PROFILE,
             "ai_advisory": self.ai_engine.status(),
+            "ai_decision": {
+                "role": "first_class_forecast_input",
+                "maximum_weight": _maximum_ai_decision_weight(),
+                "minimum_confidence": _min_ai_confidence(),
+                "active": bool(blend is not None and blend.effective_weight > 0.0),
+                "blend": None if blend is None else blend.as_dict(),
+                "consensus": None if consensus is None else consensus.as_dict(),
+            },
         }
         return EnsemblePaperAutoTrader._finish(now, enriched)
 
@@ -292,20 +320,27 @@ def run_forever(mode_getter: Callable[[], str]) -> None:
     _publish(
         enabled=True,
         state="STARTING",
-        reason="quant ensemble + dynamic risk/exit + optional multi-provider AI advisory loop starting",
+        reason="quant ensemble + dynamic risk/exit + first-class multi-provider AI decision loop starting",
         strategy=SIGNAL_STRATEGY,
         risk_profile=RISK_PROFILE,
         exit_profile=EXIT_PROFILE,
         ai_profile=AI_PROFILE,
         ai_advisory=trader.ai_engine.status(),
+        ai_decision={
+            "role": "first_class_forecast_input",
+            "maximum_weight": _maximum_ai_decision_weight(),
+            "minimum_confidence": _min_ai_confidence(),
+            "active": False,
+        },
     )
     log.info(
-        "paper AI trader started signal=%s risk=%s exit=%s ai=%s providers=%s tick=%.2fs",
+        "paper AI trader started signal=%s risk=%s exit=%s ai=%s providers=%s ai_max_weight=%.2f tick=%.2fs",
         SIGNAL_STRATEGY,
         RISK_PROFILE,
         EXIT_PROFILE,
         AI_PROFILE,
         ",".join(provider.name for provider in trader.ai_engine.providers) or "none",
+        _maximum_ai_decision_weight(),
         settings.tick_seconds,
     )
     while True:
