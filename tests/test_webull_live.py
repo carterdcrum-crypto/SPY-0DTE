@@ -89,7 +89,6 @@ def client(*, account_type="CASH", balance=None, positions=(), open_orders=()):
 
 def envelope(**overrides):
     values = dict(
-        configured=True,
         trading_date="2099-09-26",
         daily_loss_limit=25.0,
         daily_gain_limit=40.0,
