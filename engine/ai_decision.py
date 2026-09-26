@@ -76,15 +76,19 @@ def blend_ai_consensus_into_forecast(
     )
 
     # Agreement across the quant stack and AI stack becomes part of model
-    # health. Disagreement can reduce sizing; agreement never inflates the
-    # original calibration/regime scores above the quant model's values.
+    # health. Both quant-vs-AI disagreement and disagreement between AI
+    # providers can reduce sizing; agreement never inflates the original
+    # calibration/regime scores above the quant model's values.
     cross_model_agreement = _clip(
         1.0 - 2.0 * abs(quant_probability - ai_probability),
         0.0,
         1.0,
     )
+    provider_agreement_factor = 0.60 + 0.40 * disagreement_quality
     agreement = _clip(
-        forecast.agreement_score * (0.65 + 0.35 * cross_model_agreement),
+        forecast.agreement_score
+        * (0.65 + 0.35 * cross_model_agreement)
+        * provider_agreement_factor,
         0.0,
         1.0,
     )
