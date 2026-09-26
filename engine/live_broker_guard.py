@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any
 
 from .live_risk import LiveRiskEnvelope
-from .tradier_live import TradierLiveClient
+from .tradier_live import TradierLiveClient, TradierLiveError, tradier_env_status
 
 
 @dataclass(frozen=True)
@@ -20,6 +22,7 @@ class LiveBrokerGuard:
     pending_orders_count: int
     open_positions: int
     max_entry_debit: float | None
+    error: str | None = None
 
     @property
     def daily_stop_reached(self) -> bool:
@@ -42,6 +45,7 @@ class LiveBrokerGuard:
             "open_positions": self.open_positions,
             "max_entry_debit": self.max_entry_debit,
             "max_open_positions": 1,
+            "error": self.error,
         }
 
 
@@ -138,3 +142,76 @@ def evaluate_live_broker_guard(
         open_positions=open_positions,
         max_entry_debit=max_entry_debit,
     )
+
+
+_CACHE_LOCK = threading.Lock()
+_CACHE_KEY: tuple[object, ...] | None = None
+_CACHE_AT = 0.0
+_CACHE_VALUE: LiveBrokerGuard | None = None
+
+
+def _cache_key(envelope: LiveRiskEnvelope) -> tuple[object, ...]:
+    status = tradier_env_status()
+    return (
+        status.get("configured"),
+        envelope.trading_date,
+        envelope.daily_loss_limit,
+        envelope.daily_gain_limit,
+        envelope.max_account_exposure_pct,
+        envelope.max_contracts,
+    )
+
+
+def cached_live_broker_guard(
+    envelope: LiveRiskEnvelope,
+    *,
+    ttl_seconds: float = 3.0,
+) -> LiveBrokerGuard:
+    """Return a short-lived cached guard so the 1 Hz status socket stays cheap."""
+
+    global _CACHE_AT, _CACHE_KEY, _CACHE_VALUE
+    key = _cache_key(envelope)
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        if _CACHE_VALUE is not None and _CACHE_KEY == key and now - _CACHE_AT < ttl_seconds:
+            return _CACHE_VALUE
+
+    status = tradier_env_status()
+    if not status["configured"]:
+        guard = LiveBrokerGuard(
+            connected=False,
+            entry_allowed=False,
+            reasons=("tradier_credentials_missing",),
+            daily_realized_pnl=0.0,
+            daily_open_pnl=0.0,
+            daily_total_pnl=0.0,
+            cash_available=None,
+            total_equity=None,
+            pending_orders_count=0,
+            open_positions=0,
+            max_entry_debit=None,
+        )
+    else:
+        try:
+            guard = evaluate_live_broker_guard(TradierLiveClient.from_env(), envelope)
+        except (TradierLiveError, ValueError, TypeError) as exc:
+            guard = LiveBrokerGuard(
+                connected=False,
+                entry_allowed=False,
+                reasons=("broker_guard_unavailable",),
+                daily_realized_pnl=0.0,
+                daily_open_pnl=0.0,
+                daily_total_pnl=0.0,
+                cash_available=None,
+                total_equity=None,
+                pending_orders_count=0,
+                open_positions=0,
+                max_entry_debit=None,
+                error=f"{type(exc).__name__}: {exc}",
+            )
+
+    with _CACHE_LOCK:
+        _CACHE_KEY = key
+        _CACHE_AT = now
+        _CACHE_VALUE = guard
+    return guard
