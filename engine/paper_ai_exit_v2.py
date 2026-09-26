@@ -3,21 +3,28 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
+from .ai_validation import AIValidationMixin
 from .paper_ai_autotrader import AIAugmentedDynamicExitTrader
 from .paper_exit_policy_v2 import SaferDynamicExitPolicyMixin
+from .paper_hold_value_exit import HoldValueExitPolicyMixin
 
 
 class SaferAIAugmentedDynamicExitTrader(
+    AIValidationMixin,
+    HoldValueExitPolicyMixin,
     SaferDynamicExitPolicyMixin,
     AIAugmentedDynamicExitTrader,
 ):
-    """AI advisory + v2 exit policy.
+    """Hybrid AI trader with forward validation and hold-value-aware exits.
 
-    AI is still allowed to veto/reduce entry risk and to make an already-weak
-    remaining-edge assessment more conservative. It is *not* allowed to create
-    a direction-reversal exit by itself. Direction reversal remains anchored to
-    the quantitative ensemble; that prevents a cached/slow LLM opinion from
-    becoming a one-model emergency sell signal.
+    Entry decisions use the first-class quant/AI hybrid. The validation mixin
+    records paired no-lookahead outcomes for quant-only, the former AI-veto
+    behavior, and the hybrid. Soft exits compare holding with selling at the
+    current bid instead of pretending the already-owned contract must be bought
+    again at the ask.
+
+    Direction-reversal exits remain anchored to the quantitative ensemble so a
+    cached/slow LLM opinion cannot become a one-model emergency sell signal.
     """
 
     def _remaining_edge(self, symbol: str, now: datetime):
