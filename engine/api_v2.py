@@ -11,6 +11,9 @@ from pydantic import BaseModel, Field
 
 from . import api as base
 from .broker import OptionOrderRequest
+from .live_alert_policy import build_live_entry_alert
+from .live_broker_guard import cached_live_broker_guard
+from .live_risk import LiveRiskEnvelopeError, LiveRiskEnvelopeStore
 from .paper_account import PaperAccountStore
 from .paper_ai_autotrader import run_forever as run_realtime_paper_autotrader
 from .paper_ai_delayed_simulation import run_forever as run_delayed_paper_autotrader
@@ -33,8 +36,16 @@ class TradierPreviewRequest(BaseModel):
     expiration_date: str
     option_type: Literal["CALL", "PUT"]
     position_intent: Literal["BUY_TO_OPEN", "SELL_TO_CLOSE"]
-    quantity: int = Field(ge=1, le=10)
+    quantity: int = Field(ge=1, le=100)
     limit_price: float = Field(gt=0, le=1000)
+
+
+class LiveRiskEnvelopeRequest(BaseModel):
+    daily_loss_limit: float = Field(gt=0, le=1_000_000)
+    daily_gain_limit: float = Field(gt=0, le=1_000_000)
+    max_account_exposure_pct: float = Field(gt=0, le=1)
+    max_contracts: int = Field(ge=1, le=100)
+    confirmation: str
 
 
 def _default_paper_cash() -> float:
@@ -66,6 +77,18 @@ def _paper_store() -> PaperAccountStore:
     )
 
 
+def _live_risk_db_path() -> str:
+    explicit = os.environ.get("LIVE_RISK_DB_PATH", "").strip()
+    if explicit:
+        return explicit
+    control_path = Path(os.environ.get("CONTROL_DB_PATH", "/data/spy_control.sqlite"))
+    return str(control_path.with_name("spy_live_risk.sqlite"))
+
+
+def _live_risk_store() -> LiveRiskEnvelopeStore:
+    return LiveRiskEnvelopeStore(_live_risk_db_path())
+
+
 def _env_bool(name: str, default: bool = False) -> bool:
     value = os.environ.get(name)
     if value is None:
@@ -78,13 +101,7 @@ def _selected_live_broker() -> str:
 
 
 def _paper_autonomy_payload() -> dict[str, Any]:
-    """Describe the credential-free autonomous simulation control plane.
-
-    PAPER arms autonomous simulated entries and exits. SHADOW disarms new paper
-    entries while the paper runner keeps managing any already-open simulated
-    position so disarming cannot orphan a position. This path writes only to the
-    local paper ledger and never calls a production broker order endpoint.
-    """
+    """Describe the credential-free autonomous simulation control plane."""
 
     mode = base._control_store().get_mode()
     runner_enabled = _env_bool("START_PAPER_AUTOTRADER", False)
@@ -104,6 +121,18 @@ def _paper_autonomy_payload() -> dict[str, Any]:
     }
 
 
+def _live_alert_payload(automation: dict[str, Any]) -> dict[str, Any] | None:
+    """Expose a bounded strategy alert without transmitting an order."""
+
+    if base._control_store().get_mode() is not base.TradingMode.LIVE:
+        return None
+    envelope = _live_risk_store().snapshot()
+    if not envelope.armed_today():
+        return None
+    guard = cached_live_broker_guard(envelope)
+    return build_live_entry_alert(automation, envelope, guard)
+
+
 _original_live_gate = base._live_gate
 
 
@@ -112,29 +141,39 @@ def _live_gate(store: base.ControlStore) -> dict[str, Any]:
         return _original_live_gate(store)
 
     reasons: list[str] = []
-    if not _env_bool("ALLOW_LIVE_ORDERS", False):
-        reasons.append("live_orders_disabled")
-    if not _env_bool("LIVE_ORDER_EXECUTOR_READY", False):
-        reasons.append("live_order_executor_not_ready")
-
     status = tradier_env_status()
     if not status["token_configured"]:
         reasons.append("tradier_production_token_missing")
     if not status["account_configured"]:
         reasons.append("tradier_account_id_missing")
 
-    # The current APK intentionally removed Google sign-in for paper-preview use.
-    # Do not let that unauthenticated preview build become a real-money control
-    # surface. A dedicated owner-authenticated build is required before LIVE can
-    # ever become selectable.
+    envelope = _live_risk_store().snapshot()
+    if not envelope.armed_today():
+        reasons.append("daily_live_limits_not_armed")
+
     if _env_bool("APP_PREVIEW_MODE", False):
         reasons.append("owner_auth_required_for_live")
+
+    if status["configured"] and envelope.armed_today():
+        guard = cached_live_broker_guard(envelope)
+        blocking_guard_reasons = {
+            "broker_guard_unavailable",
+            "broker_account_not_active",
+            "broker_account_not_cash",
+            "daily_loss_stop_reached",
+            "daily_gain_stop_reached",
+            "no_live_exposure_budget",
+            "live_exposure_basis_unavailable",
+        }
+        reasons.extend(reason for reason in guard.reasons if reason in blocking_guard_reasons)
+        if not guard.connected and "broker_guard_unavailable" not in reasons:
+            reasons.append("broker_guard_unavailable")
 
     return {
         "ready": not reasons,
         "provider": "tradier",
-        "execution": "preview_only",
-        "reasons": reasons,
+        "execution": "notification_only",
+        "reasons": list(dict.fromkeys(reasons)),
     }
 
 
@@ -144,16 +183,32 @@ _original_lifespan = base.app.router.lifespan_context
 
 
 def status_payload() -> dict[str, Any]:
+    envelope = _live_risk_store().snapshot()
+    guard = cached_live_broker_guard(envelope) if envelope.armed_today() else None
+
+    # Daily gain/loss stops are server-authoritative. If one is reached while
+    # LIVE alerts are armed, immediately return the control plane to SHADOW.
+    if (
+        base._control_store().get_mode() is base.TradingMode.LIVE
+        and guard is not None
+        and guard.daily_stop_reached
+    ):
+        base._control_store().set_mode(base.TradingMode.SHADOW)
+
     payload = _original_status_payload()
     paper = _paper_store().snapshot().as_dict()
     automation = automation_status()
     payload["paper"] = paper
     payload["paper_automation"] = automation
     payload["paper_autonomy"] = _paper_autonomy_payload()
+    payload["live_risk"] = envelope.as_dict()
+    payload["live_alert"] = _live_alert_payload(automation)
     payload["live_broker"] = {
         **tradier_env_status(),
         "selected": _selected_live_broker() == "tradier",
         "real_order_submission": False,
+        "workflow": "strategy_alert_then_owner_review",
+        "guard": None if guard is None else guard.as_dict(),
     }
 
     decision = payload.get("decision")
@@ -162,12 +217,21 @@ def status_payload() -> dict[str, Any]:
         decision["state"] = state
         decision["reason"] = str(
             automation.get("reason")
-            or "autonomous paper decision loop is starting"
+            or "autonomous paper/shadow decision loop is starting"
         )
     return payload
 
 
 base.status_payload = status_payload
+
+
+def _strategy_mode() -> str:
+    mode = base._control_store().get_mode()
+    # LIVE uses the same strategy/risk loop as SHADOW so decisions can be
+    # surfaced to the phone without giving that loop broker-write capability.
+    if mode is base.TradingMode.LIVE:
+        return base.TradingMode.SHADOW.value
+    return mode.value
 
 
 @asynccontextmanager
@@ -180,7 +244,7 @@ async def lifespan(app):
         )
         thread = threading.Thread(
             target=runner,
-            args=(lambda: base._control_store().get_mode().value,),
+            args=(_strategy_mode,),
             name="spy0dte-paper-autotrader",
             daemon=True,
         )
@@ -245,6 +309,38 @@ def reset_paper_account(
     return _paper_store().reset(request.starting_cash).as_dict()
 
 
+@app.get("/v1/live/risk-envelope")
+def live_risk_envelope(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
+    return _live_risk_store().snapshot().as_dict()
+
+
+@app.post("/v1/live/risk-envelope")
+def arm_live_risk_envelope(
+    request: LiveRiskEnvelopeRequest,
+    _: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    try:
+        envelope = _live_risk_store().arm(
+            daily_loss_limit=request.daily_loss_limit,
+            daily_gain_limit=request.daily_gain_limit,
+            max_account_exposure_pct=request.max_account_exposure_pct,
+            max_contracts=request.max_contracts,
+            explicit_confirmation=request.confirmation,
+        )
+    except LiveRiskEnvelopeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return envelope.as_dict()
+
+
+@app.post("/v1/live/risk-envelope/disarm")
+def disarm_live_risk_envelope(
+    _: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    if base._control_store().get_mode() is base.TradingMode.LIVE:
+        base._control_store().set_mode(base.TradingMode.SHADOW)
+    return _live_risk_store().disarm().as_dict()
+
+
 @app.get("/v1/broker/tradier/readiness")
 def tradier_readiness(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
     status = tradier_env_status()
@@ -252,31 +348,10 @@ def tradier_readiness(_: base.UserIdentity = Depends(base.require_user)) -> dict
     if not status["configured"]:
         return result
 
-    try:
-        client = TradierLiveClient.from_env()
-        account = client.account_profile()
-        balances_payload = client.balances(account.account_number)
-    except (TradierLiveError, ValueError) as exc:
-        result["error"] = str(exc)
-        return result
-
-    balances = balances_payload.get("balances")
-    if not isinstance(balances, dict):
-        balances = {}
-    safe_balance_keys = (
-        "total_cash",
-        "option_buying_power",
-        "total_equity",
-        "open_pl",
-        "close_pl",
-    )
-    result.update(
-        {
-            "connected": True,
-            "account": account.as_dict(),
-            "balances": {key: balances.get(key) for key in safe_balance_keys},
-        }
-    )
+    envelope = _live_risk_store().snapshot()
+    guard = cached_live_broker_guard(envelope)
+    result["connected"] = guard.connected
+    result["guard"] = guard.as_dict()
     return result
 
 
@@ -288,10 +363,23 @@ def preview_tradier_option_order(
     account_id = os.environ.get("TRADIER_ACCOUNT_ID", "").strip()
     if not account_id:
         raise HTTPException(status_code=409, detail="Tradier account is not configured")
-    if base._control_store().get_mode() is base.TradingMode.LIVE:
-        # Preview remains safe in LIVE, but make the response explicit that this
-        # endpoint never submits to the market.
-        pass
+
+    envelope = _live_risk_store().snapshot()
+    if not envelope.armed_today():
+        raise HTTPException(status_code=409, detail="daily live limits are not armed")
+
+    if request.position_intent == "BUY_TO_OPEN":
+        guard = cached_live_broker_guard(envelope, ttl_seconds=0.0)
+        if not guard.entry_allowed:
+            raise HTTPException(
+                status_code=409,
+                detail={"message": "new live entry is blocked", **guard.as_dict()},
+            )
+        if envelope.max_contracts is not None and request.quantity > envelope.max_contracts:
+            raise HTTPException(status_code=409, detail="quantity exceeds today's contract ceiling")
+        debit = request.limit_price * 100.0 * request.quantity
+        if guard.max_entry_debit is None or debit > guard.max_entry_debit + 1e-9:
+            raise HTTPException(status_code=409, detail="order exceeds today's account-exposure ceiling")
 
     order = OptionOrderRequest(
         account_id=account_id,
