@@ -7,7 +7,7 @@ import androidx.activity.ComponentActivity
 class LauncherActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startActivity(Intent(this, RailwayLiveActivity::class.java))
+        startActivity(Intent(this, WebullTradeActivity::class.java))
         finish()
     }
 }

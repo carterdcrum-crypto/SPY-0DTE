@@ -39,7 +39,11 @@ def _env_bool(name: str, default: bool = False) -> bool:
 def main() -> None:
     _ensure_encryption_key()
     port = int(os.environ.get("PORT", "8080"))
-    app_module = "engine.preview_api:app" if _env_bool("APP_PREVIEW_MODE", False) else "engine.api_v2:app"
+    app_module = (
+        "engine.preview_api:app"
+        if _env_bool("APP_PREVIEW_MODE", False)
+        else "engine.webull_live_api:app"
+    )
     uvicorn.run(app_module, host="0.0.0.0", port=port)
 
 

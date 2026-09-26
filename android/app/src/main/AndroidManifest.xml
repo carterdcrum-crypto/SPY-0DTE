@@ -19,6 +19,9 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".WebullTradeActivity"
+            android:exported="false" />
+        <activity
             android:name=".RailwayLiveActivity"
             android:exported="false" />
         <activity
@@ -30,6 +33,10 @@
         <activity
             android:name=".DashboardActivity"
             android:exported="false" />
+        <service
+            android:name=".TradeWatchService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <service
             android:name=".RailwayWatchService"
             android:exported="false"

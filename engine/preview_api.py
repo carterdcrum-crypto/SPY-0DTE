@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from . import api as base
-from . import api_v2
+from . import webull_live_api
 
 
 _original_live_gate = base._live_gate
@@ -19,7 +19,7 @@ def _preview_identity(_: str | None) -> base.UserIdentity:
 def _preview_live_gate(store: base.ControlStore) -> dict[str, Any]:
     gate = _original_live_gate(store)
     reasons = ["preview_mode_live_locked", *list(gate.get("reasons", []))]
-    return {"ready": False, "reasons": list(dict.fromkeys(reasons))}
+    return {**gate, "ready": False, "reasons": list(dict.fromkeys(reasons))}
 
 
 def _block_credential_writes():
@@ -29,11 +29,10 @@ def _block_credential_writes():
     )
 
 
-# engine.api routes resolve these module globals at request time. Replacing them
-# here makes the existing status, mode, paper-account, and websocket routes usable
-# without Google while keeping real-order mode impossible and broker secrets blocked.
+# Preview keeps the full Railway/Webull status surface visible but broker writes
+# still require a real authenticated owner in webull_live_api.
 base._verify_google_bearer = _preview_identity
 base._live_gate = _preview_live_gate
 base._cipher = _block_credential_writes
 
-app = api_v2.app
+app = webull_live_api.app
