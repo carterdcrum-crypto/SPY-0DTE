@@ -7,12 +7,10 @@ import androidx.activity.ComponentActivity
 class LauncherActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val destination = if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
-            PreviewActivity::class.java
-        } else {
-            MainActivity::class.java
-        }
-        startActivity(Intent(this, destination))
+        // Always open the full app shell. When Google OAuth is not configured,
+        // MainActivity falls back to the existing login-free preview backend
+        // while still exposing the LIVE workspace and setup/status controls.
+        startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
 }
