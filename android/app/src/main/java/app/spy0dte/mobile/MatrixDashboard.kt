@@ -898,7 +898,7 @@ private fun MatrixBottomNav(selected: String, onSelect: (String) -> Unit) {
 @Composable
 private fun MatrixPanel(
     border: Color = MatrixColors.BorderSoft,
-    content: @Composable Column.() -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
