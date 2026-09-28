@@ -1,47 +1,48 @@
 package app.spy0dte.mobile
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 internal object GlassColors {
-    val Background = Color(0xFFF4FAFC)
-    val BackgroundBlue = Color(0xFFE8F6FA)
-    val Panel = Color(0xBFFFFFFF)
-    val PanelStrong = Color(0xE8FFFFFF)
-    val PanelSoft = Color(0x9CF7FBFD)
-    val Border = Color(0xFFC7DEE5)
-    val BorderBright = Color(0xFFEAF4F7)
-    val Green = Color(0xFF20C98A)
-    val GreenDark = Color(0xFF0BA66F)
-    val Mint = Color(0xFFD8F7EB)
-    val Blue = Color(0xFF57A8D5)
-    val SoftBlue = Color(0xFFDDF1F8)
-    val Red = Color(0xFFFF625E)
-    val SoftRed = Color(0xFFFFE9E8)
-    val Amber = Color(0xFFE39A21)
-    val Text = Color(0xFF101A22)
-    val TextMuted = Color(0xFF637681)
-    val TextFaint = Color(0xFF99A8B0)
+    val Background = Color(0xFF071126)
+    val BackgroundDeep = Color(0xFF040A18)
+    val Navy = Color(0xFF0C1836)
+    val Panel = Color(0xA6152348)
+    val PanelStrong = Color(0xC51A2851)
+    val PanelSoft = Color(0x80192A55)
+    val Border = Color(0x668CA8FF)
+    val BorderBright = Color(0x99A9BBFF)
+    val Blue = Color(0xFF5C8CFF)
+    val Cyan = Color(0xFF66E2FF)
+    val Violet = Color(0xFFA56CFF)
+    val VioletDeep = Color(0xFF6C4CFF)
+    val Mint = Color(0xFF5EF0BD)
+    val Red = Color(0xFFFF6B83)
+    val Amber = Color(0xFFFFC96B)
+    val Text = Color(0xFFF5F7FF)
+    val TextMuted = Color(0xFFB5C3E7)
+    val TextFaint = Color(0xFF7586AE)
     val White = Color(0xFFFFFFFF)
-    val Black = Color(0xFF0A1116)
+    val Black = Color(0xFF050817)
 }
 
-private val GlassScheme = lightColorScheme(
-    primary = GlassColors.Green,
-    onPrimary = GlassColors.White,
-    primaryContainer = GlassColors.Mint,
+private val GlassScheme = darkColorScheme(
+    primary = GlassColors.Blue,
+    onPrimary = GlassColors.Text,
+    primaryContainer = GlassColors.PanelStrong,
     onPrimaryContainer = GlassColors.Text,
-    secondary = GlassColors.Blue,
-    onSecondary = GlassColors.White,
-    secondaryContainer = GlassColors.SoftBlue,
+    secondary = GlassColors.Violet,
+    onSecondary = GlassColors.Text,
+    secondaryContainer = GlassColors.PanelSoft,
     onSecondaryContainer = GlassColors.Text,
+    tertiary = GlassColors.Cyan,
     background = GlassColors.Background,
     onBackground = GlassColors.Text,
-    surface = GlassColors.PanelStrong,
+    surface = GlassColors.Panel,
     onSurface = GlassColors.Text,
-    surfaceVariant = GlassColors.PanelSoft,
+    surfaceVariant = GlassColors.PanelStrong,
     onSurfaceVariant = GlassColors.TextMuted,
     outline = GlassColors.Border,
     error = GlassColors.Red,
