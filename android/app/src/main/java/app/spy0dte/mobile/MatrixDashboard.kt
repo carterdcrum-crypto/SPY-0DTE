@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -55,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlinx.coroutines.launch
 
 internal data class MatrixActions(
@@ -66,6 +69,13 @@ internal data class MatrixActions(
     val disarmRisk: suspend () -> Result<String>,
 )
 
+/**
+ * Approved showcase option #4: GLASS.
+ *
+ * This is a functional UI replacement, not a mock. Every trading/account value
+ * comes from ScreenStatus; unavailable values render as an em dash rather than
+ * fabricated sample data.
+ */
 @Composable
 internal fun MatrixDashboard(
     status: ScreenStatus,
@@ -79,117 +89,120 @@ internal fun MatrixDashboard(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MatrixColors.Background)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFFF8FCFD),
+                        MatrixColors.BackgroundBlue,
+                        Color(0xFFF4F9FB),
+                    ),
+                ),
+            )
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        MatrixBackground()
+        GlassAmbientBackground()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .widthIn(max = 620.dp)
                 .align(Alignment.TopCenter),
         ) {
-            MatrixHeader(status)
+            GlassHeader(status)
             Box(Modifier.weight(1f)) {
                 when (bottomTab) {
-                    "POSITIONS" -> MatrixPositionsScreen(status)
-                    "ANALYTICS" -> MatrixAnalyticsScreen(status)
-                    "SETTINGS" -> MatrixSettingsScreen(
+                    "POSITIONS" -> GlassPositionsScreen(status)
+                    "ANALYTICS" -> GlassAnalyticsScreen(status)
+                    "SETTINGS" -> GlassSettingsScreen(
                         status = status,
                         preview = preview,
                         actions = actions,
                         onSignOut = onSignOut,
                     )
-                    else -> MatrixLiveScreen(
+                    else -> GlassLiveScreen(
                         status = status,
                         preview = preview,
                         connectionError = connectionError,
                         actions = actions,
-                        onEditRisk = { bottomTab = "SETTINGS" },
+                        onPositions = { bottomTab = "POSITIONS" },
                     )
                 }
             }
-            MatrixBottomNav(bottomTab) { bottomTab = it }
+            GlassBottomNav(bottomTab) { bottomTab = it }
         }
     }
 }
 
 @Composable
-private fun MatrixBackground() {
+private fun GlassAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
-        val step = 34.dp.toPx()
-        var x = 0f
-        while (x < size.width) {
-            drawLine(
-                color = MatrixColors.Neon.copy(alpha = 0.025f),
-                start = Offset(x, 0f),
-                end = Offset(x, size.height),
-                strokeWidth = 1f,
-            )
-            x += step
-        }
-        var y = 0f
-        while (y < size.height) {
-            drawLine(
-                color = MatrixColors.Neon.copy(alpha = 0.02f),
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
-                strokeWidth = 1f,
-            )
-            y += step
-        }
+        drawCircle(
+            color = Color(0xFFBFEFE4).copy(alpha = 0.34f),
+            radius = size.minDimension * 0.43f,
+            center = Offset(size.width * 0.84f, size.height * 0.08f),
+        )
+        drawCircle(
+            color = Color(0xFFCAE7FA).copy(alpha = 0.38f),
+            radius = size.minDimension * 0.48f,
+            center = Offset(size.width * 0.08f, size.height * 0.32f),
+        )
+        drawCircle(
+            color = Color.White.copy(alpha = 0.55f),
+            radius = size.minDimension * 0.58f,
+            center = Offset(size.width * 0.76f, size.height * 0.69f),
+        )
     }
 }
 
 @Composable
-private fun MatrixHeader(status: ScreenStatus) {
+private fun GlassHeader(status: ScreenStatus) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MatrixColors.SurfaceRaised)
-                .border(1.dp, MatrixColors.BorderSoft, RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
+        Surface(
+            modifier = Modifier.size(38.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White.copy(alpha = 0.74f),
+            border = BorderStroke(1.dp, MatrixColors.BorderSoft),
         ) {
-            Text("☰", color = MatrixColors.Neon, fontSize = 19.sp)
+            Box(contentAlignment = Alignment.Center) {
+                Text("☰", color = MatrixColors.Text, fontSize = 18.sp)
+            }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(13.dp))
         Column(Modifier.weight(1f)) {
             Text("SPY 0DTE", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 18.sp)
             Text(
-                if (status.connected) "RAILWAY ONLINE" else "RAILWAY CONNECTING",
+                if (status.connected) "●  ENGINE CONNECTED" else "○  CONNECTING",
                 color = if (status.connected) MatrixColors.Neon else MatrixColors.Amber,
                 fontSize = 9.sp,
-                letterSpacing = 1.2.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.7.sp,
             )
         }
         Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = MatrixColors.Neon.copy(alpha = 0.10f),
-            border = BorderStroke(1.dp, MatrixColors.Neon),
+            shape = RoundedCornerShape(22.dp),
+            color = MatrixColors.SoftGreen.copy(alpha = 0.92f),
+            border = BorderStroke(1.dp, MatrixColors.NeonDim),
         ) {
             Text(
-                "${status.mode}  ▾",
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                color = MatrixColors.NeonBright,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
+                "${status.mode} ⌄",
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                color = Color(0xFF0AA36E),
+                fontWeight = FontWeight.Black,
+                fontSize = 11.sp,
             )
         }
     }
 }
 
 @Composable
-private fun MatrixLiveScreen(
+private fun GlassLiveScreen(
     status: ScreenStatus,
     preview: Boolean,
     connectionError: String?,
     actions: MatrixActions,
-    onEditRisk: () -> Unit,
+    onPositions: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var prepared by remember { mutableStateOf<PreparedTrade?>(null) }
@@ -198,52 +211,69 @@ private fun MatrixLiveScreen(
     var topTab by remember { mutableStateOf("AI") }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        MatrixHero(status)
-        MatrixTopTabs(topTab) { topTab = it }
+        GlassMarketStrip(status)
+        GlassTopTabs(topTab) { topTab = it }
 
-        connectionError?.let { MatrixNotice(it, danger = true) }
+        connectionError?.let { GlassNotice("$it · retrying", danger = true) }
         if (preview) {
-            MatrixNotice(
-                "PREVIEW BUILD · LIVE submission waits for owner authentication. The complete trade UI remains visible.",
+            GlassNotice(
+                "LIVE orders are locked until owner authentication is configured. Paper data and the complete Glass UI remain active.",
                 danger = true,
             )
         }
 
         when (topTab) {
             "AI" -> {
-                MatrixAiConsensus(status.ai, status.alert)
-                MatrixSetupCard(
+                GlassAiConsensus(status.ai, status.alert)
+                GlassSetupCard(
                     status = status,
                     preview = preview,
                     busy = submitting,
                     onTrade = {
                         scope.launch {
-                            message = "PREPARING EXACT WEBULL PREVIEW…"
+                            message = "Preparing exact Webull preview…"
                             actions.prepareTrade()
                                 .onSuccess { prepared = it; message = null }
                                 .onFailure { message = it.message }
                         }
                     },
-                    onEnableLive = {
-                        scope.launch {
-                            actions.setMode("LIVE")
-                                .onSuccess { message = it }
-                                .onFailure { message = it.message }
+                    onQuickCall = {
+                        val right = status.alert?.right?.uppercase()
+                        if (right == "CALL" || right == "C") {
+                            scope.launch {
+                                actions.prepareTrade()
+                                    .onSuccess { prepared = it }
+                                    .onFailure { message = it.message }
+                            }
+                        } else {
+                            message = "No qualified CALL setup is active."
                         }
                     },
+                    onQuickPut = {
+                        val right = status.alert?.right?.uppercase()
+                        if (right == "PUT" || right == "P") {
+                            scope.launch {
+                                actions.prepareTrade()
+                                    .onSuccess { prepared = it }
+                                    .onFailure { message = it.message }
+                            }
+                        } else {
+                            message = "No qualified PUT setup is active."
+                        }
+                    },
+                    onClose = onPositions,
                 )
-                MatrixRiskCard(status.risk, onEditRisk)
-                MatrixLiveDataCard(status)
-                MatrixPositionCard(status)
+                GlassPositionsCard(status, onPositions)
+                GlassTodayCard(status)
             }
-            "CHART" -> MatrixCapabilityCard(
-                "LIVE CHART",
-                "The Matrix shell is ready for the real-time chart surface. No synthetic candles are rendered when the backend has no chart series.",
-            )
-            "OPTIONS" -> MatrixSetupCard(
+            "CHART" -> GlassChartPanel(status)
+            "OPTIONS" -> GlassSetupCard(
                 status = status,
                 preview = preview,
                 busy = submitting,
@@ -254,49 +284,52 @@ private fun MatrixLiveScreen(
                             .onFailure { message = it.message }
                     }
                 },
-                onEnableLive = {
-                    scope.launch { actions.setMode("LIVE") }
-                },
+                onQuickCall = { message = "Railway chooses the exact CALL contract when a qualified CALL setup exists." },
+                onQuickPut = { message = "Railway chooses the exact PUT contract when a qualified PUT setup exists." },
+                onClose = onPositions,
             )
-            "FLOW" -> MatrixCapabilityCard(
-                "FLOW",
-                "No options-flow feed is configured, so this panel stays explicitly empty instead of fabricating institutional flow.",
-            )
-            else -> MatrixCapabilityCard(
-                "NEWS",
-                "The trading AIs are currently tape-only by design. No outside-news feed is shown here until a timestamp-safe news source is connected.",
-            )
+            else -> GlassNewsPanel()
         }
 
-        message?.let { MatrixNotice(it, danger = it.contains("fail", true) || it.contains("lock", true)) }
+        message?.let {
+            GlassNotice(
+                it,
+                danger = it.contains("fail", true) || it.contains("lock", true) || it.contains("no qualified", true),
+            )
+        }
         Spacer(Modifier.height(4.dp))
     }
 
     prepared?.let { trade ->
         AlertDialog(
             onDismissRequest = { if (!submitting) prepared = null },
-            containerColor = MatrixColors.SurfaceRaised,
-            titleContentColor = MatrixColors.NeonBright,
+            containerColor = Color(0xFFF9FCFD),
+            titleContentColor = MatrixColors.Text,
             textContentColor = MatrixColors.Text,
-            title = { Text("CONFIRM WEBULL TRADE", fontWeight = FontWeight.Black) },
+            shape = RoundedCornerShape(26.dp),
+            title = { Text("Confirm Webull trade", fontWeight = FontWeight.Black) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("SPY ${trade.optionType} ${trimNumber(trade.strike)}", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    MatrixKeyValue("Expiration", trade.expiration)
-                    MatrixKeyValue("Quantity", trade.quantity.toString())
-                    MatrixKeyValue("Limit", money(trade.limitPrice))
-                    MatrixKeyValue("Maximum debit", money(trade.maxDebit))
-                    MatrixKeyValue("Authorization", "${trade.expiresSeconds}s")
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "This confirmation can submit only this exact order.",
+                        "SPY ${trade.optionType} ${trimNumber(trade.strike)}",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    GlassKeyValue("Expiration", trade.expiration)
+                    GlassKeyValue("Quantity", trade.quantity.toString())
+                    GlassKeyValue("Limit", money(trade.limitPrice))
+                    GlassKeyValue("Maximum debit", money(trade.maxDebit))
+                    GlassKeyValue("Authorization", "${trade.expiresSeconds}s")
+                    Text(
+                        "The authorization is single-use and applies only to this exact order.",
                         color = MatrixColors.TextMuted,
                         fontSize = 12.sp,
                     )
                 }
             },
             confirmButton = {
-                MatrixPrimaryButton(
-                    text = if (submitting) "SUBMITTING…" else "CONFIRM TRADE  >>>",
+                GlassPrimaryButton(
+                    text = if (submitting) "Submitting…" else "Confirm Trade  →",
                     enabled = !submitting,
                     onClick = {
                         submitting = true
@@ -314,7 +347,7 @@ private fun MatrixLiveScreen(
             },
             dismissButton = {
                 TextButton(enabled = !submitting, onClick = { prepared = null }) {
-                    Text("CANCEL", color = MatrixColors.TextMuted)
+                    Text("Cancel", color = MatrixColors.TextMuted)
                 }
             },
         )
@@ -322,109 +355,90 @@ private fun MatrixLiveScreen(
 }
 
 @Composable
-private fun MatrixHero(status: ScreenStatus) {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(132.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).padding(start = 6.dp)) {
-            Text(
-                status.spot?.let { "%.2f".format(it) } ?: "—",
-                color = MatrixColors.Text,
-                fontWeight = FontWeight.Black,
-                fontSize = 38.sp,
-                letterSpacing = (-1).sp,
-            )
-            Text(
-                if (status.connected) "● LIVE ENGINE LINK" else "○ ENGINE LINK",
-                color = if (status.connected) MatrixColors.Neon else MatrixColors.Amber,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "DATA AGE ${status.dataAge?.let { "%.1fs".format(it) } ?: "—"}   ·   FEED ${status.feedDelay?.let { "%.0fs".format(it) } ?: "—"}",
-                color = MatrixColors.TextMuted,
-                fontSize = 9.sp,
-                letterSpacing = 0.8.sp,
+private fun GlassMarketStrip(status: ScreenStatus) {
+    GlassPanel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("SPY", color = MatrixColors.Text, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    status.spot?.let { "%.2f".format(it) } ?: "—",
+                    color = MatrixColors.Text,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-1).sp,
+                )
+                Text(
+                    status.dataAge?.let { "Live · data age %.1fs".format(it) } ?: "Waiting for market data",
+                    color = if (status.connected) MatrixColors.Neon else MatrixColors.TextMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            GlassSpotPulse(
+                spot = status.spot,
+                connected = status.connected,
+                modifier = Modifier.width(128.dp).height(72.dp),
             )
         }
-        MatrixGlobe(Modifier.size(126.dp))
     }
 }
 
 @Composable
-private fun MatrixGlobe(modifier: Modifier = Modifier) {
+private fun GlassSpotPulse(spot: Double?, connected: Boolean, modifier: Modifier = Modifier) {
     Canvas(modifier) {
-        val center = Offset(size.width / 2f, size.height / 2f)
-        val radius = size.minDimension * 0.36f
-        drawCircle(MatrixColors.Neon.copy(alpha = 0.05f), radius * 1.45f, center)
-        drawCircle(MatrixColors.Neon.copy(alpha = 0.12f), radius * 1.15f, center)
-        drawCircle(MatrixColors.Neon, radius, center, style = Stroke(width = 1.7.dp.toPx()))
-        drawCircle(MatrixColors.Neon.copy(alpha = 0.35f), radius * 0.72f, center, style = Stroke(width = 1.dp.toPx()))
-        drawOval(
-            color = MatrixColors.Neon.copy(alpha = 0.55f),
-            topLeft = Offset(center.x - radius * 0.55f, center.y - radius),
-            size = Size(radius * 1.1f, radius * 2f),
-            style = Stroke(width = 1.dp.toPx()),
+        val centerY = size.height * 0.55f
+        drawLine(
+            color = MatrixColors.BorderSoft,
+            start = Offset(0f, centerY),
+            end = Offset(size.width, centerY),
+            strokeWidth = 1.dp.toPx(),
         )
-        drawOval(
-            color = MatrixColors.Neon.copy(alpha = 0.35f),
-            topLeft = Offset(center.x - radius, center.y - radius * 0.42f),
-            size = Size(radius * 2f, radius * 0.84f),
-            style = Stroke(width = 1.dp.toPx()),
-        )
-        for (i in -2..2) {
-            val yy = center.y + i * radius * 0.34f
-            drawLine(
-                MatrixColors.Neon.copy(alpha = 0.25f),
-                Offset(center.x - radius * 0.94f, yy),
-                Offset(center.x + radius * 0.94f, yy),
-                0.7.dp.toPx(),
+        if (spot != null && connected) {
+            val path = Path().apply {
+                moveTo(size.width * 0.05f, centerY)
+                cubicTo(
+                    size.width * 0.24f, centerY,
+                    size.width * 0.34f, centerY - 7.dp.toPx(),
+                    size.width * 0.50f, centerY - 7.dp.toPx(),
+                )
+                cubicTo(
+                    size.width * 0.66f, centerY - 7.dp.toPx(),
+                    size.width * 0.72f, centerY,
+                    size.width * 0.93f, centerY,
+                )
+            }
+            drawPath(path, MatrixColors.Neon.copy(alpha = 0.65f), style = Stroke(2.dp.toPx()))
+            drawCircle(
+                color = MatrixColors.Neon,
+                radius = 3.dp.toPx(),
+                center = Offset(size.width * 0.93f, centerY),
             )
         }
-        val path = Path().apply {
-            moveTo(0f, size.height * 0.72f)
-            lineTo(size.width * 0.16f, size.height * 0.63f)
-            lineTo(size.width * 0.27f, size.height * 0.70f)
-            lineTo(size.width * 0.42f, size.height * 0.50f)
-            lineTo(size.width * 0.54f, size.height * 0.57f)
-            lineTo(size.width * 0.68f, size.height * 0.34f)
-            lineTo(size.width * 0.80f, size.height * 0.43f)
-            lineTo(size.width, size.height * 0.20f)
-        }
-        drawPath(path, MatrixColors.NeonBright.copy(alpha = 0.75f), style = Stroke(width = 1.3.dp.toPx()))
     }
 }
 
 @Composable
-private fun MatrixTopTabs(selected: String, onSelect: (String) -> Unit) {
+private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, MatrixColors.BorderSoft, RoundedCornerShape(7.dp))
-            .background(MatrixColors.Surface.copy(alpha = 0.85f), RoundedCornerShape(7.dp))
-            .padding(3.dp),
+            .padding(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        listOf("AI", "CHART", "OPTIONS", "FLOW", "NEWS").forEach { label ->
+        listOf("AI", "CHART", "OPTIONS", "NEWS").forEach { label ->
             val active = selected == label
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (active) MatrixColors.Neon.copy(alpha = 0.12f) else Color.Transparent)
-                    .border(
-                        width = if (active) 1.dp else 0.dp,
-                        color = if (active) MatrixColors.Neon else Color.Transparent,
-                        shape = RoundedCornerShape(6.dp),
-                    )
-                    .clickable { onSelect(label) }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
+            Surface(
+                modifier = Modifier.weight(1f).clickable { onSelect(label) },
+                shape = RoundedCornerShape(20.dp),
+                color = if (active) Color.White.copy(alpha = 0.92f) else Color.Transparent,
+                border = if (active) BorderStroke(1.dp, MatrixColors.BorderSoft) else null,
             ) {
                 Text(
                     label,
-                    color = if (active) MatrixColors.NeonBright else MatrixColors.Text,
+                    modifier = Modifier.padding(vertical = 9.dp),
+                    textAlign = TextAlign.Center,
+                    color = if (active) MatrixColors.Text else MatrixColors.TextMuted,
                     fontSize = 10.sp,
                     fontWeight = if (active) FontWeight.Black else FontWeight.Medium,
                 )
@@ -434,52 +448,46 @@ private fun MatrixTopTabs(selected: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun MatrixAiConsensus(ai: AiDecisionState, alert: LiveAlert?) {
-    MatrixPanel {
-        Text("AI CONSENSUS", color = MatrixColors.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(8.dp))
+private fun GlassAiConsensus(ai: AiDecisionState, alert: LiveAlert?) {
+    GlassPanel {
+        Text("AI CONSENSUS", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MatrixConsensusGauge(ai, alert, Modifier.size(134.dp))
+            GlassConsensusGauge(ai, alert, Modifier.size(122.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                MatrixProbabilityRow("Quant", ai.quantProbabilityUp)
+                GlassProbabilityRow("Quant", ai.quantProbabilityUp)
                 ai.providers.forEach { provider ->
-                    MatrixProbabilityRow(providerDisplayName(provider.provider), provider.probabilityUp)
+                    GlassProbabilityRow(providerDisplayName(provider.provider), provider.probabilityUp)
                 }
-                if (ai.providers.isEmpty()) MatrixProbabilityRow("AI", ai.aiProbabilityUp)
+                if (ai.providers.isEmpty()) GlassProbabilityRow("AI", ai.aiProbabilityUp)
             }
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MatrixMicroChip("AI WEIGHT", ai.effectiveWeight?.let { percent(it) } ?: "—", Modifier.weight(1f))
-            MatrixMicroChip("CONF", ai.consensusConfidence?.let { percent(it) } ?: "—", Modifier.weight(1f))
-            MatrixMicroChip("DISAGREE", ai.disagreement?.let { percent(it) } ?: "—", Modifier.weight(1f))
         }
     }
 }
 
 @Composable
-private fun MatrixConsensusGauge(ai: AiDecisionState, alert: LiveAlert?, modifier: Modifier = Modifier) {
-    val probability = ai.hybridProbabilityUp
+private fun GlassConsensusGauge(ai: AiDecisionState, alert: LiveAlert?, modifier: Modifier = Modifier) {
+    val pUp = ai.hybridProbabilityUp ?: ai.aiProbabilityUp ?: ai.quantProbabilityUp
     val directionProbability = when {
-        probability == null -> null
-        alert?.right.equals("PUT", true) || alert?.right.equals("P", true) -> 1.0 - probability
-        else -> probability
+        pUp == null -> null
+        alert?.right.equals("PUT", true) || alert?.right.equals("P", true) -> 1.0 - pUp
+        else -> pUp
     }
-    val gauge = (directionProbability ?: 0.0).coerceIn(0.0, 1.0).toFloat()
+    val sweep = ((directionProbability ?: 0.0).coerceIn(0.0, 1.0) * 270.0).toFloat()
     val label = when {
-        probability == null -> "WAITING"
-        probability >= 0.53 -> "BULLISH"
-        probability <= 0.47 -> "BEARISH"
+        pUp == null -> "WAITING"
+        pUp >= 0.53 -> "BULLISH"
+        pUp <= 0.47 -> "BEARISH"
         else -> "NEUTRAL"
     }
 
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 7.dp.toPx()
-            val inset = stroke / 2f + 3.dp.toPx()
+            val inset = 7.dp.toPx()
             drawArc(
-                color = MatrixColors.BorderSoft,
+                color = Color(0xFFDCE8EC),
                 startAngle = 135f,
                 sweepAngle = 270f,
                 useCenter = false,
@@ -488,63 +496,55 @@ private fun MatrixConsensusGauge(ai: AiDecisionState, alert: LiveAlert?, modifie
                 style = Stroke(stroke),
             )
             drawArc(
-                brush = Brush.sweepGradient(listOf(MatrixColors.NeonDim, MatrixColors.NeonBright, MatrixColors.Neon)),
+                color = MatrixColors.Neon,
                 startAngle = 135f,
-                sweepAngle = 270f * gauge,
+                sweepAngle = sweep,
                 useCenter = false,
                 topLeft = Offset(inset, inset),
                 size = Size(size.width - inset * 2, size.height - inset * 2),
                 style = Stroke(stroke),
             )
-            val r = size.minDimension * 0.32f
-            val c = Offset(size.width / 2f, size.height / 2f)
-            val points = List(6) { index ->
-                val angle = Math.toRadians((60.0 * index - 30.0))
-                Offset(c.x + (r * kotlin.math.cos(angle)).toFloat(), c.y + (r * kotlin.math.sin(angle)).toFloat())
-            }
-            val hex = Path().apply {
-                moveTo(points.first().x, points.first().y)
-                points.drop(1).forEach { lineTo(it.x, it.y) }
-                close()
-            }
-            drawPath(hex, MatrixColors.Neon.copy(alpha = 0.16f))
-            drawPath(hex, MatrixColors.Neon, style = Stroke(1.dp.toPx()))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("AI", color = MatrixColors.TextMuted, fontSize = 9.sp, letterSpacing = 1.sp)
             Text(
                 directionProbability?.let { percent(it) } ?: "—",
                 color = MatrixColors.Text,
-                fontSize = 27.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
             )
-            Text(label, color = MatrixColors.Neon, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(
+                label,
+                color = if (label == "BEARISH") MatrixColors.Red else MatrixColors.Neon,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+            )
         }
     }
 }
 
 @Composable
-private fun MatrixProbabilityRow(label: String, value: Double?) {
+private fun GlassProbabilityRow(label: String, value: Double?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = MatrixColors.TextMuted, fontSize = 10.sp, modifier = Modifier.width(64.dp))
+        Text(label, color = MatrixColors.TextMuted, fontSize = 10.sp, modifier = Modifier.width(62.dp))
         Box(
             Modifier
                 .weight(1f)
                 .height(6.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MatrixColors.BorderSoft),
+                .clip(RoundedCornerShape(99.dp))
+                .background(Color(0xFFE3ECEF)),
         ) {
             Box(
                 Modifier
                     .fillMaxHeight()
                     .fillMaxWidth((value ?: 0.0).coerceIn(0.0, 1.0).toFloat())
-                    .background(Brush.horizontalGradient(listOf(MatrixColors.NeonDim, MatrixColors.NeonBright))),
+                    .background(MatrixColors.Neon),
             )
         }
         Text(
             value?.let { percent(it) } ?: "—",
             color = MatrixColors.Text,
             fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.End,
             modifier = Modifier.width(42.dp),
         )
@@ -552,66 +552,115 @@ private fun MatrixProbabilityRow(label: String, value: Double?) {
 }
 
 @Composable
-private fun MatrixSetupCard(
+private fun GlassSetupCard(
     status: ScreenStatus,
     preview: Boolean,
     busy: Boolean,
     onTrade: () -> Unit,
-    onEnableLive: () -> Unit,
+    onQuickCall: () -> Unit,
+    onQuickPut: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val alert = status.alert
-    MatrixPanel(border = MatrixColors.NeonDim) {
+    val parsed = alert?.symbol?.let(::parseOccSymbol)
+    val moneyness = if (parsed != null && status.spot != null) {
+        when {
+            kotlin.math.abs(status.spot - parsed.strike) < 0.25 -> "ATM"
+            (parsed.right == "CALL" && status.spot > parsed.strike) ||
+                (parsed.right == "PUT" && status.spot < parsed.strike) -> "ITM"
+            else -> "OTM"
+        }
+    } else null
+    val pUp = status.ai.hybridProbabilityUp ?: status.ai.aiProbabilityUp ?: status.ai.quantProbabilityUp
+    val directionProbability = when {
+        pUp == null || alert == null -> null
+        alert.right.equals("PUT", true) || alert.right.equals("P", true) -> 1.0 - pUp
+        else -> pUp
+    }
+
+    GlassPanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("TOP SETUP", color = MatrixColors.TextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("TOP SETUP", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Spacer(Modifier.height(5.dp))
                 Text(
                     alert?.let { optionLabel(it.symbol, it.right) } ?: "WAITING FOR QUALIFIED SETUP",
                     color = MatrixColors.Text,
-                    fontSize = if (alert == null) 16.sp else 22.sp,
                     fontWeight = FontWeight.Black,
+                    fontSize = if (alert == null) 16.sp else 21.sp,
                 )
             }
-            Surface(
-                color = MatrixColors.Neon.copy(alpha = 0.08f),
-                border = BorderStroke(1.dp, MatrixColors.NeonDim),
-                shape = RoundedCornerShape(10.dp),
-            ) {
-                Text(
-                    "ITM/OTM",
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    color = MatrixColors.Neon,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+            moneyness?.let {
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = MatrixColors.SoftGreen,
+                    border = BorderStroke(1.dp, MatrixColors.NeonDim),
+                ) {
+                    Text(
+                        it,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        color = Color(0xFF0DA873),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MatrixMetric("Hybrid", status.ai.hybridProbabilityUp?.let { percent(it) } ?: "—", Modifier.weight(1f))
-            MatrixMetric("Limit", alert?.let { "${price(it.bid)} / ${price(it.ask)}" } ?: "—", Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                GlassKeyValue("Direction Prob.", directionProbability?.let { percent(it) } ?: "—")
+                GlassKeyValue("Est. Move", "—")
+                GlassKeyValue("Risk/Reward", "—")
+            }
+            Box(Modifier.width(1.dp).height(62.dp).background(MatrixColors.BorderSoft))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                GlassKeyValue("Limit", alert?.let { "${price(it.bid)} / ${price(it.ask)}" } ?: "—")
+                GlassKeyValue("Contracts", alert?.contracts?.takeIf { it > 0 }?.toString() ?: "—")
+                GlassKeyValue("Est. Cost", alert?.maxDebit?.let(::money) ?: "—")
+            }
         }
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MatrixMetric("Contracts", alert?.contracts?.takeIf { it > 0 }?.toString() ?: "—", Modifier.weight(1f))
-            MatrixMetric("Max Debit", alert?.maxDebit?.let { money(it) } ?: "—", Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(13.dp))
+        Spacer(Modifier.height(12.dp))
 
         val canTrade = !preview && status.liveReady && status.mode == "LIVE" && alert != null && !busy
-        MatrixPrimaryButton(
-            text = if (preview) "TRADE · OWNER LOGIN REQUIRED" else "TRADE     >>>",
+        GlassPrimaryButton(
+            text = if (preview) "TRADE · OWNER LOGIN REQUIRED" else "TRADE  →",
             enabled = canTrade,
             onClick = onTrade,
             modifier = Modifier.fillMaxWidth(),
         )
-        if (!preview && status.mode != "LIVE") {
-            Spacer(Modifier.height(8.dp))
-            MatrixOutlineButton("ENABLE LIVE MODE", onEnableLive, Modifier.fillMaxWidth())
+        Spacer(Modifier.height(9.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassQuickButton(
+                label = "↑",
+                caption = "Buy Call",
+                tint = MatrixColors.Neon,
+                enabled = alert != null,
+                onClick = onQuickCall,
+                modifier = Modifier.weight(1f),
+            )
+            GlassQuickButton(
+                label = "↓",
+                caption = "Buy Put",
+                tint = MatrixColors.Red,
+                enabled = alert != null,
+                onClick = onQuickPut,
+                modifier = Modifier.weight(1f),
+            )
+            val openCount = if (status.mode == "PAPER") status.paperPositions else status.brokerState.openPositions
+            GlassQuickButton(
+                label = "○",
+                caption = "Close",
+                tint = MatrixColors.TextMuted,
+                enabled = openCount > 0,
+                onClick = onClose,
+                modifier = Modifier.weight(1f),
+            )
         }
         if (!status.liveReady && status.liveReasons.isNotEmpty()) {
             Spacer(Modifier.height(9.dp))
             Text(
-                "LOCKED · ${status.liveReasons.joinToString(" · ")}",
+                "LIVE LOCKED · ${status.liveReasons.joinToString(" · ").replace('_', ' ')}",
                 color = MatrixColors.Amber,
                 fontSize = 9.sp,
             )
@@ -620,124 +669,201 @@ private fun MatrixSetupCard(
 }
 
 @Composable
-private fun MatrixRiskCard(risk: RiskState, onEdit: () -> Unit) {
-    MatrixPanel {
+private fun GlassQuickButton(
+    label: String,
+    caption: String,
+    tint: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .height(65.dp)
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(17.dp),
+        color = Color.White.copy(alpha = if (enabled) 0.66f else 0.35f),
+        border = BorderStroke(1.dp, MatrixColors.BorderSoft),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(label, color = if (enabled) tint else MatrixColors.TextFaint, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Text(caption, color = if (enabled) MatrixColors.Text else MatrixColors.TextFaint, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun GlassPositionsCard(status: ScreenStatus, onOpen: () -> Unit) {
+    val paper = status.mode == "PAPER"
+    val count = if (paper) status.paperPositions else status.brokerState.openPositions
+    val pnl = if (paper) status.paperPnl else status.brokerState.openPnl
+
+    GlassPanel(modifier = Modifier.clickable { onOpen() }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("RISK CONTROLS", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            Text(
-                "EDIT",
-                color = MatrixColors.Neon,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable(onClick = onEdit).padding(6.dp),
-            )
+            Text("POSITIONS ($count)", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text("›", color = MatrixColors.TextMuted, fontSize = 22.sp)
         }
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MatrixRiskTile("DAILY GAIN", risk.gain?.let { "+${money(it)}" } ?: "—", MatrixColors.Neon, Modifier.weight(1f))
-            MatrixRiskTile("DAILY LOSS", risk.loss?.let { "-${money(it)}" } ?: "—", MatrixColors.Red, Modifier.weight(1f))
-            MatrixRiskTile("MAX CONTRACTS", risk.contracts?.toString() ?: "—", MatrixColors.Text, Modifier.weight(1f))
-            MatrixRiskTile("MAX EXPOSURE", risk.exposure?.let { percent(it) } ?: "—", MatrixColors.Text, Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun MatrixLiveDataCard(status: ScreenStatus) {
-    MatrixPanel {
-        Text("LIVE DATA", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MatrixMetric("Cash", money(status.brokerState.cashAvailable), Modifier.weight(1f))
-            MatrixMetric("Buying Basis", money(status.brokerState.totalEquity), Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MatrixMetric(
-                "Day P&L",
-                signedMoney(status.brokerState.dailyPnl),
-                Modifier.weight(1f),
-                valueColor = pnlColor(status.brokerState.dailyPnl),
-            )
-            MatrixMetric("Open Positions", status.brokerState.openPositions.toString(), Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun MatrixPositionCard(status: ScreenStatus) {
-    MatrixPanel {
-        Text("POSITIONS (${status.brokerState.openPositions})", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-        Spacer(Modifier.height(8.dp))
-        if (status.brokerState.openPositions == 0) {
-            Text("FLAT", color = MatrixColors.Neon, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text("No broker position is currently open.", color = MatrixColors.TextMuted, fontSize = 11.sp)
+        Spacer(Modifier.height(7.dp))
+        if (count == 0) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(4.dp, 38.dp).background(MatrixColors.Neon, RoundedCornerShape(99.dp)))
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("FLAT", color = MatrixColors.Neon, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text("No open positions", color = MatrixColors.TextMuted, fontSize = 10.sp)
+                }
+            }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(3.dp).height(42.dp).background(MatrixColors.Neon))
-                Spacer(Modifier.width(10.dp))
+                Box(Modifier.size(4.dp, 44.dp).background(if ((pnl ?: 0.0) >= 0) MatrixColors.Neon else MatrixColors.Red, RoundedCornerShape(99.dp)))
+                Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("WEBULL LIVE POSITION", color = MatrixColors.Text, fontWeight = FontWeight.Bold)
-                    Text("${status.brokerState.openPositions} open · ${status.brokerState.pendingOrders} pending", color = MatrixColors.TextMuted, fontSize = 11.sp)
+                    Text(
+                        if (paper) "PAPER SPY 0DTE" else "WEBULL SPY 0DTE",
+                        color = MatrixColors.Text,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                    )
+                    Text("$count open position${if (count == 1) "" else "s"}", color = MatrixColors.TextMuted, fontSize = 10.sp)
                 }
-                Text(signedMoney(status.brokerState.openPnl), color = pnlColor(status.brokerState.openPnl), fontWeight = FontWeight.Bold)
+                Text(signedMoney(pnl), color = pnlColor(pnl), fontWeight = FontWeight.Black, fontSize = 15.sp)
             }
         }
     }
 }
 
 @Composable
-private fun MatrixPositionsScreen(status: ScreenStatus) {
+private fun GlassTodayCard(status: ScreenStatus) {
+    val pnl = if (status.mode == "PAPER") status.paperPnl else status.brokerState.dailyPnl
+    GlassPanel {
+        Text("TODAY", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        Row {
+            GlassTodayMetric("Trades", if (status.mode == "PAPER") status.paperTrades.toString() else "—", Modifier.weight(1f))
+            GlassDivider()
+            GlassTodayMetric("Win Rate", "—", Modifier.weight(1f))
+            GlassDivider()
+            GlassTodayMetric("P&L", signedMoney(pnl), Modifier.weight(1f), pnlColor(pnl))
+        }
+    }
+}
+
+@Composable
+private fun GlassTodayMetric(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = MatrixColors.Text) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = MatrixColors.TextMuted, fontSize = 9.sp)
+        Text(value, color = valueColor, fontWeight = FontWeight.Black, fontSize = 15.sp)
+    }
+}
+
+@Composable
+private fun GlassDivider() {
+    Box(Modifier.width(1.dp).height(34.dp).background(MatrixColors.BorderSoft))
+}
+
+@Composable
+private fun GlassChartPanel(status: ScreenStatus) {
+    GlassPanel {
+        Text("LIVE CHART", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            status.spot?.let { "SPY  %.2f".format(it) } ?: "SPY  —",
+            color = MatrixColors.Text,
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Black,
+        )
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(170.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color.White.copy(alpha = 0.38f))
+                .border(1.dp, MatrixColors.BorderSoft, RoundedCornerShape(18.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Real-time chart series not published by Railway yet", color = MatrixColors.TextMuted, fontSize = 11.sp)
+                Text("No synthetic candles are drawn.", color = MatrixColors.TextFaint, fontSize = 9.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassNewsPanel() {
+    GlassPanel {
+        Text("NEWS", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "The AI decision feed is tape-only, so this screen stays empty until a timestamp-safe news source is connected.",
+            color = MatrixColors.TextMuted,
+            fontSize = 11.sp,
+        )
+    }
+}
+
+@Composable
+private fun GlassPositionsScreen(status: ScreenStatus) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        MatrixSectionTitle("POSITIONS")
-        MatrixPositionCard(status)
-        MatrixPanel {
-            MatrixKeyValue("Pending broker orders", status.brokerState.pendingOrders.toString())
-            MatrixKeyValue("Open P&L", signedMoney(status.brokerState.openPnl), pnlColor(status.brokerState.openPnl))
-            MatrixKeyValue("Day P&L", signedMoney(status.brokerState.dailyPnl), pnlColor(status.brokerState.dailyPnl))
-            MatrixKeyValue("Maximum new debit", money(status.brokerState.maxEntryDebit))
-            MatrixKeyValue("Entry eligible", if (status.brokerState.entryAllowed) "YES" else "NO", if (status.brokerState.entryAllowed) MatrixColors.Neon else MatrixColors.Amber)
+        GlassSectionTitle("Positions")
+        GlassPositionsCard(status) {}
+        GlassPanel {
+            val live = status.mode == "LIVE"
+            GlassKeyValue("Mode", status.mode)
+            GlassKeyValue("Open positions", if (live) status.brokerState.openPositions.toString() else status.paperPositions.toString())
+            GlassKeyValue("Pending broker orders", if (live) status.brokerState.pendingOrders.toString() else "—")
+            GlassKeyValue("Open P&L", if (live) signedMoney(status.brokerState.openPnl) else "—", pnlColor(status.brokerState.openPnl))
+            GlassKeyValue("Day P&L", if (live) signedMoney(status.brokerState.dailyPnl) else signedMoney(status.paperPnl), pnlColor(if (live) status.brokerState.dailyPnl else status.paperPnl))
+            GlassKeyValue("New entry eligible", if (status.brokerState.entryAllowed) "YES" else "NO", if (status.brokerState.entryAllowed) MatrixColors.Neon else MatrixColors.Amber)
         }
         if (status.brokerState.openPositions > 0) {
-            MatrixNotice("Webull currently exposes the reconciled position count to this dashboard. The app does not invent contract details that are absent from the status stream.")
+            GlassNotice("The broker status stream currently exposes reconciled position count and P&L, not contract-level position details. This screen does not invent them.")
         }
     }
 }
 
 @Composable
-private fun MatrixAnalyticsScreen(status: ScreenStatus) {
+private fun GlassAnalyticsScreen(status: ScreenStatus) {
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        MatrixSectionTitle("ANALYTICS")
-        MatrixAiConsensus(status.ai, status.alert)
-        MatrixPanel {
+        GlassSectionTitle("Analytics")
+        GlassAiConsensus(status.ai, status.alert)
+        GlassPanel {
             Text("ENGINE", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            MatrixKeyValue("Strategy", status.strategy)
-            MatrixKeyValue("Risk", status.riskProfile)
-            MatrixKeyValue("Exit", status.exitProfile)
-            MatrixKeyValue("Decision", status.decision)
-            Text(status.reason, color = MatrixColors.TextMuted, fontSize = 11.sp)
+            GlassKeyValue("Strategy", status.strategy)
+            GlassKeyValue("Risk", status.riskProfile)
+            GlassKeyValue("Exit", status.exitProfile)
+            GlassKeyValue("Decision", status.decision)
+            Spacer(Modifier.height(6.dp))
+            Text(status.reason, color = MatrixColors.TextMuted, fontSize = 10.sp)
         }
-        MatrixPanel {
+        GlassPanel {
             Text("PAPER LEDGER", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MatrixMetric("Cash", money(status.paperCash), Modifier.weight(1f))
-                MatrixMetric("P&L", signedMoney(status.paperPnl), Modifier.weight(1f), pnlColor(status.paperPnl))
-                MatrixMetric("Trades", status.paperTrades.toString(), Modifier.weight(1f))
+            Row {
+                GlassTodayMetric("Cash", money(status.paperCash), Modifier.weight(1f))
+                GlassDivider()
+                GlassTodayMetric("P&L", signedMoney(status.paperPnl), Modifier.weight(1f), pnlColor(status.paperPnl))
+                GlassDivider()
+                GlassTodayMetric("Trades", status.paperTrades.toString(), Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun MatrixSettingsScreen(
+private fun GlassSettingsScreen(
     status: ScreenStatus,
     preview: Boolean,
     actions: MatrixActions,
@@ -751,11 +877,11 @@ private fun MatrixSettingsScreen(
     var message by remember { mutableStateOf<String?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        MatrixSectionTitle("SETTINGS")
-        MatrixPanel {
+        GlassSectionTitle("Settings")
+        GlassPanel {
             Text("TRADING MODE", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -770,27 +896,32 @@ private fun MatrixSettingsScreen(
                             }
                         },
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (active) MatrixColors.Neon.copy(alpha = 0.12f) else Color.Transparent,
-                            contentColor = if (active) MatrixColors.Neon else MatrixColors.Text,
+                            containerColor = if (active) MatrixColors.SoftGreen else Color.White.copy(alpha = 0.35f),
+                            contentColor = if (active) Color(0xFF0AA36E) else MatrixColors.TextMuted,
                         ),
-                        border = BorderStroke(1.dp, if (active) MatrixColors.Neon else MatrixColors.BorderSoft),
-                    ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        border = BorderStroke(1.dp, if (active) MatrixColors.NeonDim else MatrixColors.BorderSoft),
+                    ) {
+                        Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
 
-        MatrixPanel {
-            Text("DAILY LIVE ENVELOPE", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Text("Server-authoritative ceilings. New entries are also blocked while a position or broker order is open.", color = MatrixColors.TextMuted, fontSize = 10.sp)
+        GlassPanel {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("RISK CONTROLS", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text(if (status.risk.armed) "ARMED" else "NOT ARMED", color = if (status.risk.armed) MatrixColors.Neon else MatrixColors.Amber, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
             Spacer(Modifier.height(8.dp))
-            MatrixTextField(loss, { loss = it }, "Daily loss stop ($)")
-            MatrixTextField(gain, { gain = it }, "Daily gain stop ($)")
-            MatrixTextField(exposure, { exposure = it }, "Max account exposure (%)")
-            MatrixTextField(contracts, { contracts = it }, "Max contracts")
-            Spacer(Modifier.height(5.dp))
-            MatrixPrimaryButton(
-                text = "ARM TODAY'S LIMITS",
+            GlassTextField(loss, { loss = it }, "Daily loss stop ($)")
+            GlassTextField(gain, { gain = it }, "Daily gain stop ($)")
+            GlassTextField(exposure, { exposure = it }, "Max account exposure (%)")
+            GlassTextField(contracts, { contracts = it }, "Max contracts")
+            Spacer(Modifier.height(7.dp))
+            GlassPrimaryButton(
+                text = "Arm Today's Limits",
                 enabled = true,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
@@ -810,8 +941,8 @@ private fun MatrixSettingsScreen(
                 },
             )
             Spacer(Modifier.height(7.dp))
-            MatrixOutlineButton(
-                text = "DISARM LIVE",
+            GlassOutlineButton(
+                text = "Disarm Live",
                 onClick = {
                     scope.launch {
                         actions.disarmRisk()
@@ -823,15 +954,15 @@ private fun MatrixSettingsScreen(
             )
         }
 
-        MatrixPanel {
+        GlassPanel {
             Text("AUTONOMOUS PAPER", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Spacer(Modifier.height(6.dp))
-            MatrixKeyValue("Cash", money(status.paperCash))
-            MatrixKeyValue("Realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
-            MatrixKeyValue("Trades", status.paperTrades.toString())
+            Spacer(Modifier.height(7.dp))
+            GlassKeyValue("Cash", money(status.paperCash))
+            GlassKeyValue("Realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
+            GlassKeyValue("Trades", status.paperTrades.toString())
             Spacer(Modifier.height(8.dp))
-            MatrixOutlineButton(
-                text = if (status.paperArmed) "STOP NEW PAPER ENTRIES" else "ARM AUTONOMOUS PAPER",
+            GlassOutlineButton(
+                text = if (status.paperArmed) "Stop New Paper Entries" else "Arm Autonomous Paper",
                 onClick = {
                     scope.launch {
                         actions.setPaperAutonomy(!status.paperArmed)
@@ -843,32 +974,35 @@ private fun MatrixSettingsScreen(
             )
         }
 
-        MatrixPanel {
-            Text("BROKER", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Spacer(Modifier.height(6.dp))
-            MatrixKeyValue("Provider", status.broker.uppercase())
-            MatrixKeyValue("API configured", if (status.brokerConfigured) "YES" else "NO")
-            MatrixKeyValue("Account connected", if (status.brokerConnected) "YES" else "NO")
-            MatrixKeyValue("Owner auth", if (preview) "LOCKED" else "ACTIVE", if (preview) MatrixColors.Amber else MatrixColors.Neon)
+        GlassPanel {
+            Text("ACCOUNT", color = MatrixColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Spacer(Modifier.height(7.dp))
+            GlassKeyValue("Provider", status.broker.uppercase())
+            GlassKeyValue("API configured", if (status.brokerConfigured) "YES" else "NO")
+            GlassKeyValue("Broker connected", if (status.brokerConnected) "YES" else "NO")
+            GlassKeyValue("Cash", money(status.brokerState.cashAvailable))
+            GlassKeyValue("Day P&L", signedMoney(status.brokerState.dailyPnl), pnlColor(status.brokerState.dailyPnl))
+            GlassKeyValue("Owner auth", if (preview) "LOCKED" else "ACTIVE", if (preview) MatrixColors.Amber else MatrixColors.Neon)
             onSignOut?.let {
                 Spacer(Modifier.height(8.dp))
-                MatrixOutlineButton("SIGN OUT", it, Modifier.fillMaxWidth())
+                GlassOutlineButton("Sign Out", it, Modifier.fillMaxWidth())
             }
         }
-        if (preview) MatrixNotice("Owner login is not configured in this APK, so Webull submission remains locked.", danger = true)
-        message?.let { MatrixNotice(it, danger = it.contains("fail", true) || it.contains("invalid", true)) }
+        if (preview) GlassNotice("Owner login is not configured in this APK, so Webull submission remains locked.", danger = true)
+        message?.let { GlassNotice(it, danger = it.contains("fail", true) || it.contains("invalid", true)) }
+        Spacer(Modifier.height(4.dp))
     }
 }
 
 @Composable
-private fun MatrixBottomNav(selected: String, onSelect: (String) -> Unit) {
+private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
     Surface(
-        color = MatrixColors.Background.copy(alpha = 0.98f),
+        color = Color.White.copy(alpha = 0.78f),
         border = BorderStroke(1.dp, MatrixColors.BorderSoft),
     ) {
-        Row(Modifier.fillMaxWidth().height(64.dp)) {
+        Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 8.dp)) {
             listOf(
-                "LIVE" to "◆",
+                "LIVE" to "⌂",
                 "POSITIONS" to "▣",
                 "ANALYTICS" to "⌁",
                 "SETTINGS" to "⚙",
@@ -882,7 +1016,19 @@ private fun MatrixBottomNav(selected: String, onSelect: (String) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(glyph, color = if (active) MatrixColors.Neon else MatrixColors.TextMuted, fontSize = 18.sp)
+                    Surface(
+                        shape = CircleShape,
+                        color = if (active) MatrixColors.Neon else Color.Transparent,
+                    ) {
+                        Text(
+                            glyph,
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                            color = if (active) Color.White else MatrixColors.TextMuted,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         label.lowercase().replaceFirstChar { it.uppercase() },
                         color = if (active) MatrixColors.Neon else MatrixColors.TextMuted,
@@ -896,47 +1042,39 @@ private fun MatrixBottomNav(selected: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun MatrixPanel(
-    border: Color = MatrixColors.BorderSoft,
-    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+private fun GlassPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MatrixColors.Surface.copy(alpha = 0.94f),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, border),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White.copy(alpha = 0.66f),
+        border = BorderStroke(1.dp, MatrixColors.BorderSoft),
+        shadowElevation = 3.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(13.dp), content = content)
+        Column(Modifier.fillMaxWidth().padding(14.dp), content = content)
     }
 }
 
 @Composable
-private fun MatrixNotice(text: String, danger: Boolean = false) {
+private fun GlassNotice(text: String, danger: Boolean = false) {
     Surface(
-        color = if (danger) MatrixColors.Red.copy(alpha = 0.08f) else MatrixColors.Neon.copy(alpha = 0.06f),
-        border = BorderStroke(1.dp, if (danger) MatrixColors.Red.copy(alpha = 0.55f) else MatrixColors.BorderSoft),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (danger) MatrixColors.SoftRed.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.54f),
+        border = BorderStroke(1.dp, if (danger) MatrixColors.Red.copy(alpha = 0.25f) else MatrixColors.BorderSoft),
     ) {
         Text(
             text,
-            modifier = Modifier.fillMaxWidth().padding(10.dp),
-            color = if (danger) MatrixColors.Red else MatrixColors.TextMuted,
+            modifier = Modifier.fillMaxWidth().padding(11.dp),
+            color = if (danger) Color(0xFFC83C39) else MatrixColors.TextMuted,
             fontSize = 10.sp,
         )
     }
 }
 
 @Composable
-private fun MatrixCapabilityCard(title: String, body: String) {
-    MatrixPanel {
-        Text(title, color = MatrixColors.Neon, fontWeight = FontWeight.Black, fontSize = 15.sp)
-        Spacer(Modifier.height(8.dp))
-        Text(body, color = MatrixColors.TextMuted, fontSize = 11.sp)
-    }
-}
-
-@Composable
-private fun MatrixPrimaryButton(
+private fun GlassPrimaryButton(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -946,100 +1084,92 @@ private fun MatrixPrimaryButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MatrixColors.Neon,
-            contentColor = MatrixColors.Black,
-            disabledContainerColor = MatrixColors.BorderSoft,
+            contentColor = Color.White,
+            disabledContainerColor = Color(0xFFDCE5E8),
             disabledContentColor = MatrixColors.TextFaint,
         ),
     ) {
-        Text(text, fontWeight = FontWeight.Black, letterSpacing = 0.7.sp)
+        Text(text, fontWeight = FontWeight.Black, fontSize = 13.sp)
     }
 }
 
 @Composable
-private fun MatrixOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun GlassOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, MatrixColors.NeonDim),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MatrixColors.NeonBright),
+        shape = RoundedCornerShape(15.dp),
+        border = BorderStroke(1.dp, MatrixColors.Border),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.White.copy(alpha = 0.35f),
+            contentColor = MatrixColors.Text,
+        ),
     ) {
         Text(text, fontWeight = FontWeight.Bold, fontSize = 11.sp)
     }
 }
 
 @Composable
-private fun MatrixTextField(value: String, onValueChange: (String) -> Unit, label: String) {
+private fun GlassTextField(value: String, onValueChange: (String) -> Unit, label: String) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         singleLine = true,
         label = { Text(label) },
+        shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MatrixColors.Neon,
-            unfocusedBorderColor = MatrixColors.BorderSoft,
-            focusedLabelColor = MatrixColors.Neon,
+            unfocusedBorderColor = MatrixColors.Border,
+            focusedLabelColor = Color(0xFF0AA36E),
             unfocusedLabelColor = MatrixColors.TextMuted,
             focusedTextColor = MatrixColors.Text,
             unfocusedTextColor = MatrixColors.Text,
             cursorColor = MatrixColors.Neon,
+            focusedContainerColor = Color.White.copy(alpha = 0.56f),
+            unfocusedContainerColor = Color.White.copy(alpha = 0.42f),
         ),
     )
 }
 
 @Composable
-private fun MatrixRiskTile(label: String, value: String, valueColor: Color, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = MatrixColors.SurfaceRaised,
-        shape = RoundedCornerShape(7.dp),
-        border = BorderStroke(1.dp, MatrixColors.BorderSoft),
-    ) {
-        Column(Modifier.padding(horizontal = 6.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = MatrixColors.TextMuted, fontSize = 7.sp, maxLines = 1)
-            Text(value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
-        }
+private fun GlassKeyValue(label: String, value: String, valueColor: Color = MatrixColors.Text) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = MatrixColors.TextMuted, fontSize = 10.sp, modifier = Modifier.weight(1f))
+        Text(value, color = valueColor, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
     }
 }
 
 @Composable
-private fun MatrixMetric(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = MatrixColors.Text) {
-    Column(modifier) {
-        Text(label.uppercase(), color = MatrixColors.TextFaint, fontSize = 8.sp, letterSpacing = 0.5.sp)
-        Text(value, color = valueColor, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-    }
+private fun GlassSectionTitle(title: String) {
+    Text(
+        title.uppercase(),
+        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+        color = MatrixColors.Text,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 0.9.sp,
+    )
 }
 
-@Composable
-private fun MatrixMicroChip(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = MatrixColors.SurfaceRaised,
-        shape = RoundedCornerShape(7.dp),
-        border = BorderStroke(1.dp, MatrixColors.BorderSoft),
-    ) {
-        Column(Modifier.padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = MatrixColors.TextFaint, fontSize = 7.sp)
-            Text(value, color = MatrixColors.Neon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
+private data class ParsedOcc(
+    val strike: Double,
+    val expiration: LocalDate?,
+    val right: String,
+)
 
-@Composable
-private fun MatrixKeyValue(label: String, value: String, valueColor: Color = MatrixColors.Text) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(label, color = MatrixColors.TextMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
-        Text(value, color = valueColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-    }
-}
-
-@Composable
-private fun MatrixSectionTitle(title: String) {
-    Text(title, color = MatrixColors.Neon, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+private fun parseOccSymbol(symbol: String): ParsedOcc? {
+    val match = Regex("^([A-Z]{1,6})(\\d{6})([CP])(\\d{8})$").matchEntire(symbol.uppercase()) ?: return null
+    val yymmdd = match.groupValues[2]
+    val right = if (match.groupValues[3] == "P") "PUT" else "CALL"
+    val strike = match.groupValues[4].toIntOrNull()?.div(1000.0) ?: return null
+    val expiration = runCatching {
+        LocalDate.parse("20$yymmdd", DateTimeFormatter.ofPattern("yyyyMMdd"))
+    }.getOrNull()
+    return ParsedOcc(strike, expiration, right)
 }
 
 private fun money(value: Double?): String = value?.let { "$%.2f".format(it) } ?: "—"
@@ -1062,22 +1192,15 @@ private fun providerDisplayName(provider: String): String = when (provider.lower
 }
 
 private fun optionLabel(symbol: String, right: String): String {
-    val match = Regex("^([A-Z]{1,6})(\\d{6})([CP])(\\d{8})$").matchEntire(symbol.uppercase())
-        ?: return symbol
-    val underlying = match.groupValues[1]
-    val yymmdd = match.groupValues[2]
-    val cp = match.groupValues[3]
-    val strike = match.groupValues[4].toIntOrNull()?.div(1000.0)
-    val expiration = runCatching {
-        LocalDate.parse("20$yymmdd", DateTimeFormatter.ofPattern("yyyyMMdd"))
-    }.getOrNull()
-    val dte = expiration?.let { java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), it).coerceAtLeast(0) }
-    val rightLetter = if (right.equals("PUT", true) || cp == "P") "P" else "C"
+    val parsed = parseOccSymbol(symbol) ?: return symbol
+    val dte = parsed.expiration?.let {
+        java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), it).coerceAtLeast(0)
+    }
+    val cp = if (right.equals("PUT", true) || right.equals("P", true) || parsed.right == "PUT") "P" else "C"
     return buildString {
-        append(underlying)
-        append(' ')
-        append(strike?.let(::trimNumber) ?: "?")
-        append(rightLetter)
+        append("SPY ")
+        append(trimNumber(parsed.strike))
+        append(cp)
         dte?.let { append("  ${it}DTE") }
     }
 }
