@@ -63,8 +63,8 @@ class WebullTradeActivity : ComponentActivity() {
             )
         }
         setContent {
-            MatrixTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MatrixColors.Background) {
+            GlassTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = GlassColors.Background) {
                     WebullTradeApp(this)
                 }
             }
@@ -351,8 +351,8 @@ private fun WebullTradeApp(activity: Activity) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("SPY 0DTE", color = MatrixColors.Neon, fontWeight = FontWeight.Black)
-            Text("MATRIX · Railway AI + Webull")
+            Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
+            Text("GLASS · Railway AI + Webull")
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 scope.launch {
@@ -362,7 +362,7 @@ private fun WebullTradeApp(activity: Activity) {
             }) { Text("SIGN IN AS OWNER") }
             loginError?.let {
                 Spacer(Modifier.height(10.dp))
-                Text(it, color = MatrixColors.Red)
+                Text(it, color = GlassColors.Red)
             }
         }
         return
@@ -396,12 +396,12 @@ private fun TradeConsole(
         onDispose { socket?.close(1000, "screen closed") }
     }
 
-    MatrixDashboard(
+    GlassDashboard(
         status = status,
         preview = preview,
         connectionError = connectionError,
         actions = remember(backend) {
-            MatrixActions(
+            GlassActions(
                 prepareTrade = { backend.prepareTrade() },
                 submitTrade = { trade ->
                     backend.submitTrade(trade).map { result ->
