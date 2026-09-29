@@ -19,7 +19,9 @@ SYMBOL = "SPY260123C00600000"
 
 def _frame(day: int) -> HistoricalFrame:
     timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(days=day)
-    option_mid = 1.0 + 0.05 * day
+    # Make the synthetic option trend large enough to remain profitable after
+    # the backtester's bid/ask crossing, slippage, fees, and forced-end close.
+    option_mid = 1.0 + 0.25 * day
     option = OptionQuote(
         symbol=SYMBOL,
         right="call",
