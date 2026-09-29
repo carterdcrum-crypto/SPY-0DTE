@@ -992,45 +992,54 @@ private fun GlassSettingsScreen(
 
 @Composable
 private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
+    // Material-style navigation proportions, stripped down to match a normal brokerage app.
+    // Destinations and click behavior are intentionally unchanged.
     Surface(
-        color = Color.White.copy(alpha = 0.82f),
-        border = BorderStroke(1.dp, GlassColors.Border),
+        color = Color.White.copy(alpha = 0.96f),
+        shadowElevation = 8.dp,
     ) {
-        Row(Modifier.fillMaxWidth().height(68.dp).padding(horizontal = 8.dp)) {
-            listOf(
-                "LIVE" to "⌂",
-                "POSITIONS" to "▣",
-                "ANALYTICS" to "⌁",
-                "SETTINGS" to "⚙",
-            ).forEach { (label, glyph) ->
-                val active = selected == label
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable { onSelect(label) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = if (active) GlassColors.Green else Color.Transparent,
+        Column(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(GlassColors.Border.copy(alpha = 0.72f)),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(63.dp)
+                    .padding(horizontal = 6.dp),
+            ) {
+                listOf("LIVE", "POSITIONS", "ANALYTICS", "SETTINGS").forEach { label ->
+                    val active = selected == label
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onSelect(label) }
+                            .padding(horizontal = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
+                        Box(
+                            Modifier
+                                .width(28.dp)
+                                .height(2.dp)
+                                .background(
+                                    if (active) GlassColors.Green else Color.Transparent,
+                                    RoundedCornerShape(99.dp),
+                                ),
+                        )
+                        Spacer(Modifier.height(9.dp))
                         Text(
-                            glyph,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                            color = if (active) GlassColors.White else GlassColors.TextMuted,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black,
+                            label.lowercase().replaceFirstChar { it.uppercase() },
+                            color = if (active) GlassColors.Text else GlassColors.TextMuted,
+                            fontSize = 10.sp,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                            letterSpacing = 0.1.sp,
                         )
                     }
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        label.lowercase().replaceFirstChar { it.uppercase() },
-                        color = if (active) GlassColors.Green else GlassColors.TextMuted,
-                        fontSize = 9.sp,
-                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
-                    )
                 }
             }
         }
