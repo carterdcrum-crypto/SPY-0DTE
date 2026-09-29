@@ -1,9 +1,14 @@
 package app.spy0dte.mobile
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 
 internal object GlassColors {
     val Background = Color(0xFFF4FAFC)
@@ -48,7 +53,47 @@ private val GlassScheme = lightColorScheme(
     error = GlassColors.Red,
 )
 
+private val GoogleFontsProvider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs,
+)
+
+private val GeistName = GoogleFont("Geist")
+
+private val GeistFamily = FontFamily(
+    Font(googleFont = GeistName, fontProvider = GoogleFontsProvider, weight = FontWeight.Normal),
+    Font(googleFont = GeistName, fontProvider = GoogleFontsProvider, weight = FontWeight.Medium),
+    Font(googleFont = GeistName, fontProvider = GoogleFontsProvider, weight = FontWeight.SemiBold),
+    Font(googleFont = GeistName, fontProvider = GoogleFontsProvider, weight = FontWeight.Bold),
+    Font(googleFont = GeistName, fontProvider = GoogleFontsProvider, weight = FontWeight.Black),
+)
+
+private val BaseTypography = Typography()
+
+private val GeistTypography = Typography(
+    displayLarge = BaseTypography.displayLarge.copy(fontFamily = GeistFamily),
+    displayMedium = BaseTypography.displayMedium.copy(fontFamily = GeistFamily),
+    displaySmall = BaseTypography.displaySmall.copy(fontFamily = GeistFamily),
+    headlineLarge = BaseTypography.headlineLarge.copy(fontFamily = GeistFamily),
+    headlineMedium = BaseTypography.headlineMedium.copy(fontFamily = GeistFamily),
+    headlineSmall = BaseTypography.headlineSmall.copy(fontFamily = GeistFamily),
+    titleLarge = BaseTypography.titleLarge.copy(fontFamily = GeistFamily),
+    titleMedium = BaseTypography.titleMedium.copy(fontFamily = GeistFamily),
+    titleSmall = BaseTypography.titleSmall.copy(fontFamily = GeistFamily),
+    bodyLarge = BaseTypography.bodyLarge.copy(fontFamily = GeistFamily),
+    bodyMedium = BaseTypography.bodyMedium.copy(fontFamily = GeistFamily),
+    bodySmall = BaseTypography.bodySmall.copy(fontFamily = GeistFamily),
+    labelLarge = BaseTypography.labelLarge.copy(fontFamily = GeistFamily),
+    labelMedium = BaseTypography.labelMedium.copy(fontFamily = GeistFamily),
+    labelSmall = BaseTypography.labelSmall.copy(fontFamily = GeistFamily),
+)
+
 @Composable
 internal fun GlassTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = GlassScheme, content = content)
+    MaterialTheme(
+        colorScheme = GlassScheme,
+        typography = GeistTypography,
+        content = content,
+    )
 }
