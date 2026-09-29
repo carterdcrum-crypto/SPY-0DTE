@@ -4,14 +4,16 @@ import hashlib
 import math
 import statistics
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Callable, Sequence, Tuple
+from zoneinfo import ZoneInfo
 
 from .backtest import BacktestConfig, BacktestResult, BacktestStrategy, run_backtest
 from .data import HistoricalFrame
 from .walkforward import WalkForwardSplit, walk_forward_splits
 
 
+EASTERN = ZoneInfo("America/New_York")
 StrategyFitter = Callable[[Tuple[HistoricalFrame, ...]], BacktestStrategy]
 SelectionScore = Callable[[BacktestResult], float]
 
@@ -80,11 +82,50 @@ class HoldoutEvaluation:
     result: BacktestResult
 
 
+@dataclass(frozen=True)
+class CoverageSummary:
+    frames: int
+    trading_days: int
+    first_trading_day: date | None
+    last_trading_day: date | None
+
+
 def _ordered_unique(frames: Sequence[HistoricalFrame]) -> Tuple[HistoricalFrame, ...]:
     ordered = tuple(sorted(frames, key=lambda frame: frame.timestamp))
     if any(a.timestamp == b.timestamp for a, b in zip(ordered, ordered[1:])):
         raise ValueError("historical frames must have unique timestamps")
     return ordered
+
+
+def coverage_summary(frames: Sequence[HistoricalFrame]) -> CoverageSummary:
+    """Summarize actual U.S. market-session coverage, not raw row density."""
+
+    ordered = _ordered_unique(frames)
+    days = tuple(sorted({frame.timestamp.astimezone(EASTERN).date() for frame in ordered}))
+    return CoverageSummary(
+        frames=len(ordered),
+        trading_days=len(days),
+        first_trading_day=days[0] if days else None,
+        last_trading_day=days[-1] if days else None,
+    )
+
+
+def require_trading_day_coverage(
+    frames: Sequence[HistoricalFrame],
+    *,
+    minimum_trading_days: int,
+) -> CoverageSummary:
+    """Reject dense-but-short datasets before they are treated as robust evidence."""
+
+    if minimum_trading_days < 2:
+        raise ValueError("minimum_trading_days must be at least 2")
+    summary = coverage_summary(frames)
+    if summary.trading_days < minimum_trading_days:
+        raise ValueError(
+            "insufficient SPY history for robust validation: "
+            f"have {summary.trading_days} trading days, need {minimum_trading_days}"
+        )
+    return summary
 
 
 def dataset_fingerprint(frames: Sequence[HistoricalFrame]) -> str:
@@ -233,10 +274,14 @@ def walk_forward_candidate_selection(
     if not splits:
         raise ValueError("not enough data for any walk-forward split")
 
-    score_fn = score or (lambda result: conservative_selection_score(result, minimum_trades=minimum_trades))
+    score_fn = score or (
+        lambda result: conservative_selection_score(result, minimum_trades=minimum_trades)
+    )
     folds: list[FoldEvaluation] = []
     counts = {candidate.name: 0 for candidate in candidates}
-    validation_scores_by_name: dict[str, list[float]] = {candidate.name: [] for candidate in candidates}
+    validation_scores_by_name: dict[str, list[float]] = {
+        candidate.name: [] for candidate in candidates
+    }
 
     for index, split in enumerate(splits):
         validations: list[CandidateValidation] = []
