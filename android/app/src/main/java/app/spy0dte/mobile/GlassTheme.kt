@@ -9,7 +9,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.googlefonts.R as GoogleFontsR
 
 internal object GlassColors {
     val Background = Color(0xFFF4FAFC)
@@ -57,7 +56,7 @@ private val GlassScheme = lightColorScheme(
 private val GoogleFontsProvider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
     providerPackage = "com.google.android.gms",
-    certificates = GoogleFontsR.array.com_google_android_gms_fonts_certs,
+    certificates = R.array.com_google_android_gms_fonts_certs,
 )
 
 private val GeistName = GoogleFont("Geist")
