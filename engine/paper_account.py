@@ -388,8 +388,10 @@ class PaperAccountStore:
             positions = connection.execute(
                 "SELECT COUNT(*) AS value FROM paper_positions WHERE quantity > 0"
             ).fetchone()
+            # A user-facing trade is a completed round trip. BUY fills should not
+            # advance this counter before they can contribute realized P&L.
             trades = connection.execute(
-                "SELECT COUNT(*) AS value FROM paper_trades"
+                "SELECT COUNT(*) AS value FROM paper_trades WHERE side = 'SELL'"
             ).fetchone()
 
         if account is None:
