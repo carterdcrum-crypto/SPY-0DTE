@@ -46,6 +46,28 @@ internal data class LiveAlert(
     val maxDebit: Double?,
 )
 
+internal data class PaperPositionState(
+    val symbol: String,
+    val quantity: Int,
+    val averageCost: Double,
+    val markValue: Double? = null,
+    val unrealizedPnl: Double? = null,
+    val openedAt: String? = null,
+    val entrySpot: Double? = null,
+    val strategy: String? = null,
+)
+
+internal data class PaperTradeState(
+    val timestamp: String,
+    val symbol: String,
+    val side: String,
+    val quantity: Int,
+    val fillPrice: Double,
+    val realizedPnl: Double,
+    val strategy: String? = null,
+    val reason: String? = null,
+)
+
 internal data class ScreenStatus(
     val mode: String = "PAPER",
     val connected: Boolean = false,
@@ -67,10 +89,14 @@ internal data class ScreenStatus(
     val ai: AiDecisionState = AiDecisionState(),
     val alert: LiveAlert? = null,
     val paperCash: Double? = null,
-    val paperPnl: Double? = null,
+    val paperRealizedPnl: Double? = null,
+    val paperUnrealizedPnl: Double? = null,
+    val paperTotalPnl: Double? = null,
     val paperPositions: Int = 0,
-    val paperTrades: Int = 0,
+    val paperTradeCount: Int = 0,
     val paperArmed: Boolean = false,
+    val paperPositionDetails: List<PaperPositionState> = emptyList(),
+    val recentPaperTrades: List<PaperTradeState> = emptyList(),
 )
 
 internal data class PreparedTrade(
