@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from engine.backtest import BacktestSignal
 from engine.data import HistoricalFrame
 from engine.market import MarketSnapshot, OptionQuote
 from engine.robust_validation import (
     StrategyCandidate,
+    coverage_summary,
     dataset_fingerprint,
     evaluate_locked_holdout,
     locked_holdout_partition,
+    require_trading_day_coverage,
     walk_forward_candidate_selection,
 )
 
@@ -71,6 +76,23 @@ def _round_trip(_train):
 
 def _hold(_train):
     return HoldStrategy()
+
+
+def test_coverage_counts_trading_days_not_dense_intraday_rows():
+    base = _frame(0)
+    intraday = tuple(
+        replace(base, timestamp=base.timestamp + timedelta(minutes=minute))
+        for minute in range(120)
+    )
+
+    summary = coverage_summary(intraday)
+    assert summary.frames == 120
+    assert summary.trading_days == 1
+    with pytest.raises(ValueError, match="have 1 trading days"):
+        require_trading_day_coverage(intraday, minimum_trading_days=2)
+
+    two_days = intraday + (_frame(1),)
+    assert require_trading_day_coverage(two_days, minimum_trading_days=2).trading_days == 2
 
 
 def test_locked_holdout_has_embargo_and_stable_dataset_fingerprint():
