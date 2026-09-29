@@ -150,7 +150,7 @@ private class BackendClient(private val idToken: String) {
             request,
             object : WebSocketListener() {
                 override fun onMessage(webSocket: WebSocket, text: String) {
-                    runCatching { parseStatus(text) }
+                    runCatching { parseLegacyStatus(text) }
                         .onSuccess(onStatus)
                         .onFailure { onError("Bad backend message: ${it.message}") }
                 }
@@ -214,7 +214,7 @@ private class BackendClient(private val idToken: String) {
     }
 }
 
-private fun parseStatus(text: String): LiveStatus {
+private fun parseLegacyStatus(text: String): LiveStatus {
     val root = JSONObject(text)
     val market = root.optJSONObject("market") ?: JSONObject()
     val cadence = root.optJSONObject("cadence") ?: JSONObject()
