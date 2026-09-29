@@ -1,0 +1,109 @@
+name: apply-bottom-nav-material
+
+on:
+  push:
+    branches:
+      - bottom-nav-material-v019
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bottom-nav-material-v019
+      - name: Replace bottom navigation appearance only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('android/app/src/main/java/app/spy0dte/mobile/GlassDashboard.kt')
+          text = path.read_text()
+
+          replacement = r'''@Composable
+private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
+    // Conventional Material-style bottom navigation: no decorative glyph bubbles,
+    // no floating-pill treatment, and no changes to destinations or behavior.
+    Surface(
+        color = Color.White.copy(alpha = 0.96f),
+        shadowElevation = 8.dp,
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(GlassColors.Border.copy(alpha = 0.72f)),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(63.dp)
+                    .padding(horizontal = 6.dp),
+            ) {
+                listOf("LIVE", "POSITIONS", "ANALYTICS", "SETTINGS").forEach { label ->
+                    val active = selected == label
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable { onSelect(label) }
+                            .padding(horizontal = 3.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Box(
+                            Modifier
+                                .width(28.dp)
+                                .height(2.dp)
+                                .background(
+                                    if (active) GlassColors.Green else Color.Transparent,
+                                    RoundedCornerShape(99.dp),
+                                ),
+                        )
+                        Spacer(Modifier.height(9.dp))
+                        Text(
+                            label.lowercase().replaceFirstChar { it.uppercase() },
+                            color = if (active) GlassColors.Text else GlassColors.TextMuted,
+                            fontSize = 10.sp,
+                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                            letterSpacing = 0.1.sp,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+'''
+
+          pattern = re.compile(
+              r'@Composable\nprivate fun GlassBottomNav\(selected: String, onSelect: \(String\) -> Unit\) \{.*?\n\}\n\n(?=@Composable\nprivate fun GlassPanel)',
+              re.S,
+          )
+          new_text, count = pattern.subn(replacement + '\n', text, count=1)
+          if count != 1:
+              raise SystemExit(f'Expected one GlassBottomNav function, found {count}')
+          path.write_text(new_text)
+
+          gradle = Path('android/app/build.gradle.kts')
+          g = gradle.read_text()
+          g = g.replace('versionCode = 9', 'versionCode = 10', 1)
+          g = g.replace('versionName = "0.1.8"', 'versionName = "0.1.9"', 1)
+          gradle.write_text(g)
+          PY
+      - name: Remove temporary workflow
+        run: rm .github/workflows/apply-bottom-nav-material.yml
+      - name: Commit scoped UI change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/java/app/spy0dte/mobile/GlassDashboard.kt android/app/build.gradle.kts .github/workflows/apply-bottom-nav-material.yml
+          git commit -m "Refine Glass bottom navigation"
+          git push origin HEAD:bottom-nav-material-v019
