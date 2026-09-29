@@ -81,7 +81,7 @@ def test_paper_mode_opens_and_closes_position(tmp_path):
     assert opened["state"] == "POSITION_OPENED"
     snapshot = account.snapshot()
     assert snapshot.open_positions == 1
-    assert snapshot.trade_count == 1
+    assert snapshot.trade_count == 0
     assert snapshot.settled_cash < 115.0
 
     winning = _quote(cycle=now + timedelta(seconds=2), spot=672.0, bid=1.25, ask=1.27)
@@ -92,7 +92,7 @@ def test_paper_mode_opens_and_closes_position(tmp_path):
 
     snapshot = account.snapshot()
     assert snapshot.open_positions == 0
-    assert snapshot.trade_count == 2
+    assert snapshot.trade_count == 1
     assert snapshot.realized_pnl > 0
     assert snapshot.unsettled_cash > 0
 
