@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/spy-0dte-chart-pulse.webp" alt="SPY 0DTE Chart Pulse logo" width="180" />
+</p>
+
 # SPY-0DTE
 
 Simulation-first SPY 0DTE research, paper-trading, and guarded execution platform with an Android control app.
