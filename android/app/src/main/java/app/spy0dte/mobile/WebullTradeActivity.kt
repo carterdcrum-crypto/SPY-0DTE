@@ -18,7 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,15 +37,14 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 class WebullTradeActivity : ComponentActivity() {
@@ -56,11 +55,7 @@ class WebullTradeActivity : ComponentActivity() {
             ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                1201,
-            )
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1201)
         }
         setContent {
             GlassTheme {
@@ -75,37 +70,37 @@ class WebullTradeActivity : ComponentActivity() {
 internal class TradeBackend(private val token: String) {
     private val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
     private val http = OkHttpClient.Builder()
-        .pingInterval(15, TimeUnit.SECONDS)
+        .callTimeout(8, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
 
-    fun connect(onStatus: (ScreenStatus) -> Unit, onError: (String) -> Unit): WebSocket? {
-        if (base.isBlank()) {
-            onError("Backend URL is not configured")
-            return null
-        }
-        val wsBase = when {
-            base.startsWith("https://") -> "wss://${base.removePrefix("https://")}"
-            base.startsWith("http://") -> "ws://${base.removePrefix("http://")}"
-            else -> base
-        }
-        return http.newWebSocket(
-            Request.Builder()
-                .url("$wsBase/v1/live")
-                .header("Authorization", "Bearer $token")
-                .build(),
-            object : WebSocketListener() {
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    runCatching { parseStatus(text) }
-                        .onSuccess(onStatus)
-                        .onFailure { onError("Bad Railway status: ${it.message}") }
-                }
+    suspend fun fetchStatus(): Result<ScreenStatus> = withContext(Dispatchers.IO) {
+        get("/v1/status").mapCatching { parseStatus(it.toString()) }
+    }
 
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    onError(t.message ?: "Railway connection failed")
+    suspend fun fetchPaperTrades(limit: Int = 50): Result<List<PaperTradeState>> = withContext(Dispatchers.IO) {
+        get("/v1/paper/trades?limit=${limit.coerceIn(1, 100)}").mapCatching { root ->
+            val values = root.optJSONArray("trades") ?: return@mapCatching emptyList()
+            buildList {
+                for (index in 0 until values.length()) {
+                    val item = values.optJSONObject(index) ?: continue
+                    val symbol = item.optString("symbol").trim()
+                    if (symbol.isBlank()) continue
+                    add(
+                        PaperTradeState(
+                            timestamp = item.optString("timestamp"),
+                            symbol = symbol,
+                            side = item.optString("side").uppercase(),
+                            quantity = item.optInt("quantity", 0),
+                            fillPrice = item.optDouble("fill_price", 0.0),
+                            realizedPnl = item.optDouble("realized_pnl", 0.0),
+                            strategy = item.optString("strategy").takeIf { it.isNotBlank() && it != "null" },
+                            reason = item.optString("reason").takeIf { it.isNotBlank() && it != "null" },
+                        ),
+                    )
                 }
-            },
-        )
+            }
+        }
     }
 
     suspend fun setMode(mode: String): Result<JSONObject> = withContext(Dispatchers.IO) {
@@ -118,18 +113,17 @@ internal class TradeBackend(private val token: String) {
         post("/v1/paper/autonomy", JSONObject().put("armed", armed))
     }
 
-    suspend fun armRisk(loss: Double, gain: Double, exposure: Double, contracts: Int): Result<JSONObject> =
-        withContext(Dispatchers.IO) {
-            post(
-                "/v1/live/risk-envelope",
-                JSONObject()
-                    .put("daily_loss_limit", loss)
-                    .put("daily_gain_limit", gain)
-                    .put("max_account_exposure_pct", exposure)
-                    .put("max_contracts", contracts)
-                    .put("confirmation", "ARM LIVE TODAY"),
-            )
-        }
+    suspend fun armRisk(loss: Double, gain: Double, exposure: Double, contracts: Int): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post(
+            "/v1/live/risk-envelope",
+            JSONObject()
+                .put("daily_loss_limit", loss)
+                .put("daily_gain_limit", gain)
+                .put("max_account_exposure_pct", exposure)
+                .put("max_contracts", contracts)
+                .put("confirmation", "ARM LIVE TODAY"),
+        )
+    }
 
     suspend fun disarmRisk(): Result<JSONObject> = withContext(Dispatchers.IO) {
         post("/v1/live/risk-envelope/disarm", JSONObject())
@@ -163,6 +157,24 @@ internal class TradeBackend(private val token: String) {
         )
     }
 
+    private fun get(path: String): Result<JSONObject> {
+        if (base.isBlank()) return Result.failure(IllegalStateException("Backend URL is not configured"))
+        return try {
+            val request = Request.Builder()
+                .url("$base$path")
+                .header("Authorization", "Bearer $token")
+                .get()
+                .build()
+            http.newCall(request).execute().use { response ->
+                val text = response.body?.string().orEmpty()
+                if (response.isSuccessful) Result.success(if (text.isBlank()) JSONObject() else JSONObject(text))
+                else Result.failure(IllegalStateException(errorDetail(text, response.code)))
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
     private fun post(path: String, payload: JSONObject): Result<JSONObject> {
         if (base.isBlank()) return Result.failure(IllegalStateException("Backend URL is not configured"))
         return try {
@@ -173,18 +185,17 @@ internal class TradeBackend(private val token: String) {
                 .build()
             http.newCall(request).execute().use { response ->
                 val text = response.body?.string().orEmpty()
-                if (response.isSuccessful) {
-                    Result.success(if (text.isBlank()) JSONObject() else JSONObject(text))
-                } else {
-                    val detail = runCatching { JSONObject(text).opt("detail")?.toString() }.getOrNull()
-                    Result.failure(
-                        IllegalStateException(detail ?: text.take(500).ifBlank { "HTTP ${response.code}" }),
-                    )
-                }
+                if (response.isSuccessful) Result.success(if (text.isBlank()) JSONObject() else JSONObject(text))
+                else Result.failure(IllegalStateException(errorDetail(text, response.code)))
             }
         } catch (error: Exception) {
             Result.failure(error)
         }
+    }
+
+    private fun errorDetail(text: String, code: Int): String {
+        val detail = runCatching { JSONObject(text).opt("detail")?.toString() }.getOrNull()
+        return detail ?: text.take(500).ifBlank { "HTTP $code" }
     }
 }
 
@@ -237,9 +248,7 @@ private fun parseStatus(text: String): ScreenStatus {
     val aiDecision = automation.optJSONObject("ai_decision") ?: JSONObject()
     val blend = aiDecision.optJSONObject("blend") ?: JSONObject()
     val directConsensus = aiDecision.optJSONObject("consensus")
-    val advisoryConsensus = automation
-        .optJSONObject("ai_advisory")
-        ?.optJSONObject("latest")
+    val advisoryConsensus = automation.optJSONObject("ai_advisory")?.optJSONObject("latest")
     val consensus = directConsensus ?: advisoryConsensus ?: JSONObject()
 
     val providerStates = buildList {
@@ -248,13 +257,7 @@ private fun parseStatus(text: String): ScreenStatus {
                 val provider = values.optJSONObject(index) ?: continue
                 val name = provider.optString("provider").trim()
                 if (name.isBlank()) continue
-                add(
-                    AiProviderState(
-                        provider = name,
-                        probabilityUp = number(provider, "probability_up"),
-                        confidence = number(provider, "confidence"),
-                    ),
-                )
+                add(AiProviderState(name, number(provider, "probability_up"), number(provider, "confidence")))
             }
         }
     }
@@ -269,6 +272,27 @@ private fun parseStatus(text: String): ScreenStatus {
         disagreement = number(consensus, "disagreement"),
         providers = providerStates,
     )
+
+    val currentPosition = automation.optJSONObject("position")?.let { position ->
+        val symbol = position.optString("symbol").trim()
+        if (symbol.isBlank()) null else PaperPositionState(
+            symbol = symbol,
+            quantity = position.optInt("quantity", 0),
+            averageCost = number(position, "average_cost") ?: 0.0,
+            markValue = number(position, "mark_value"),
+            unrealizedPnl = number(position, "unrealized_pnl"),
+            openedAt = position.optString("opened_at").takeIf { it.isNotBlank() && it != "null" },
+            entrySpot = number(position, "entry_spot"),
+            strategy = position.optString("strategy").takeIf { it.isNotBlank() && it != "null" },
+        )
+    }
+    val realized = number(paper, "realized_pnl")
+    val unrealized = currentPosition?.unrealizedPnl ?: if (paper.optInt("open_positions", 0) == 0) 0.0 else null
+    val totalPnl = when {
+        realized != null && unrealized != null -> realized + unrealized
+        realized != null -> realized
+        else -> unrealized
+    }
 
     return ScreenStatus(
         mode = root.optString("mode", "PAPER"),
@@ -285,24 +309,25 @@ private fun parseStatus(text: String): ScreenStatus {
         liveReasons = reasons,
         broker = broker.optString("provider", "webull"),
         brokerConfigured = broker.optBoolean("configured", false),
-        brokerConnected = broker.optBoolean("connected", false),
+        brokerConnected = brokerState.connected,
         risk = RiskState(
             armed = risk.optBoolean("armed_today", false),
             loss = number(risk, "daily_loss_limit"),
             gain = number(risk, "daily_gain_limit"),
             exposure = number(risk, "max_account_exposure_pct"),
-            contracts = if (risk.has("max_contracts") && !risk.isNull("max_contracts")) {
-                risk.optInt("max_contracts")
-            } else null,
+            contracts = if (risk.has("max_contracts") && !risk.isNull("max_contracts")) risk.optInt("max_contracts") else null,
         ),
         brokerState = brokerState,
         ai = ai,
         alert = alert,
         paperCash = number(paper, "settled_cash"),
-        paperPnl = number(paper, "realized_pnl"),
+        paperRealizedPnl = realized,
+        paperUnrealizedPnl = unrealized,
+        paperTotalPnl = totalPnl,
         paperPositions = paper.optInt("open_positions", 0),
-        paperTrades = paper.optInt("trade_count", 0),
+        paperTradeCount = paper.optInt("trade_count", 0),
         paperArmed = autonomy.optBoolean("armed", false),
+        paperPositionDetails = currentPosition?.let(::listOf) ?: emptyList(),
     )
 }
 
@@ -319,10 +344,7 @@ private suspend fun googleSignIn(activity: Activity): Result<String> {
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         val response = manager.getCredential(context = activity, request = request)
         val credential = response.credential
-        if (
-            credential is CustomCredential &&
-            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-        ) {
+        if (credential is CustomCredential && credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             Result.success(GoogleIdTokenCredential.createFrom(credential.data).idToken)
         } else {
             Result.failure(IllegalStateException("Google did not return an owner ID token"))
@@ -333,8 +355,7 @@ private suspend fun googleSignIn(activity: Activity): Result<String> {
 }
 
 private fun startWatcher(activity: Activity, token: String) {
-    val intent = Intent(activity, TradeWatchService::class.java)
-        .putExtra(TradeWatchService.EXTRA_ID_TOKEN, token)
+    val intent = Intent(activity, TradeWatchService::class.java).putExtra(TradeWatchService.EXTRA_ID_TOKEN, token)
     ContextCompat.startForegroundService(activity, intent)
 }
 
@@ -351,8 +372,8 @@ private fun WebullTradeApp(activity: Activity) {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
-            Text("GLASS · Railway AI + Webull")
+            Text("SPY 0DTE", color = GlassColors.GreenDark, fontWeight = FontWeight.Black)
+            Text("Railway + Webull")
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 scope.launch {
@@ -377,23 +398,25 @@ private fun WebullTradeApp(activity: Activity) {
 }
 
 @Composable
-private fun TradeConsole(
-    activity: Activity,
-    token: String,
-    preview: Boolean,
-    onSignOut: (() -> Unit)?,
-) {
+private fun TradeConsole(activity: Activity, token: String, preview: Boolean, onSignOut: (() -> Unit)?) {
     val backend = remember(token) { TradeBackend(token) }
     var status by remember { mutableStateOf(ScreenStatus()) }
     var connectionError by remember { mutableStateOf<String?>(null) }
 
-    DisposableEffect(token) {
+    LaunchedEffect(token) {
         startWatcher(activity, token)
-        val socket = backend.connect(
-            onStatus = { next -> activity.runOnUiThread { status = next; connectionError = null } },
-            onError = { error -> activity.runOnUiThread { connectionError = error } },
-        )
-        onDispose { socket?.close(1000, "screen closed") }
+        while (isActive) {
+            val statusResult = backend.fetchStatus()
+            if (statusResult.isSuccess) {
+                var next = statusResult.getOrThrow()
+                backend.fetchPaperTrades(50).onSuccess { trades -> next = next.copy(recentPaperTrades = trades) }
+                status = next
+                connectionError = null
+            } else {
+                connectionError = statusResult.exceptionOrNull()?.message ?: "Railway connection failed"
+            }
+            delay(1_000)
+        }
     }
 
     GlassDashboard(
@@ -409,9 +432,7 @@ private fun TradeConsole(
                         "WEBULL SUBMISSION · ${state?.ifBlank { "RECEIVED" }?.uppercase() ?: "RECEIVED"}"
                     }
                 },
-                setMode = { mode ->
-                    backend.setMode(mode).map { "MODE · $mode" }
-                },
+                setMode = { mode -> backend.setMode(mode).map { "MODE · $mode" } },
                 setPaperAutonomy = { armed ->
                     backend.setPaperAutonomy(armed).map {
                         if (armed) "AUTONOMOUS PAPER · ARMED" else "AUTONOMOUS PAPER · NEW ENTRIES STOPPED"
@@ -420,9 +441,7 @@ private fun TradeConsole(
                 armRisk = { loss, gain, exposure, contracts ->
                     backend.armRisk(loss, gain, exposure, contracts).map { "TODAY'S LIVE LIMITS · ARMED" }
                 },
-                disarmRisk = {
-                    backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" }
-                },
+                disarmRisk = { backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" } },
             )
         },
         onSignOut = onSignOut,
