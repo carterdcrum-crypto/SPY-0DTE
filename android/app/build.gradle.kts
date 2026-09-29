@@ -6,7 +6,8 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("SPY_API_BASE_URL")
     .orElse("https://spy-0dte-collector-production.up.railway.app")
     .get()
-val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID").orElse("").get()
+val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
+    .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID")).orElse("").get()
 
 android {
     namespace = "app.spy0dte.mobile"
@@ -16,8 +17,8 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
-        versionCode = 11
-        versionName = "0.2.0"
+        versionCode = 12
+        versionName = "0.2.1"
 
         buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl}\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId}\"")

@@ -71,16 +71,14 @@ internal data class ScreenStatus(
     val paperPositions: Int = 0,
     val paperTrades: Int = 0,
     val paperArmed: Boolean = false,
+    val paperBuys: Int = 0,
+    val paperSells: Int = 0,
+    val paperUnrealizedPnl: Double? = null,
+    val liveEnabled: Boolean = false,
+    val liveState: String = "STARTING",
+    val liveReason: String = "Waiting for live worker",
+    val livePositions: List<LivePosition> = emptyList(),
+    val workerState: String = "STARTING",
 )
 
-internal data class PreparedTrade(
-    val ticket: String,
-    val expiresSeconds: Int,
-    val orderJson: String,
-    val optionType: String,
-    val strike: Double,
-    val expiration: String,
-    val quantity: Int,
-    val limitPrice: Double,
-    val maxDebit: Double,
-)
+internal data class LivePosition(val symbol: String, val quantity: Int, val averagePrice: Double?)

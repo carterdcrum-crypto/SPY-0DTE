@@ -47,9 +47,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 class RailwayLiveActivity : ComponentActivity() {
@@ -97,6 +94,10 @@ private data class RailwayStatus(
     val strategy: String = "—",
     val riskProfile: String = "—",
     val exitProfile: String = "—",
+    val workerState: String = "STARTING",
+    val workerRestarts: Int = 0,
+    val aiFallback: String = "quant_only",
+    val nextSession: String? = null,
     val spot: Double? = null,
     val dataAge: Double? = null,
     val feedDelay: Double? = null,
@@ -104,6 +105,8 @@ private data class RailwayStatus(
     val paperPnl: Double? = null,
     val paperPositions: Int = 0,
     val paperTrades: Int = 0,
+    val paperBuys: Int = 0,
+    val paperSells: Int = 0,
     val signalSymbol: String? = null,
     val signalRight: String? = null,
     val riskContracts: Int = 0,
@@ -129,10 +132,10 @@ private class RailwayBackend {
     fun connect(
         onStatus: (RailwayStatus) -> Unit,
         onError: (String) -> Unit,
-    ): WebSocket? {
+    ): AutoCloseable {
         if (baseUrl.isBlank()) {
             onError("Backend URL is not configured")
-            return null
+            return AutoCloseable { }
         }
         val wsBase = when {
             baseUrl.startsWith("https://") -> "wss://${baseUrl.removePrefix("https://")}"
@@ -143,20 +146,7 @@ private class RailwayBackend {
             .url("$wsBase/v1/live")
             .header("Authorization", "Bearer preview")
             .build()
-        return http.newWebSocket(
-            request,
-            object : WebSocketListener() {
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    runCatching { parseRailwayStatus(text) }
-                        .onSuccess(onStatus)
-                        .onFailure { onError("Bad Railway message: ${it.message}") }
-                }
-
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    onError(t.message ?: "Railway connection failed")
-                }
-            },
-        )
+        return connectStatusSocket(http, request, { onStatus(parseRailwayStatus(it)) }, onError)
     }
 
     suspend fun setPaperAutonomy(armed: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
@@ -222,6 +212,8 @@ private fun parseRailwayStatus(text: String): RailwayStatus {
     val liveRisk = root.optJSONObject("live_risk") ?: JSONObject()
     val alertSignal = liveAlert?.optJSONObject("signal")
     val alertRisk = liveAlert?.optJSONObject("risk")
+    val worker = autonomy.optJSONObject("worker") ?: JSONObject()
+    val ai = automation.optJSONObject("ai_advisory") ?: JSONObject()
 
     fun doubleOrNull(obj: JSONObject?, key: String): Double? =
         if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
@@ -240,13 +232,19 @@ private fun parseRailwayStatus(text: String): RailwayStatus {
         strategy = automation.optString("strategy", "—"),
         riskProfile = automation.optString("risk_profile", "—"),
         exitProfile = automation.optString("exit_profile", "—"),
+        workerState = worker.optString("state", "STARTING"),
+        workerRestarts = worker.optInt("restarts", 0),
+        aiFallback = ai.optString("fallback", "quant_only"),
+        nextSession = stringOrNull(autonomy.optJSONObject("session"), "next_session_at"),
         spot = doubleOrNull(market, "spot"),
         dataAge = doubleOrNull(market, "data_age_seconds"),
         feedDelay = doubleOrNull(market, "feed_delay_seconds"),
         paperCash = doubleOrNull(paper, "settled_cash"),
         paperPnl = doubleOrNull(paper, "realized_pnl"),
         paperPositions = paper.optInt("open_positions", 0),
-        paperTrades = paper.optInt("trade_count", 0),
+        paperTrades = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
+        paperBuys = paper.optInt("buy_count", 0),
+        paperSells = paper.optInt("sell_count", 0),
         signalSymbol = stringOrNull(signal, "symbol"),
         signalRight = stringOrNull(signal, "right"),
         riskContracts = riskDecision?.optInt("contracts", 0) ?: 0,
@@ -290,10 +288,13 @@ private fun RailwayConsole(activity: RailwayLiveActivity) {
                 }
             },
             onError = { message ->
-                activity.runOnUiThread { connectionError = message }
+                activity.runOnUiThread {
+                    status = status.copy(connected = false, engineRunning = false)
+                    connectionError = message
+                }
             },
         )
-        onDispose { socket?.close(1000, "app closed") }
+        onDispose { socket.close() }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -304,7 +305,7 @@ private fun RailwayConsole(activity: RailwayLiveActivity) {
         ) {
             Column {
                 Text("SPY 0DTE", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Text(if (connectionError == null) "● RAILWAY ENGINE CONNECTED" else "○ RECONNECTING")
+                Text(if (status.connected) "● RAILWAY ENGINE CONNECTED" else "○ CONNECTING / RETRYING")
             }
             Text(status.mode, fontWeight = FontWeight.Bold)
         }
@@ -343,6 +344,9 @@ private fun LiveTab(status: RailwayStatus, connectionError: String?) {
                 Text("Risk: ${status.riskProfile}")
                 Text("Exit: ${status.exitProfile}")
                 Text("Execution now: ${status.execution}")
+                Text("Recovery: ${status.workerState} • ${status.workerRestarts} restart(s)")
+                Text(if (status.aiFallback == "quant_only") "Using quantitative models; AI advice unavailable" else "Using quantitative models + fresh AI advice")
+                Text("Runs on Railway while your phone is closed.")
             }
         }
 
@@ -419,7 +423,10 @@ private fun PaperTab(status: RailwayStatus, backend: RailwayBackend, connectionE
                 Text("Settled cash: ${money(status.paperCash)}")
                 Text("Realized P&L: ${money(status.paperPnl)}")
                 Text("Open positions: ${status.paperPositions}")
-                Text("Trades: ${status.paperTrades}")
+                Text("Executions: ${status.paperTrades} • Buys: ${status.paperBuys} • Sells: ${status.paperSells}")
+                Text("Realized P&L changes when contracts are sold.")
+                Text("Arming persists across sessions and server restarts.")
+                status.nextSession?.let { Text("Next session: $it") }
             }
         }
 

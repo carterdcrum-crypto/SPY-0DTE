@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 from typing import Any, Mapping, Tuple
@@ -34,6 +35,7 @@ class FreeOptionSnapshot:
     open_interest: int = 0
     greeks: ModelGreeks | None = None
     source: str = "webull_sandbox_delayed"
+    underlying_timestamp: datetime | None = None
 
 
 class WebullFreeDataProvider:
@@ -63,6 +65,7 @@ class WebullFreeDataProvider:
             except ImportError as exc:  # pragma: no cover - optional dependency
                 raise RuntimeError("Install Webull SDK with `pip install -e '.[webull]'`") from exc
             api_client = ApiClient(app_key, app_secret, "us")
+            api_client.set_stream_logger(log_level=logging.CRITICAL)
             api_client.add_endpoint("us", SANDBOX_API_HOST)
             data_client = DataClient(api_client)
         self.client = data_client
@@ -160,11 +163,7 @@ class WebullFreeDataProvider:
         )
 
         all_contracts = self.list_zero_dte_contracts(trade_date)
-        contracts = _nearest_contracts(
-            all_contracts,
-            spot=spot,
-            limit=self.active_contract_limit,
-        )
+        contracts = self.select_contracts(all_contracts, spot)
         symbols = [str(_first(row, "symbol", "option_symbol", "optionSymbol")) for row in contracts]
         if not symbols:
             return ()
@@ -257,6 +256,7 @@ class WebullFreeDataProvider:
                         volume=_int_any(row, "volume", "trade_volume", default=0),
                         open_interest=_int_any(row, "open_interest", "openInterest", default=0),
                         greeks=greeks,
+                        underlying_timestamp=underlying_market_time,
                     )
                 )
 
@@ -266,6 +266,9 @@ class WebullFreeDataProvider:
                 key=lambda item: (item.strike, item.right, item.option_symbol),
             )
         )
+
+    def select_contracts(self, contracts, spot):
+        return _nearest_contracts(contracts, spot=spot, limit=self.active_contract_limit)
 
 
 def _nearest_contracts(

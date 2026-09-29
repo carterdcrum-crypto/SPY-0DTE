@@ -5,27 +5,20 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import androidx.core.app.NotificationCompat
 import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 class TradeWatchService : Service() {
-    private val handler = Handler(Looper.getMainLooper())
     private val http = OkHttpClient.Builder()
         .pingInterval(15, TimeUnit.SECONDS)
         .retryOnConnectionFailure(true)
         .build()
     private var token: String? = null
-    private var socket: WebSocket? = null
-    private var stopped = false
+    private var socket: AutoCloseable? = null
     private var lastAlertKey: String? = null
 
     override fun onCreate() {
@@ -45,17 +38,14 @@ class TradeWatchService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        stopped = false
-        startForeground(FOREGROUND_ID, watcherNotification("Watching Railway strategy alerts"))
-        socket?.close(1000, "refresh")
+        startForeground(FOREGROUND_ID, watcherNotification("Watching Railway automation"))
+        socket?.close()
         connect(idToken)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        stopped = true
-        handler.removeCallbacksAndMessages(null)
-        socket?.close(1000, "stopped")
+        socket?.close()
         socket = null
         super.onDestroy()
     }
@@ -74,37 +64,33 @@ class TradeWatchService : Service() {
             .url("$wsBase/v1/live")
             .header("Authorization", "Bearer $idToken")
             .build()
-        socket = http.newWebSocket(
-            request,
-            object : WebSocketListener() {
-                override fun onOpen(webSocket: WebSocket, response: Response) {
-                    updateForeground("Connected — waiting for a qualified trade")
-                }
-
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    handleStatus(text)
-                }
-
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    updateForeground("Connection interrupted — retrying")
-                    scheduleReconnect(idToken)
-                }
-
-                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    if (!stopped) scheduleReconnect(idToken)
-                }
-            },
-        )
-    }
-
-    private fun scheduleReconnect(idToken: String) {
-        if (stopped) return
-        handler.removeCallbacksAndMessages(null)
-        handler.postDelayed({ if (!stopped) connect(idToken) }, 3_000L)
+        socket = connectStatusSocket(http, request, ::handleStatus) { error -> updateForeground(error) }
     }
 
     private fun handleStatus(text: String) {
         val root = runCatching { JSONObject(text) }.getOrNull() ?: return
+        val live = root.optJSONObject("live_autonomy")
+        if (live != null && live.optBoolean("configured", false)) {
+            val state = live.optString("state", "CONNECTING")
+            val reason = live.optString("reason")
+            updateForeground("Live: ${state.replace('_', ' ')}")
+            val key = "$state|${live.optString("client_order_id")}|$reason"
+            if (key != lastAlertKey && state in setOf("ORDER_SUBMITTED", "ORDER_UNKNOWN", "DAILY_HALT", "POSITION_RECONCILIATION", "RECOVERING")) {
+                lastAlertKey = key
+                getSystemService(NotificationManager::class.java).notify(
+                    7202,
+                    NotificationCompat.Builder(this, ALERT_CHANNEL)
+                        .setSmallIcon(android.R.drawable.ic_dialog_info)
+                        .setContentTitle("SPY live: ${state.replace('_', ' ')}")
+                        .setContentText(reason)
+                        .setStyle(NotificationCompat.BigTextStyle().bigText(reason))
+                        .setAutoCancel(true)
+                        .setContentIntent(contentIntent())
+                        .build(),
+                )
+            }
+            return
+        }
         val alert = root.optJSONObject("live_alert") ?: return
         if (!alert.optBoolean("action_required", false)) return
         val signal = alert.optJSONObject("signal") ?: JSONObject()

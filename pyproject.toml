@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "httpx>=0.28"]
-webull = ["webull-openapi-python-sdk"]
+webull = ["webull-openapi-python-sdk==3.0.2"]
 thetadata = ["thetadata>=1.0.10"]
 
 [tool.pytest.ini_options]

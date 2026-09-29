@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -151,6 +151,10 @@ def _parse_signal(provider: str, model: str, payload: Any, latency_ms: int) -> A
     if not text:
         raise ValueError(f"{provider} response did not contain a JSON object")
     raw = json.loads(text)
+    for field in ("probability_up", "confidence", "risk_multiplier"):
+        value = float(raw[field])
+        if not math.isfinite(value) or not 0.0 <= value <= 1.0:
+            raise ValueError(f"invalid AI field: {field}")
     return AIProviderSignal(
         provider=provider,
         model=model,
@@ -273,7 +277,7 @@ def combine_ai_signals(signals: tuple[AIProviderSignal, ...]) -> AIConsensus | N
         confidence=_clip(confidence, 0.0, 1.0),
         risk_multiplier=_clip(risk_multiplier, 0.0, 1.0),
         disagreement=_clip(disagreement, 0.0, 0.5),
-        generated_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        generated_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
     )
 
 
@@ -284,11 +288,19 @@ class AIAdvisoryEngine:
         self.providers = providers if providers is not None else providers_from_env()
         self.refresh_seconds = _env_float("PAPER_AI_REFRESH_SECONDS", 60.0, minimum=10.0, maximum=900.0)
         self.timeout_seconds = _env_float("PAPER_AI_TIMEOUT_SECONDS", 6.0, minimum=1.0, maximum=30.0)
+        self.max_age_seconds = _env_float("PAPER_AI_MAX_AGE_SECONDS", 120.0, minimum=10.0, maximum=900.0)
+        self.max_spot_move = _env_float("PAPER_AI_MAX_SPOT_MOVE", 0.003, minimum=0.0001, maximum=0.05)
         self._lock = threading.Lock()
         self._latest: AIConsensus | None = None
-        self._last_started = 0.0
+        self._latest_context: AIContext | None = None
+        self._current_context: AIContext | None = None
+        self._latest_started = float("-inf")
+        self._last_started = float("-inf")
         self._inflight = False
         self._last_errors: dict[str, str] = {}
+        self._provider_inflight: set[str] = set()
+        self._provider_failures: dict[str, int] = {}
+        self._provider_retry_at: dict[str, float] = {}
 
     @property
     def configured(self) -> bool:
@@ -296,9 +308,19 @@ class AIAdvisoryEngine:
 
     def status(self) -> dict[str, Any]:
         with self._lock:
-            latest = self._latest
+            now = time.monotonic()
+            latest = self._usable_latest(self._current_context, now)
             errors = dict(self._last_errors)
             inflight = self._inflight
+            age = None if self._latest is None else max(0.0, now - self._latest_started)
+            health = {
+                provider.name: {
+                    "inflight": provider.name in self._provider_inflight,
+                    "consecutive_failures": self._provider_failures.get(provider.name, 0),
+                    "retry_in_seconds": max(0.0, self._provider_retry_at.get(provider.name, 0.0) - now),
+                }
+                for provider in self.providers
+            }
         return {
             "configured": self.configured,
             "providers": [provider.name for provider in self.providers],
@@ -307,40 +329,106 @@ class AIAdvisoryEngine:
             "errors": errors,
             "latest": None if latest is None else latest.as_dict(),
             "refresh_seconds": self.refresh_seconds,
+            "max_age_seconds": self.max_age_seconds,
+            "age_seconds": age,
+            "fallback": "quant_only" if latest is None else "quant_ai_hybrid",
+            "provider_health": health,
             "data_policy": "tape_only_no_external_current_information",
         }
+
+    def _usable_latest(self, context: AIContext | None, now: float) -> AIConsensus | None:
+        if self._latest is None or now - self._latest_started > self.max_age_seconds:
+            return None
+        previous = self._latest_context
+        if context is None or previous is None or context.data_mode != previous.data_mode:
+            return None
+        try:
+            current_time = datetime.fromisoformat(context.market_time.replace("Z", "+00:00"))
+            previous_time = datetime.fromisoformat(previous.market_time.replace("Z", "+00:00"))
+            market_age = (current_time - previous_time).total_seconds()
+            if current_time.date() != previous_time.date() or not 0.0 <= market_age <= self.max_age_seconds:
+                return None
+        except (TypeError, ValueError):
+            return None
+        if previous.spot <= 0 or abs(context.spot / previous.spot - 1.0) > self.max_spot_move:
+            return None
+        if abs(context.horizon_minutes - previous.horizon_minutes) > max(0.5, previous.horizon_minutes * 0.5):
+            return None
+        return self._latest
 
     def latest_or_request(self, context: AIContext) -> AIConsensus | None:
         now = time.monotonic()
         should_start = False
         with self._lock:
-            latest = self._latest
+            self._current_context = context
+            latest = self._usable_latest(context, now)
             if self.providers and not self._inflight and now - self._last_started >= self.refresh_seconds:
                 self._inflight = True
                 self._last_started = now
                 should_start = True
         if should_start:
-            threading.Thread(target=self._refresh, args=(context,), name="spy0dte-ai-advisory", daemon=True).start()
+            threading.Thread(target=self._refresh, args=(context, now), name="spy0dte-ai-advisory", daemon=True).start()
         return latest
 
-    def _refresh(self, context: AIContext) -> None:
+    def _refresh(self, context: AIContext, requested_at: float | None = None) -> None:
+        requested_at = time.monotonic() if requested_at is None else requested_at
         signals: list[AIProviderSignal] = []
         errors: dict[str, str] = {}
         try:
-            with ThreadPoolExecutor(max_workers=max(1, len(self.providers))) as pool:
-                futures = {pool.submit(provider.evaluate, context, self.timeout_seconds): provider for provider in self.providers}
-                for future in as_completed(futures):
-                    provider = futures[future]
-                    try:
-                        signals.append(future.result())
-                    except Exception as exc:
-                        errors[provider.name] = f"{type(exc).__name__}: {exc}"[:240]
-                        log.warning("AI provider %s failed: %s", provider.name, exc)
+            with self._lock:
+                available = [p for p in self.providers if p.name not in self._provider_inflight
+                             and time.monotonic() >= self._provider_retry_at.get(p.name, 0.0)]
+                self._provider_inflight.update(p.name for p in available)
+            if not available:
+                return
+
+            # Bounded daemon workers: a provider ignoring its socket timeout
+            # cannot pin the advisory coordinator or create unlimited threads.
+            deadline = time.monotonic() + self.timeout_seconds
+            condition = threading.Condition()
+            results: dict[str, tuple[AIProviderSignal | None, str | None]] = {}
+
+            def evaluate(provider: _Provider) -> None:
+                signal, error = None, None
+                try:
+                    signal = provider.evaluate(context, self.timeout_seconds)
+                except Exception as exc:
+                    error = type(exc).__name__
+                finally:
+                    with condition:
+                        if time.monotonic() <= deadline:
+                            results[provider.name] = (signal, error)
+                        condition.notify_all()
+                    with self._lock:
+                        self._provider_inflight.discard(provider.name)
+
+            for provider in available:
+                threading.Thread(target=evaluate, args=(provider,), name=f"spy0dte-ai-{provider.name}", daemon=True).start()
+            with condition:
+                condition.wait_for(lambda: len(results) == len(available), timeout=max(0.0, deadline - time.monotonic()))
+                completed = dict(results)
+            for provider in available:
+                signal, error = completed.get(provider.name, (None, "TimeoutError"))
+                with self._lock:
+                    if signal is not None:
+                        signals.append(signal)
+                        self._provider_failures[provider.name] = 0
+                        self._provider_retry_at[provider.name] = 0.0
+                        self._last_errors.pop(provider.name, None)
+                    else:
+                        errors[provider.name] = error or "InvalidResponse"
+                        failures = self._provider_failures.get(provider.name, 0) + 1
+                        self._provider_failures[provider.name] = failures
+                        delay = min(900.0, self.refresh_seconds * 2 ** min(failures - 1, 6))
+                        self._provider_retry_at[provider.name] = time.monotonic() + delay
+                        log.warning("AI provider=%s failed type=%s retry_in=%.1fs", provider.name, errors[provider.name], delay)
             consensus = combine_ai_signals(tuple(sorted(signals, key=lambda item: item.provider)))
             with self._lock:
                 if consensus is not None:
                     self._latest = consensus
-                self._last_errors = errors
+                    self._latest_context = context
+                    self._latest_started = requested_at
+                self._last_errors.update(errors)
         finally:
             with self._lock:
                 self._inflight = False

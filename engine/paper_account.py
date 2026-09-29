@@ -18,6 +18,8 @@ class PaperAccountSnapshot:
     open_positions: int
     trade_count: int
     updated_at: str
+    buy_count: int = 0
+    sell_count: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -27,6 +29,9 @@ class PaperAccountSnapshot:
             "realized_pnl": self.realized_pnl,
             "open_positions": self.open_positions,
             "trade_count": self.trade_count,
+            "execution_count": self.buy_count + self.sell_count,
+            "buy_count": self.buy_count,
+            "sell_count": self.sell_count,
             "updated_at": self.updated_at,
         }
 
@@ -155,6 +160,7 @@ class PaperAccountStore:
             raise ValueError("starting_cash must be positive")
         now = datetime.now(timezone.utc).isoformat()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             connection.execute("DELETE FROM paper_positions")
             connection.execute("DELETE FROM paper_settlements")
             connection.execute("DELETE FROM paper_trades")
@@ -173,6 +179,7 @@ class PaperAccountStore:
         """Release T+1 proceeds that have reached their settlement date."""
         now = datetime.now(timezone.utc).isoformat()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT COALESCE(SUM(amount), 0) AS value FROM paper_settlements WHERE settle_date <= ?",
                 (as_of.isoformat(),),
@@ -223,6 +230,7 @@ class PaperAccountStore:
         cost = float(fill_price) * int(quantity)
         timestamp = opened_at.astimezone(timezone.utc).isoformat()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             account = connection.execute(
                 "SELECT settled_cash FROM paper_account WHERE id = 1"
             ).fetchone()
@@ -317,6 +325,7 @@ class PaperAccountStore:
 
         timestamp = closed_at.astimezone(timezone.utc).isoformat()
         with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
             current = connection.execute(
                 "SELECT * FROM paper_positions WHERE symbol = ?",
                 (symbol,),
@@ -379,6 +388,9 @@ class PaperAccountStore:
 
     def snapshot(self) -> PaperAccountSnapshot:
         with self._connect() as connection:
+            # Keep cash, P&L, positions and execution counts on one WAL snapshot.
+            # Separate autocommit SELECTs can straddle an entry/exit commit.
+            connection.execute("BEGIN")
             account = connection.execute(
                 "SELECT starting_cash, settled_cash, realized_pnl, updated_at FROM paper_account WHERE id = 1"
             ).fetchone()
@@ -391,7 +403,10 @@ class PaperAccountStore:
             # A user-facing trade is a completed round trip. BUY fills should not
             # advance this counter before they can contribute realized P&L.
             trades = connection.execute(
-                "SELECT COUNT(*) AS value FROM paper_trades WHERE side = 'SELL'"
+                """SELECT COUNT(*) AS value,
+                          COALESCE(SUM(side = 'BUY'), 0) AS buys,
+                          COALESCE(SUM(side = 'SELL'), 0) AS sells
+                   FROM paper_trades"""
             ).fetchone()
 
         if account is None:
@@ -402,8 +417,10 @@ class PaperAccountStore:
             unsettled_cash=float(unsettled["value"] if unsettled else 0.0),
             realized_pnl=float(account["realized_pnl"]),
             open_positions=int(positions["value"] if positions else 0),
-            trade_count=int(trades["value"] if trades else 0),
+            trade_count=int(trades["sells"] if trades else 0),
             updated_at=str(account["updated_at"]),
+            buy_count=int(trades["buys"] if trades else 0),
+            sell_count=int(trades["sells"] if trades else 0),
         )
 
     def position(self, symbol: str) -> dict[str, Any] | None:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import math
+import logging
 import threading
 import time
 from dataclasses import dataclass
@@ -14,14 +16,17 @@ from .webull import PRODUCTION_API_HOST, build_option_order_item
 
 
 class WebullLiveError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, http_status: int | None = None):
+        super().__init__(message)
+        self.http_status = http_status
 
 
 def _number(value: Any) -> float | None:
     if value is None or isinstance(value, bool):
         return None
     try:
-        return float(value)
+        number = float(value)
+        return number if math.isfinite(number) else None
     except (TypeError, ValueError):
         return None
 
@@ -33,8 +38,9 @@ def _response_json(response: Any, action: str) -> Any:
     except Exception as exc:  # pragma: no cover - broker SDK edge case
         raise WebullLiveError(f"Webull {action} returned unreadable JSON") from exc
     if status is not None and not 200 <= int(status) < 300:
-        detail = payload if isinstance(payload, (dict, list)) else str(payload)
-        raise WebullLiveError(f"Webull {action} failed with HTTP {status}: {str(detail)[:500]}")
+        raise WebullLiveError(f"Webull {action} failed with HTTP {status}", http_status=int(status))
+    if isinstance(payload, Mapping) and payload.get("error_code"):
+        raise WebullLiveError(f"Webull {action} returned a broker error")
     return payload
 
 
@@ -57,6 +63,21 @@ def _rows(payload: Any) -> tuple[Mapping[str, Any], ...]:
     return ()
 
 
+def strict_rows(payload: Any) -> tuple[Mapping[str, Any], ...]:
+    """An unreadable position/order response must never look like an empty account."""
+    if isinstance(payload, (list, tuple)):
+        if not all(isinstance(row, Mapping) for row in payload):
+            raise WebullLiveError("malformed broker list")
+        return tuple(payload)
+    if isinstance(payload, Mapping):
+        if payload.get("has_next") or payload.get("next_cursor"):
+            raise WebullLiveError("incomplete paginated broker state")
+        for key in ("data", "items", "list", "results", "positions", "orders"):
+            if key in payload:
+                return strict_rows(payload[key])
+    raise WebullLiveError("broker list unavailable")
+
+
 @dataclass(frozen=True)
 class WebullAccountProfile:
     account_id: str
@@ -77,12 +98,7 @@ class WebullAccountProfile:
 
 
 class WebullLiveClient:
-    """Production Webull adapter for user-confirmed SPY option orders.
-
-    The client exposes preview/place only as explicit methods. The autonomous
-    strategy loop never owns an instance of this class; the confirmed-live API
-    constructs it only at the owner authorization boundary.
-    """
+    """Production adapter; authorization and journaling belong to the caller."""
 
     def __init__(
         self,
@@ -97,6 +113,7 @@ class WebullLiveClient:
         if not app_key or not app_secret:
             raise ValueError("WEBULL_APP_KEY and WEBULL_APP_SECRET are required")
         self._configured_account_id = (account_id or "").strip()
+        self._profile_cache: tuple[float, WebullAccountProfile] | None = None
 
         if trade_client is not None:
             self._trade_client = trade_client
@@ -108,7 +125,9 @@ class WebullLiveClient:
         except ImportError as exc:  # pragma: no cover - optional dependency
             raise RuntimeError("Install webull-openapi-python-sdk for Webull live support") from exc
 
-        api_client = ApiClient(app_key, app_secret, region)
+        api_client = ApiClient(app_key, app_secret, region, connect_timeout=3, timeout=8,
+                               auto_retry=False, token_check_duration_seconds=10, token_check_interval_seconds=2)
+        api_client.set_stream_logger(log_level=logging.CRITICAL)
         api_client.add_endpoint(region, PRODUCTION_API_HOST)
         resolved_token_dir = (
             token_dir
@@ -122,9 +141,9 @@ class WebullLiveClient:
 
     @classmethod
     def from_env(cls) -> "WebullLiveClient":
+        key, secret = production_credentials()
         return cls(
-            os.environ.get("WEBULL_APP_KEY", "").strip(),
-            os.environ.get("WEBULL_APP_SECRET", "").strip(),
+            key, secret,
             account_id=os.environ.get("WEBULL_ACCOUNT_ID", "").strip() or None,
             token_dir=os.environ.get("WEBULL_OPENAPI_TOKEN_DIR", "").strip() or None,
         )
@@ -134,6 +153,8 @@ class WebullLiveClient:
         return _rows(payload)
 
     def account_profile(self) -> WebullAccountProfile:
+        if self._profile_cache and time.monotonic() - self._profile_cache[0] < 60:
+            return self._profile_cache[1]
         rows = self.accounts()
         if not rows:
             raise WebullLiveError("Webull returned no trading accounts")
@@ -165,11 +186,13 @@ class WebullLiveClient:
         account_id = str(selected.get("account_id") or "").strip()
         if not account_id:
             raise WebullLiveError("Webull account response is missing account_id")
-        return WebullAccountProfile(
+        profile = WebullAccountProfile(
             account_id=account_id,
             account_number=str(selected.get("account_number") or account_id),
             account_type=str(selected.get("account_type") or "UNKNOWN").upper(),
         )
+        self._profile_cache = (time.monotonic(), profile)
+        return profile
 
     def balances(self, account_id: str) -> dict[str, Any]:
         payload = _response_json(
@@ -185,14 +208,14 @@ class WebullLiveClient:
             self._trade_client.account_v2.get_account_position(account_id),
             "account positions",
         )
-        return _rows(payload)
+        return strict_rows(payload)
 
     def open_orders(self, account_id: str) -> tuple[Mapping[str, Any], ...]:
         payload = _response_json(
             self._trade_client.order_v3.get_order_open(account_id=account_id),
             "open orders",
         )
-        return _rows(payload)
+        return strict_rows(payload)
 
     def preview_option_order(self, order: OptionOrderRequest) -> dict[str, Any]:
         item = build_option_order_item(order)
@@ -214,20 +237,44 @@ class WebullLiveClient:
             raise WebullLiveError("Webull place response is not an object")
         return dict(payload)
 
+    def cancel_order(self, account_id: str, client_order_id: str) -> None:
+        _response_json(self._trade_client.order_v3.cancel_order(account_id, client_order_id), "order cancellation")
+
+    def place_option_order(self, order: OptionOrderRequest) -> dict[str, Any]:
+        return self.place_confirmed_option_order(order)
+
     def order_detail(self, account_id: str, client_order_id: str) -> dict[str, Any] | None:
         try:
             payload = _response_json(
                 self._trade_client.order_v3.get_order_detail(account_id, client_order_id),
                 "order detail",
             )
-        except WebullLiveError:
-            return None
+        except WebullLiveError as exc:
+            if exc.http_status == 404:
+                return None
+            raise
         return dict(payload) if isinstance(payload, Mapping) else None
 
 
+def production_credentials() -> tuple[str, str]:
+    from .api import _control_store, _cipher
+    store = _control_store()
+    if store.broker_profile("production")["configured"]:
+        return store.load_webull_credentials("production", _cipher())
+    if os.environ.get("WEBULL_LIVE_APP_KEY", "").strip():
+        return os.environ["WEBULL_LIVE_APP_KEY"].strip(), os.environ.get("WEBULL_LIVE_APP_SECRET", "").strip()
+    if os.environ.get("WEBULL_ENVIRONMENT", "sandbox").strip().lower() == "production":
+        return os.environ.get("WEBULL_APP_KEY", "").strip(), os.environ.get("WEBULL_APP_SECRET", "").strip()
+    raise WebullLiveError("production Webull credentials are not configured")
+
+
 def webull_env_status() -> dict[str, Any]:
-    key = bool(os.environ.get("WEBULL_APP_KEY", "").strip())
-    secret = bool(os.environ.get("WEBULL_APP_SECRET", "").strip())
+    from .api import _control_store
+    saved = bool(_control_store().broker_profile("production")["configured"])
+    explicit = bool(os.environ.get("WEBULL_LIVE_APP_KEY", "").strip())
+    production = os.environ.get("WEBULL_ENVIRONMENT", "sandbox").strip().lower() == "production"
+    key = saved or bool(os.environ.get("WEBULL_LIVE_APP_KEY" if explicit else "WEBULL_APP_KEY", "").strip()) and (explicit or production)
+    secret = saved or bool(os.environ.get("WEBULL_LIVE_APP_SECRET" if explicit else "WEBULL_APP_SECRET", "").strip()) and (explicit or production)
     return {
         "provider": "webull",
         "environment": "production",
@@ -235,7 +282,8 @@ def webull_env_status() -> dict[str, Any]:
         "app_secret_configured": secret,
         "account_id_configured": bool(os.environ.get("WEBULL_ACCOUNT_ID", "").strip()),
         "configured": key and secret,
-        "execution": "confirmed_order_only",
+        "credential_source": "encrypted_profile" if saved else "environment" if key and secret else "missing",
+        "execution": "persistent_owner_authorization",
     }
 
 

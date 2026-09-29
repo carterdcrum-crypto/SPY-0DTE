@@ -4,7 +4,6 @@ import asyncio
 import logging
 import os
 import sqlite3
-import threading
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -14,12 +13,14 @@ from typing import Any, Mapping
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token
 from pydantic import BaseModel, Field
 
 from .cadence import MarketCadencePolicy
 from .collector_runner import run_forever
+from .runtime import runtime_status, start_worker
 
 log = logging.getLogger("spy0dte.api")
 
@@ -319,23 +320,14 @@ def status_payload() -> dict[str, Any]:
     }
 
 
-def _collector_thread_target() -> None:
-    try:
-        run_forever()
-    except Exception:
-        log.exception("collector thread stopped")
-
-
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    if _env_bool("START_COLLECTOR_IN_API", True):
-        thread = threading.Thread(
-            target=_collector_thread_target,
-            name="spy0dte-collector",
-            daemon=True,
-        )
-        thread.start()
-    yield
+    worker = start_worker("collector", run_forever) if _env_bool("START_COLLECTOR_IN_API", True) else None
+    try:
+        yield
+    finally:
+        if worker:
+            worker.close()
 
 
 app = FastAPI(
@@ -346,8 +338,15 @@ app = FastAPI(
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health():
+    runtime = runtime_status()
+    # A newly scheduled thread gets its normal watchdog window to initialize.
+    # Worker telemetry still reports STARTING; failures and stalls remain 503.
+    healthy = bool(runtime["healthy"]) or all(
+        worker["healthy"] or worker["state"] in {"STARTING", "STOPPED"}
+        for worker in runtime["workers"].values()
+    )
+    return JSONResponse({"status": "ok" if healthy else "recovering"}, status_code=200 if healthy else 503)
 
 
 @app.get("/v1/status")
@@ -365,6 +364,9 @@ def set_mode(request: ModeRequest, _: UserIdentity = Depends(require_user)) -> d
         if request.confirmation != "ENABLE LIVE TRADING":
             raise HTTPException(status_code=400, detail="explicit live-trading confirmation required")
     store.set_mode(request.mode)
+    if request.mode is not TradingMode.LIVE:
+        from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+        LiveAutonomyStore(autonomy_db_path()).disable(datetime.now(timezone.utc))
     return {"mode": request.mode.value, "live_gate": _live_gate(store)}
 
 
@@ -380,8 +382,15 @@ def webull_profiles(_: UserIdentity = Depends(require_user)) -> dict[str, Any]:
 @app.post("/v1/broker/webull")
 def save_webull_profile(
     request: WebullCredentialRequest,
-    _: UserIdentity = Depends(require_user),
+    user: UserIdentity = Depends(require_user),
 ) -> dict[str, Any]:
+    if request.environment == "production":
+        if _env_bool("APP_PREVIEW_MODE") or user.subject == "preview":
+            raise HTTPException(status_code=403, detail="owner sign-in is required for production credentials")
+        from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+        live = LiveAutonomyStore(autonomy_db_path())
+        if live.policy()["enabled"] or live.positions() or live.orders(pending_only=True):
+            raise HTTPException(status_code=409, detail="stop Auto trade and wait for orders and owned positions to close before replacing credentials")
     store = _control_store()
     store.save_webull_credentials(
         request.environment,
@@ -404,7 +413,7 @@ async def live(websocket: WebSocket) -> None:
     await websocket.accept()
     try:
         while True:
-            await websocket.send_json(status_payload())
+            await websocket.send_json(await asyncio.to_thread(status_payload))
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
         return

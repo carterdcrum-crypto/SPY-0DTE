@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import re
 import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,6 +21,9 @@ from .live_order_ticket import (
     LiveOrderTicketStore,
 )
 from .paper_autotrader import automation_status
+from .live_autonomy import execution_blocks, live_status, run_forever as run_live
+from .live_autonomy_store import ARM_AUTONOMY, LiveAutonomyStore, autonomy_db_path
+from .runtime import start_worker
 from .webull_live import (
     WebullLiveClient,
     WebullLiveError,
@@ -98,6 +103,20 @@ def _market_reasons() -> list[str]:
 
 
 def _webull_live_gate(_: base.ControlStore) -> dict[str, Any]:
+    standing = LiveAutonomyStore(autonomy_db_path()).policy()
+    if standing["configured"]:
+        live = live_status()
+        reasons = execution_blocks()
+        if not standing["enabled"]:
+            reasons.append("autonomous_live_disabled")
+        if not live["worker_current"]:
+            reasons.append("live_worker_recovering")
+        if not live.get("broker_connected"):
+            reasons.append("broker_guard_unavailable")
+        if live["state"] in {"DAILY_HALT", "RECOVERING", "POSITION_RECONCILIATION", "ORDER_UNKNOWN", "UNMANAGED_POSITION", "MARKET_CLOSED"}:
+            reasons.append(live["state"].lower())
+        return {"ready": not reasons, "provider": "webull", "execution": "autonomous",
+                "reasons": list(dict.fromkeys(reasons)), "guard": None}
     reasons: list[str] = []
     if _selected_broker() != "webull":
         reasons.append("webull_not_selected")
@@ -143,30 +162,84 @@ _original_status_payload = base.status_payload
 
 def status_payload() -> dict[str, Any]:
     payload = _original_status_payload()
+    live = live_status()
     envelope = api_v2._live_risk_store().snapshot()
-    guard = cached_webull_guard(envelope) if envelope.armed_today() else None
+    guard = cached_webull_guard(envelope) if envelope.armed_today() and not live["configured"] else None
     gate = _webull_live_gate(base._control_store())
 
     payload["live_gate"] = gate
     payload["live_broker"] = {
         **webull_env_status(),
         "selected": _selected_broker() == "webull",
-        "connected": bool(guard and guard.connected),
+        "connected": bool(live.get("broker_connected") and live["worker_current"]) if live["configured"] else bool(guard and guard.connected),
         "real_order_submission": (
             not _env_bool("APP_PREVIEW_MODE", False)
             and _env_bool("ALLOW_LIVE_ORDERS", False)
             and _env_bool("LIVE_ORDER_EXECUTOR_READY", False)
         ),
-        "autonomous_order_submission": False,
-        "workflow": "railway_signal_then_trade_button_confirmation",
+        "autonomous_order_submission": live["enabled"] and not execution_blocks(),
+        "workflow": "server_managed_entry_fill_reconciliation_and_exit",
         "owner_auth_required": _env_bool("APP_PREVIEW_MODE", False),
         "guard": None if guard is None else guard.as_dict(),
     }
+    payload["live_autonomy"] = live
+    if live["configured"]:
+        limits = LiveAutonomyStore(autonomy_db_path()).envelope(datetime.now(timezone.utc))
+        payload["live_risk"] = {**limits.as_dict(), "armed_today": live["enabled"], "standing_authorization": True}
+        payload["live_alert"] = None
+    if payload.get("mode") == "LIVE":
+        payload["decision"] = {"state": live["state"], "reason": live["reason"]}
     return payload
 
 
 base.status_payload = status_payload
 app = api_v2.app
+_previous_lifespan = app.router.lifespan_context
+
+
+@asynccontextmanager
+async def lifespan(app):
+    worker = start_worker("live", lambda context: run_live(lambda: base._control_store().get_mode().value, context))
+    try:
+        async with _previous_lifespan(app):
+            yield
+    finally:
+        worker.close()
+
+
+app.router.lifespan_context = lifespan
+
+
+class LiveAutonomyRequest(BaseModel):
+    enabled: bool
+    confirmation: Literal["ENABLE AUTONOMOUS LIVE", "STOP AUTONOMOUS LIVE"]
+
+
+@app.get("/v1/live/autonomy")
+def get_live_autonomy(_: base.UserIdentity = Depends(base.require_user)):
+    return live_status()
+
+
+@app.post("/v1/live/autonomy")
+def set_live_autonomy(request: LiveAutonomyRequest, user: base.UserIdentity = Depends(base.require_user)):
+    _require_real_owner(user)
+    store = LiveAutonomyStore(autonomy_db_path())
+    now = datetime.now(timezone.utc)
+    if request.enabled:
+        if not api_v2._live_risk_store().snapshot().is_complete:
+            raise HTTPException(status_code=400, detail="Save live limits in Settings before turning Auto trade on")
+        try:
+            store.enable(owner=user.subject, limits=api_v2._live_risk_store().snapshot(),
+                         confirmation=request.confirmation, now=now,
+                         account_id=os.environ.get("WEBULL_ACCOUNT_ID", "").strip())
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        base._control_store().set_mode(base.TradingMode.LIVE)
+    else:
+        if request.confirmation != "STOP AUTONOMOUS LIVE":
+            raise HTTPException(status_code=400, detail="explicit stop confirmation required")
+        store.disable(now)
+    return {**live_status(), "prerequisites": execution_blocks()}
 
 
 def _require_real_owner(user: base.UserIdentity) -> None:
@@ -175,6 +248,8 @@ def _require_real_owner(user: base.UserIdentity) -> None:
 
 
 def _require_live_ready() -> None:
+    if LiveAutonomyStore(autonomy_db_path()).policy()["configured"]:
+        raise HTTPException(status_code=409, detail="this account is managed by the autonomous executor")
     if base._control_store().get_mode() is not base.TradingMode.LIVE:
         raise HTTPException(status_code=409, detail="LIVE mode is not selected")
     gate = _webull_live_gate(base._control_store())
@@ -288,6 +363,10 @@ def _current_entry_order(client: WebullLiveClient) -> tuple[OptionOrderRequest, 
 def webull_readiness(user: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
     status = webull_env_status()
     result: dict[str, Any] = {**status, "connected": False, "account": None}
+    live = live_status()
+    if live["configured"]:
+        return {**result, "connected": bool(live.get("broker_connected") and live["worker_current"]),
+                "autonomy_state": live["state"], "owner_authenticated": user.subject != "preview" and not _env_bool("APP_PREVIEW_MODE")}
     if not status["configured"]:
         return result
     try:
@@ -299,7 +378,7 @@ def webull_readiness(user: base.UserIdentity = Depends(base.require_user)) -> di
         if envelope.armed_today():
             result["guard"] = cached_webull_guard(envelope, ttl_seconds=0.0).as_dict()
     except (WebullLiveError, RuntimeError, ValueError) as exc:
-        result["error"] = f"{type(exc).__name__}: {exc}"
+        result["error"] = f"{type(exc).__name__}: broker connection unavailable"
     result["owner_authenticated"] = user.subject != "preview" and not _env_bool("APP_PREVIEW_MODE", False)
     return result
 

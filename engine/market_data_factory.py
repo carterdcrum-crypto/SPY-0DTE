@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from dataclasses import replace
 from typing import Any
 
@@ -54,6 +55,7 @@ def _webull_provider(*, production: bool) -> Any:
         raise RuntimeError("Install Webull SDK with `pip install -e '.[webull]'`") from exc
 
     api_client = ApiClient(app_key, app_secret, "us")
+    api_client.set_stream_logger(log_level=logging.CRITICAL)
     api_client.add_endpoint("us", PRODUCTION_API_HOST)
     provider = WebullFreeDataProvider(
         data_client=DataClient(api_client),

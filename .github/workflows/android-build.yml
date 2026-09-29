@@ -41,6 +41,8 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
+        env:
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Upload debug APK

@@ -12,6 +12,7 @@ from typing import Callable, Iterable
 from zoneinfo import ZoneInfo
 
 from .paper_account import PaperAccountStore
+from .session_calendar import session_bounds
 
 log = logging.getLogger("spy0dte.paper")
 EASTERN = ZoneInfo("America/New_York")
@@ -174,6 +175,9 @@ def automation_status() -> dict[str, object]:
 
 def _publish(**values: object) -> None:
     with _STATUS_LOCK:
+        if "last_tick" in values:
+            for name in ("position", "closed_trade", "last_signal", "last_action", "risk"):
+                _STATUS[name] = None
         _STATUS.update(values)
 
 
@@ -700,14 +704,12 @@ class PaperAutoTrader:
         return (now - last).total_seconds() < self.settings.cooldown_seconds
 
     def _market_session(self, eastern: datetime) -> bool:
-        if eastern.weekday() >= 5:
-            return False
-        clock = eastern.timetz().replace(tzinfo=None)
-        return self.settings.market_open <= clock < self.settings.market_close
+        bounds = session_bounds(eastern.date(), self.settings.market_open, self.settings.market_close)
+        return bounds is not None and bounds[0] <= eastern < bounds[1]
 
     def _minutes_to_close(self, eastern: datetime) -> float:
-        close = datetime.combine(eastern.date(), self.settings.market_close, tzinfo=EASTERN)
-        return (close - eastern).total_seconds() / 60.0
+        bounds = session_bounds(eastern.date(), self.settings.market_open, self.settings.market_close)
+        return 0.0 if bounds is None else (bounds[1] - eastern).total_seconds() / 60.0
 
     @staticmethod
     def _finish(now: datetime, values: dict[str, object]) -> dict[str, object]:

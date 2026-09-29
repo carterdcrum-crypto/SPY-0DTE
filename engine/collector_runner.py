@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time as time_module
 from dataclasses import dataclass
 from datetime import datetime, time, timezone
 from pathlib import Path
@@ -11,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 from .collector import SnapshotStore, collect_and_store
 from .market_data_factory import provider_from_env, provider_source
+from .runtime import WorkerContext
+from .session_calendar import session_bounds
 
 EASTERN = ZoneInfo("America/New_York")
 
@@ -66,10 +67,8 @@ def is_collection_window(now: datetime, settings: CollectorRunnerSettings) -> bo
     if now.tzinfo is None:
         raise ValueError("now must be timezone-aware")
     eastern = now.astimezone(EASTERN)
-    if eastern.weekday() >= 5:
-        return False
-    clock = eastern.timetz().replace(tzinfo=None)
-    return settings.market_open <= clock < settings.market_close
+    bounds = session_bounds(eastern.date(), settings.market_open, settings.market_close, collection=True)
+    return bounds is not None and bounds[0] <= eastern < bounds[1]
 
 
 def _backoff_seconds(settings: CollectorRunnerSettings, consecutive_failures: int) -> int:
@@ -79,7 +78,7 @@ def _backoff_seconds(settings: CollectorRunnerSettings, consecutive_failures: in
     return min(settings.maximum_backoff_seconds, settings.interval_seconds * multiplier)
 
 
-def run_forever() -> None:
+def run_forever(context: WorkerContext | None = None) -> None:
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO").upper(),
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -107,8 +106,10 @@ def run_forever() -> None:
         settings.market_close.strftime("%H:%M"),
     )
 
+    context = context or WorkerContext()
+    context.heartbeat()
     try:
-        while True:
+        while not context.stop.is_set():
             now = datetime.now(timezone.utc)
             if is_collection_window(now, settings):
                 trade_date = now.astimezone(EASTERN).date()
@@ -148,7 +149,12 @@ def run_forever() -> None:
                 consecutive_failures = 0
                 sleep_seconds = settings.idle_sleep_seconds
 
-            time_module.sleep(sleep_seconds)
+            context.heartbeat(
+                state="RUNNING" if is_collection_window(now, settings) else "IDLE",
+                collection_failures=consecutive_failures,
+                retry_in_seconds=sleep_seconds if consecutive_failures else None,
+            )
+            context.wait(sleep_seconds)
     finally:
         store.close()
 

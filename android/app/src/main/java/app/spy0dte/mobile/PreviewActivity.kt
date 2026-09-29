@@ -232,7 +232,7 @@ private fun parsePreviewStatus(text: String): PreviewStatus {
         paperUnsettledCash = paper.optDouble("unsettled_cash", 0.0),
         paperRealizedPnl = paper.optDouble("realized_pnl", 0.0),
         paperOpenPositions = paper.optInt("open_positions", 0),
-        paperTradeCount = paper.optInt("trade_count", 0),
+        paperTradeCount = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
         positionSymbol = nullableString(position, "symbol"),
         positionQuantity = position?.optInt("quantity", 0) ?: 0,
         positionAverageCost = nullableDouble(position, "average_cost"),
@@ -480,7 +480,7 @@ private fun PreviewLive(
                 Text("Unsettled cash: $${"%.2f".format(status.paperUnsettledCash)}")
                 Text("Realized P&L: ${signedMoney(status.paperRealizedPnl)}")
                 Text("Open positions: ${status.paperOpenPositions}")
-                Text("Trades: ${status.paperTradeCount}")
+                Text("Executions (buys + sells): ${status.paperTradeCount}")
             }
         }
 

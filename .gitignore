@@ -7,3 +7,8 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+*.egg-info/
+
+.venv/
+*.runner.lock
+webull_*_sdk.log

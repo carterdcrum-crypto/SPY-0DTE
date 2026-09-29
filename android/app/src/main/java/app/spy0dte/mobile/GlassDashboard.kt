@@ -1,5 +1,11 @@
 package app.spy0dte.mobile
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -26,7 +32,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -34,7 +39,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,8 +64,8 @@ import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 
 internal data class GlassActions(
-    val prepareTrade: suspend () -> Result<PreparedTrade>,
-    val submitTrade: suspend (PreparedTrade) -> Result<String>,
+    val saveCredentials: suspend (String, String) -> Result<String>,
+    val setLiveAutonomy: suspend (Boolean) -> Result<String>,
     val setMode: suspend (String) -> Result<String>,
     val setPaperAutonomy: suspend (Boolean) -> Result<String>,
     val armRisk: suspend (Double, Double, Double, Int) -> Result<String>,
@@ -200,152 +205,88 @@ private fun GlassLiveScreen(
     onPositions: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var prepared by remember { mutableStateOf<PreparedTrade?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
-    var submitting by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
     var topTab by remember { mutableStateOf("AI") }
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        GlassAutoTradeCard(status, preview, saving) { enabled ->
+            saving = true
+            scope.launch {
+                actions.setLiveAutonomy(enabled)
+                    .onSuccess { message = it }
+                    .onFailure { message = it.message ?: "Could not change Auto trade. Check connection and settings." }
+                saving = false
+            }
+        }
+        connectionError?.let { GlassNotice(it, danger = true) }
+        message?.let { GlassNotice(it) }
         GlassMarketStrip(status)
         GlassTopTabs(topTab) { topTab = it }
-
-        connectionError?.let { GlassNotice("$it · retrying", danger = true) }
-        if (preview) {
-            GlassNotice(
-                "LIVE orders are locked until owner authentication is configured. Paper data and the complete Glass UI remain active.",
-                danger = true,
-            )
-        }
-
         when (topTab) {
             "AI" -> {
                 GlassAiConsensus(status.ai, status.alert)
-                GlassSetupCard(
-                    status = status,
-                    preview = preview,
-                    busy = submitting,
-                    onTrade = {
-                        scope.launch {
-                            message = "Preparing exact Webull preview…"
-                            actions.prepareTrade()
-                                .onSuccess { prepared = it; message = null }
-                                .onFailure { message = it.message }
-                        }
-                    },
-                    onQuickCall = {
-                        val right = status.alert?.right?.uppercase()
-                        if (right == "CALL" || right == "C") {
-                            scope.launch {
-                                actions.prepareTrade()
-                                    .onSuccess { prepared = it }
-                                    .onFailure { message = it.message }
-                            }
-                        } else {
-                            message = "No qualified CALL setup is active."
-                        }
-                    },
-                    onQuickPut = {
-                        val right = status.alert?.right?.uppercase()
-                        if (right == "PUT" || right == "P") {
-                            scope.launch {
-                                actions.prepareTrade()
-                                    .onSuccess { prepared = it }
-                                    .onFailure { message = it.message }
-                            }
-                        } else {
-                            message = "No qualified PUT setup is active."
-                        }
-                    },
-                    onClose = onPositions,
-                )
+                GlassSetupCard(status)
                 GlassPositionsCard(status, onPositions)
                 GlassTodayCard(status)
             }
             "CHART" -> GlassChartPanel(status)
-            "OPTIONS" -> GlassSetupCard(
-                status = status,
-                preview = preview,
-                busy = submitting,
-                onTrade = {
-                    scope.launch {
-                        actions.prepareTrade()
-                            .onSuccess { prepared = it }
-                            .onFailure { message = it.message }
-                    }
-                },
-                onQuickCall = { message = "Railway chooses the exact CALL contract when a qualified CALL setup exists." },
-                onQuickPut = { message = "Railway chooses the exact PUT contract when a qualified PUT setup exists." },
-                onClose = onPositions,
-            )
+            "OPTIONS" -> GlassSetupCard(status)
             else -> GlassNewsPanel()
-        }
-
-        message?.let {
-            GlassNotice(
-                it,
-                danger = it.contains("fail", true) || it.contains("lock", true) || it.contains("no qualified", true),
-            )
         }
         Spacer(Modifier.height(4.dp))
     }
+}
 
-    prepared?.let { trade ->
-        AlertDialog(
-            onDismissRequest = { if (!submitting) prepared = null },
-            containerColor = Color(0xFFF9FCFD),
-            titleContentColor = GlassColors.Text,
-            textContentColor = GlassColors.Text,
-            shape = RoundedCornerShape(26.dp),
-            title = { Text("Confirm Webull trade", fontWeight = FontWeight.Black) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "SPY ${trade.optionType} ${trimNumber(trade.strike)}",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    GlassKeyValue("Expiration", trade.expiration)
-                    GlassKeyValue("Quantity", trade.quantity.toString())
-                    GlassKeyValue("Limit", money(trade.limitPrice))
-                    GlassKeyValue("Maximum debit", money(trade.maxDebit))
-                    GlassKeyValue("Authorization", "${trade.expiresSeconds}s")
-                    Text(
-                        "The authorization is single-use and applies only to this exact order.",
-                        color = GlassColors.TextMuted,
-                        fontSize = 12.sp,
-                    )
-                }
-            },
-            confirmButton = {
-                GlassPrimaryButton(
-                    text = if (submitting) "Submitting…" else "Confirm Trade  →",
-                    enabled = !submitting,
-                    onClick = {
-                        submitting = true
-                        scope.launch {
-                            actions.submitTrade(trade)
-                                .onSuccess { result ->
-                                    message = result
-                                    prepared = null
-                                }
-                                .onFailure { message = it.message ?: "Trade submission failed" }
-                            submitting = false
-                        }
-                    },
+@Composable
+private fun GlassAutoTradeCard(status: ScreenStatus, preview: Boolean, saving: Boolean, onChange: (Boolean) -> Unit) {
+    GlassPanel {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Auto trade", color = GlassColors.Text, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                Text(
+                    if (saving) "Saving…" else if (status.liveEnabled) "ON · Real-money automation" else "OFF · No new live entries",
+                    color = if (status.liveEnabled) GlassColors.GreenDark else GlassColors.TextMuted,
+                    fontSize = 11.sp,
                 )
-            },
-            dismissButton = {
-                TextButton(enabled = !submitting, onClick = { prepared = null }) {
-                    Text("Cancel", color = GlassColors.TextMuted)
-                }
-            },
-        )
+            }
+            AutoTradeSwitch(status.liveEnabled, !preview && status.connected && !saving, onChange)
+        }
+        Spacer(Modifier.height(6.dp))
+        Text("On: Railway buys and sells automatically, even with your phone closed. Off: cancels pending buys and closes positions opened by Auto trade when executable.",
+            color = GlassColors.TextMuted, fontSize = 11.sp)
+        Spacer(Modifier.height(7.dp))
+        if (preview) {
+            Text("Owner sign-in is required for live trading.", color = GlassColors.Amber, fontSize = 11.sp)
+        } else if (!status.connected) {
+            Text("Offline · the last confirmed switch state is shown. Reconnecting…", color = GlassColors.Amber, fontSize = 11.sp)
+        } else {
+            Text(status.liveState.replace('_', ' '), color = GlassColors.Text, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(status.liveReason, color = GlassColors.TextMuted, fontSize = 11.sp)
+        }
+        if (status.liveEnabled && status.liveReasons.isNotEmpty()) {
+            Text(status.liveReasons.joinToString(" · ") { it.replace('_', ' ') }, color = GlassColors.Amber, fontSize = 10.sp)
+        }
+        Text("Limits repeat each trading day until switched off. Configure them in Settings.", color = GlassColors.TextMuted, fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun AutoTradeSwitch(checked: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    val thumbOffset by animateDpAsState(if (checked) 24.dp else 2.dp, label = "Auto trade thumb")
+    Box(
+        Modifier.size(width = 64.dp, height = 48.dp)
+            .semantics { contentDescription = "Auto trade" }
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.size(width = 54.dp, height = 32.dp).clip(RoundedCornerShape(99.dp))
+            .background((if (checked) Color(0xFF34C759) else Color(0xFFD2D9DE)).copy(alpha = if (enabled) 1f else 0.55f))) {
+            Box(Modifier.align(Alignment.CenterStart).offset(x = thumbOffset).size(28.dp)
+                .background(Color.White, CircleShape))
+        }
     }
 }
 
@@ -364,7 +305,8 @@ private fun GlassMarketStrip(status: ScreenStatus) {
                 Text(
                     when {
                         !status.connected -> "Connecting to Railway"
-                        status.dataAge != null -> "●  LIVE · data age %.1fs".format(status.dataAge)
+                        status.feedDelay != null && status.feedDelay > 5 -> "●  DELAYED FEED · %.0fs".format(status.feedDelay)
+                        status.dataAge != null -> "●  ${if (status.mode == "LIVE") "LIVE" else "PAPER"} · data age %.1fs".format(status.dataAge)
                         else -> "●  ENGINE CONNECTED"
                     },
                     color = if (status.connected) GlassColors.Green else GlassColors.TextMuted,
@@ -548,15 +490,7 @@ private fun GlassProbabilityRow(label: String, value: Double?) {
 }
 
 @Composable
-private fun GlassSetupCard(
-    status: ScreenStatus,
-    preview: Boolean,
-    busy: Boolean,
-    onTrade: () -> Unit,
-    onQuickCall: () -> Unit,
-    onQuickPut: () -> Unit,
-    onClose: () -> Unit,
-) {
+private fun GlassSetupCard(status: ScreenStatus) {
     val alert = status.alert
     val parsed = alert?.symbol?.let(::parseOccSymbol)
     val moneyness = if (parsed != null && status.spot != null) {
@@ -618,49 +552,11 @@ private fun GlassSetupCard(
         }
         Spacer(Modifier.height(12.dp))
 
-        val canTrade = !preview && status.liveReady && status.mode == "LIVE" && alert != null && !busy
-        GlassPrimaryButton(
-            text = if (preview) "TRADE · OWNER LOGIN REQUIRED" else "TRADE  →",
-            enabled = canTrade,
-            onClick = onTrade,
-            modifier = Modifier.fillMaxWidth(),
+        Text(
+            if (status.liveEnabled) "Auto trade manages qualified entries and exits."
+            else "Turn on Auto trade to allow live entries and automatic exits.",
+            color = GlassColors.TextMuted, fontSize = 11.sp,
         )
-        Spacer(Modifier.height(9.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassQuickButton(
-                label = "↑",
-                caption = "Buy Call",
-                tint = GlassColors.Green,
-                enabled = alert != null,
-                onClick = onQuickCall,
-                modifier = Modifier.weight(1f),
-            )
-            GlassQuickButton(
-                label = "↓",
-                caption = "Buy Put",
-                tint = GlassColors.Red,
-                enabled = alert != null,
-                onClick = onQuickPut,
-                modifier = Modifier.weight(1f),
-            )
-            val openCount = if (status.mode == "PAPER") status.paperPositions else status.brokerState.openPositions
-            GlassQuickButton(
-                label = "○",
-                caption = "Close",
-                tint = GlassColors.TextMuted,
-                enabled = openCount > 0,
-                onClick = onClose,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        if (!status.liveReady && status.liveReasons.isNotEmpty()) {
-            Spacer(Modifier.height(9.dp))
-            Text(
-                "LIVE LOCKED · ${status.liveReasons.joinToString(" · ").replace('_', ' ')}",
-                color = GlassColors.Amber,
-                fontSize = 9.sp,
-            )
-        }
     }
 }
 
@@ -694,9 +590,9 @@ private fun GlassQuickButton(
 
 @Composable
 private fun GlassPositionsCard(status: ScreenStatus, onOpen: () -> Unit) {
-    val paper = status.mode == "PAPER"
+    val paper = status.mode != "LIVE"
     val count = if (paper) status.paperPositions else status.brokerState.openPositions
-    val pnl = if (paper) status.paperPnl else status.brokerState.openPnl
+    val pnl = if (paper) status.paperUnrealizedPnl else status.brokerState.openPnl
 
     GlassPanel(modifier = Modifier.clickable { onOpen() }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -736,10 +632,10 @@ private fun GlassPositionsCard(status: ScreenStatus, onOpen: () -> Unit) {
 private fun GlassTodayCard(status: ScreenStatus) {
     val pnl = if (status.mode == "PAPER") status.paperPnl else status.brokerState.dailyPnl
     GlassPanel {
-        Text("TODAY", color = GlassColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+        Text(if (status.mode == "LIVE") "LIVE · TODAY" else "PAPER · SINCE RESET", color = GlassColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
         Row {
-            GlassTodayMetric("Trades", if (status.mode == "PAPER") status.paperTrades.toString() else "—", Modifier.weight(1f))
+            GlassTodayMetric("Executions", if (status.mode == "PAPER") status.paperTrades.toString() else "—", Modifier.weight(1f))
             GlassDivider()
             GlassTodayMetric("Win Rate", "—", Modifier.weight(1f))
             GlassDivider()
@@ -820,8 +716,12 @@ private fun GlassPositionsScreen(status: ScreenStatus) {
             GlassKeyValue("Day P&L", if (live) signedMoney(status.brokerState.dailyPnl) else signedMoney(status.paperPnl), pnlColor(if (live) status.brokerState.dailyPnl else status.paperPnl))
             GlassKeyValue("New entry eligible", if (status.brokerState.entryAllowed) "YES" else "NO", if (status.brokerState.entryAllowed) GlassColors.Green else GlassColors.Amber)
         }
-        if (status.brokerState.openPositions > 0) {
-            GlassNotice("The broker status stream currently exposes reconciled position count and P&L, not contract-level position details. This screen does not invent them.")
+        status.livePositions.forEach { position ->
+            GlassPanel {
+                Text(position.symbol, color = GlassColors.Text, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                GlassKeyValue("Contracts owned", position.quantity.toString())
+                GlassKeyValue("Average broker fill", money(position.averagePrice))
+            }
         }
     }
 }
@@ -841,6 +741,7 @@ private fun GlassAnalyticsScreen(status: ScreenStatus) {
             GlassKeyValue("Risk", status.riskProfile)
             GlassKeyValue("Exit", status.exitProfile)
             GlassKeyValue("Decision", status.decision)
+            GlassKeyValue("Worker", status.workerState)
             Spacer(Modifier.height(6.dp))
             Text(status.reason, color = GlassColors.TextMuted, fontSize = 10.sp)
         }
@@ -850,9 +751,9 @@ private fun GlassAnalyticsScreen(status: ScreenStatus) {
             Row {
                 GlassTodayMetric("Cash", money(status.paperCash), Modifier.weight(1f))
                 GlassDivider()
-                GlassTodayMetric("P&L", signedMoney(status.paperPnl), Modifier.weight(1f), pnlColor(status.paperPnl))
+                GlassTodayMetric("Realized P&L", signedMoney(status.paperPnl), Modifier.weight(1f), pnlColor(status.paperPnl))
                 GlassDivider()
-                GlassTodayMetric("Trades", status.paperTrades.toString(), Modifier.weight(1f))
+                GlassTodayMetric("Executions", status.paperTrades.toString(), Modifier.weight(1f))
             }
         }
     }
@@ -872,6 +773,9 @@ private fun GlassSettingsScreen(
     var contracts by remember(status.risk.contracts) { mutableStateOf(status.risk.contracts?.toString() ?: "1") }
     var message by remember { mutableStateOf<String?>(null) }
 
+    var appKey by remember { mutableStateOf("") }
+    var appSecret by remember { mutableStateOf("") }
+    var savingCredentials by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -886,9 +790,13 @@ private fun GlassSettingsScreen(
                     OutlinedButton(
                         onClick = {
                             scope.launch {
-                                actions.setMode(mode)
-                                    .onSuccess { message = it }
-                                    .onFailure { message = it.message }
+                                if (mode == "LIVE") {
+                                    message = "Turn on Auto trade on the LIVE tab to start live automation."
+                                } else {
+                                    actions.setMode(mode)
+                                        .onSuccess { message = it }
+                                        .onFailure { message = it.message }
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f),
@@ -911,21 +819,22 @@ private fun GlassSettingsScreen(
                 Text(if (status.risk.armed) "ARMED" else "NOT ARMED", color = if (status.risk.armed) GlassColors.Green else GlassColors.Amber, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
             Spacer(Modifier.height(8.dp))
+            Text("Standing limits repeat each trading day. Turn Auto trade off before changing them.", color = GlassColors.TextMuted, fontSize = 11.sp)
             GlassTextField(loss, { loss = it }, "Daily loss stop ($)")
             GlassTextField(gain, { gain = it }, "Daily gain stop ($)")
             GlassTextField(exposure, { exposure = it }, "Max account exposure (%)")
             GlassTextField(contracts, { contracts = it }, "Max contracts")
             Spacer(Modifier.height(7.dp))
             GlassPrimaryButton(
-                text = "Arm Today's Limits",
-                enabled = true,
+                text = "Save Live Limits",
+                enabled = !preview && !status.liveEnabled,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     val l = loss.toDoubleOrNull()
                     val g = gain.toDoubleOrNull()
                     val e = exposure.toDoubleOrNull()?.div(100.0)
                     val c = contracts.toIntOrNull()
-                    if (l == null || g == null || e == null || c == null) {
+                    if (l == null || g == null || e == null || c == null || !l.isFinite() || !g.isFinite() || !e.isFinite()) {
                         message = "Enter valid numeric limits"
                     } else {
                         scope.launch {
@@ -955,7 +864,10 @@ private fun GlassSettingsScreen(
             Spacer(Modifier.height(7.dp))
             GlassKeyValue("Cash", money(status.paperCash))
             GlassKeyValue("Realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
-            GlassKeyValue("Trades", status.paperTrades.toString())
+            GlassKeyValue("Executions", status.paperTrades.toString())
+            GlassKeyValue("Buys / sells", "${status.paperBuys} / ${status.paperSells}")
+            GlassKeyValue("Unrealized P&L", signedMoney(status.paperUnrealizedPnl), pnlColor(status.paperUnrealizedPnl))
+            Text("Each buy or sell counts once. Realized P&L changes when contracts are sold.", color = GlassColors.TextMuted, fontSize = 11.sp)
             Spacer(Modifier.height(8.dp))
             GlassOutlineButton(
                 text = if (status.paperArmed) "Stop New Paper Entries" else "Arm Autonomous Paper",
@@ -975,6 +887,24 @@ private fun GlassSettingsScreen(
             Spacer(Modifier.height(7.dp))
             GlassKeyValue("Provider", status.broker.uppercase())
             GlassKeyValue("API configured", if (status.brokerConfigured) "YES" else "NO")
+            Text("Webull production OpenAPI credentials", color = GlassColors.TextMuted, fontSize = 11.sp)
+            OutlinedTextField(appKey, { appKey = it }, label = { Text("App key") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(appSecret, { appSecret = it }, label = { Text("App secret") }, singleLine = true,
+                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+            GlassPrimaryButton(
+                text = if (savingCredentials) "Saving…" else "Save Production Credentials",
+                enabled = !preview && !status.liveEnabled && !savingCredentials && appKey.isNotBlank() && appSecret.isNotBlank(),
+                onClick = {
+                    savingCredentials = true
+                    scope.launch {
+                        actions.saveCredentials(appKey.trim(), appSecret.trim())
+                            .onSuccess { message = it; appKey = ""; appSecret = "" }
+                            .onFailure { message = it.message }
+                        savingCredentials = false
+                    }
+                }, modifier = Modifier.fillMaxWidth(),
+            )
             GlassKeyValue("Broker connected", if (status.brokerConnected) "YES" else "NO")
             GlassKeyValue("Cash", money(status.brokerState.cashAvailable))
             GlassKeyValue("Day P&L", signedMoney(status.brokerState.dailyPnl), pnlColor(status.brokerState.dailyPnl))

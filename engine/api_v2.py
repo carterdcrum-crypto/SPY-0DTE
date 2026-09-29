@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
-import threading
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -15,9 +15,10 @@ from .live_alert_policy import build_live_entry_alert
 from .live_broker_guard import cached_live_broker_guard
 from .live_risk import LiveRiskEnvelopeError, LiveRiskEnvelopeStore
 from .paper_account import PaperAccountStore
-from .paper_ai_autotrader import run_forever as run_realtime_paper_autotrader
-from .paper_ai_delayed_simulation import run_forever as run_delayed_paper_autotrader
-from .paper_autotrader import automation_status
+from .paper_autotrader import PaperAutoSettings, automation_status
+from .paper_runner import run_forever as run_paper_autotrader
+from .runtime import runtime_status, start_worker
+from .session_calendar import session_status
 from .tradier_live import TradierLiveClient, TradierLiveError, tradier_env_status
 
 
@@ -105,18 +106,26 @@ def _paper_autonomy_payload() -> dict[str, Any]:
 
     mode = base._control_store().get_mode()
     runner_enabled = _env_bool("START_PAPER_AUTOTRADER", False)
+    worker = runtime_status()["workers"].get("paper", {})
+    running = runner_enabled and bool(worker.get("healthy", False))
     armed = mode is base.TradingMode.PAPER
+    settings = PaperAutoSettings.from_env()
     return {
         "armed": armed,
         "mode": mode.value,
-        "engine_running": runner_enabled,
+        "engine_running": running,
+        "engine_configured": runner_enabled,
+        "worker": worker,
+        "resume_after_restart": True,
+        "runs_without_phone": True,
+        "session": session_status(datetime.now(timezone.utc), settings.market_open, settings.market_close),
         "execution": "local_paper_ledger",
         "broker_credentials_required": False,
         "live_order_submission": False,
         "production_isolated": True,
-        "new_entries_enabled": runner_enabled and armed,
-        "existing_position_management_enabled": runner_enabled,
-        "dynamic_exits_enabled": runner_enabled,
+        "new_entries_enabled": running and armed,
+        "existing_position_management_enabled": running,
+        "dynamic_exits_enabled": running,
         "disarmed_behavior": "block_new_entries_manage_existing_positions",
     }
 
@@ -183,8 +192,10 @@ _original_lifespan = base.app.router.lifespan_context
 
 
 def status_payload() -> dict[str, Any]:
+    from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+    standing = LiveAutonomyStore(autonomy_db_path()).policy()
     envelope = _live_risk_store().snapshot()
-    guard = cached_live_broker_guard(envelope) if envelope.armed_today() else None
+    guard = cached_live_broker_guard(envelope) if envelope.armed_today() and not standing["configured"] else None
 
     # Daily gain/loss stops are server-authoritative. If one is reached while
     # LIVE alerts are armed, immediately return the control plane to SHADOW.
@@ -198,11 +209,20 @@ def status_payload() -> dict[str, Any]:
     payload = _original_status_payload()
     paper = _paper_store().snapshot().as_dict()
     automation = automation_status()
+    runtime = runtime_status()
+    worker = runtime["workers"].get("paper", {})
+    if _env_bool("START_PAPER_AUTOTRADER", False) and not worker.get("healthy", False):
+        automation = {
+            **automation, "state": str(worker.get("state", "STARTING")),
+            "reason": "paper worker is recovering automatically; new entries are paused",
+            "last_signal": None, "last_action": None, "risk": None,
+        }
+    payload["runtime"] = runtime
     payload["paper"] = paper
     payload["paper_automation"] = automation
     payload["paper_autonomy"] = _paper_autonomy_payload()
     payload["live_risk"] = envelope.as_dict()
-    payload["live_alert"] = _live_alert_payload(automation)
+    payload["live_alert"] = None if standing["configured"] else _live_alert_payload(automation)
     payload["live_broker"] = {
         **tradier_env_status(),
         "selected": _selected_live_broker() == "tradier",
@@ -236,22 +256,17 @@ def _strategy_mode() -> str:
 
 @asynccontextmanager
 async def lifespan(app):
+    worker = None
     if _env_bool("START_PAPER_AUTOTRADER", False):
-        runner = (
-            run_delayed_paper_autotrader
-            if _env_bool("PAPER_DELAYED_SIMULATION", False)
-            else run_realtime_paper_autotrader
-        )
-        thread = threading.Thread(
-            target=runner,
-            args=(_strategy_mode,),
-            name="spy0dte-paper-autotrader",
-            daemon=True,
-        )
-        thread.start()
-
-    async with _original_lifespan(app):
-        yield
+        worker = start_worker("paper", lambda context: run_paper_autotrader(
+            _strategy_mode, context, delayed=_env_bool("PAPER_DELAYED_SIMULATION", False),
+        ))
+    try:
+        async with _original_lifespan(app):
+            yield
+    finally:
+        if worker:
+            worker.close()
 
 
 base.app.router.lifespan_context = lifespan
@@ -319,6 +334,9 @@ def arm_live_risk_envelope(
     request: LiveRiskEnvelopeRequest,
     _: base.UserIdentity = Depends(base.require_user),
 ) -> dict[str, Any]:
+    from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+    if LiveAutonomyStore(autonomy_db_path()).policy()["enabled"]:
+        raise HTTPException(status_code=409, detail="stop live autonomy before changing its standing limits")
     try:
         envelope = _live_risk_store().arm(
             daily_loss_limit=request.daily_loss_limit,
@@ -336,6 +354,8 @@ def arm_live_risk_envelope(
 def disarm_live_risk_envelope(
     _: base.UserIdentity = Depends(base.require_user),
 ) -> dict[str, Any]:
+    from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+    LiveAutonomyStore(autonomy_db_path()).disable(datetime.now(timezone.utc))
     if base._control_store().get_mode() is base.TradingMode.LIVE:
         base._control_store().set_mode(base.TradingMode.SHADOW)
     return _live_risk_store().disarm().as_dict()

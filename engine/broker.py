@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+import math
 from typing import Literal
 
 
@@ -36,13 +37,17 @@ class OptionOrderRequest:
             raise ValueError("account_id is required")
         if not self.client_order_id or len(self.client_order_id) > 32:
             raise ValueError("client_order_id must be 1..32 characters")
-        if self.quantity <= 0:
+        if isinstance(self.quantity, bool) or int(self.quantity) != self.quantity or self.quantity <= 0:
             raise ValueError("quantity must be positive")
-        if self.limit_price <= 0:
+        if not math.isfinite(self.limit_price) or self.limit_price <= 0:
             raise ValueError("limit_price must be positive")
-        if self.strike_price <= 0:
+        if not math.isfinite(self.strike_price) or self.strike_price <= 0:
             raise ValueError("strike_price must be positive")
         date.fromisoformat(self.expiration_date)
+        if self.option_type not in {"CALL", "PUT"}:
+            raise ValueError("invalid option type")
+        if self.position_intent not in {"BUY_TO_OPEN", "SELL_TO_CLOSE"}:
+            raise ValueError("only long-option entry and exit are supported")
 
         if self.position_intent == "BUY_TO_OPEN" and self.side != "BUY":
             raise ValueError("BUY_TO_OPEN requires BUY side")

@@ -43,9 +43,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import org.json.JSONObject
 
 class WebullTradeActivity : ComponentActivity() {
@@ -79,33 +76,19 @@ internal class TradeBackend(private val token: String) {
         .retryOnConnectionFailure(true)
         .build()
 
-    fun connect(onStatus: (ScreenStatus) -> Unit, onError: (String) -> Unit): WebSocket? {
+    fun connect(onStatus: (ScreenStatus) -> Unit, onError: (String) -> Unit): AutoCloseable {
         if (base.isBlank()) {
             onError("Backend URL is not configured")
-            return null
+            return AutoCloseable { }
         }
         val wsBase = when {
             base.startsWith("https://") -> "wss://${base.removePrefix("https://")}"
             base.startsWith("http://") -> "ws://${base.removePrefix("http://")}"
             else -> base
         }
-        return http.newWebSocket(
-            Request.Builder()
-                .url("$wsBase/v1/live")
-                .header("Authorization", "Bearer $token")
-                .build(),
-            object : WebSocketListener() {
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    runCatching { parseStatus(text) }
-                        .onSuccess(onStatus)
-                        .onFailure { onError("Bad Railway status: ${it.message}") }
-                }
-
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    onError(t.message ?: "Railway connection failed")
-                }
-            },
-        )
+        return connectStatusSocket(http, Request.Builder().url("$wsBase/v1/live")
+            .header("Authorization", "Bearer $token").build(),
+            { onStatus(parseStatus(it)) }, onError)
     }
 
     suspend fun setMode(mode: String): Result<JSONObject> = withContext(Dispatchers.IO) {
@@ -135,32 +118,13 @@ internal class TradeBackend(private val token: String) {
         post("/v1/live/risk-envelope/disarm", JSONObject())
     }
 
-    suspend fun prepareTrade(): Result<PreparedTrade> = withContext(Dispatchers.IO) {
-        post("/v1/live/order/prepare", JSONObject().put("confirmation", "PREPARE LIVE ORDER"))
-            .mapCatching { root ->
-                val order = root.getJSONObject("order")
-                PreparedTrade(
-                    ticket = root.getString("ticket_token"),
-                    expiresSeconds = root.optInt("expires_in_seconds", 45),
-                    orderJson = order.toString(),
-                    optionType = order.getString("option_type"),
-                    strike = order.getDouble("strike_price"),
-                    expiration = order.getString("expiration_date"),
-                    quantity = order.getInt("quantity"),
-                    limitPrice = order.getDouble("limit_price"),
-                    maxDebit = order.getDouble("max_debit"),
-                )
-            }
+    suspend fun setLiveAutonomy(enabled: Boolean): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post("/v1/live/autonomy", JSONObject().put("enabled", enabled)
+            .put("confirmation", if (enabled) "ENABLE AUTONOMOUS LIVE" else "STOP AUTONOMOUS LIVE"))
     }
 
-    suspend fun submitTrade(trade: PreparedTrade): Result<JSONObject> = withContext(Dispatchers.IO) {
-        post(
-            "/v1/live/order/submit",
-            JSONObject()
-                .put("ticket_token", trade.ticket)
-                .put("order", JSONObject(trade.orderJson))
-                .put("confirmation", "CONFIRM TRADE"),
-        )
+    suspend fun saveProductionCredentials(key: String, secret: String): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post("/v1/broker/webull", JSONObject().put("environment", "production").put("app_key", key).put("app_secret", secret))
     }
 
     private fun post(path: String, payload: JSONObject): Result<JSONObject> {
@@ -188,19 +152,24 @@ internal class TradeBackend(private val token: String) {
     }
 }
 
-private fun parseStatus(text: String): ScreenStatus {
+internal fun parseStatus(text: String): ScreenStatus {
     val root = JSONObject(text)
-    val market = root.optJSONObject("market") ?: JSONObject()
+    val market = if (root.optString("mode") == "LIVE") {
+        root.optJSONObject("live_autonomy")?.optJSONObject("market") ?: JSONObject()
+    } else root.optJSONObject("market") ?: JSONObject()
     val gate = root.optJSONObject("live_gate") ?: JSONObject()
     val broker = root.optJSONObject("live_broker") ?: JSONObject()
     val risk = root.optJSONObject("live_risk") ?: JSONObject()
-    val automation = root.optJSONObject("paper_automation") ?: JSONObject()
+    val paperAutomation = root.optJSONObject("paper_automation") ?: JSONObject()
+    val liveAuto = root.optJSONObject("live_autonomy") ?: JSONObject()
+    val isLive = root.optString("mode") == "LIVE"
+    val automation = if (isLive) liveAuto else paperAutomation
     val paper = root.optJSONObject("paper") ?: JSONObject()
     val autonomy = root.optJSONObject("paper_autonomy") ?: JSONObject()
-    val liveAlert = root.optJSONObject("live_alert")
+    val liveAlert = if (isLive) liveAuto.optJSONObject("entry_alert") else root.optJSONObject("live_alert")
 
     fun number(obj: JSONObject?, key: String): Double? =
-        if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key)
+        if (obj == null || !obj.has(key) || obj.isNull(key)) null else obj.optDouble(key).takeIf { it.isFinite() }
 
     val reasons = mutableListOf<String>()
     gate.optJSONArray("reasons")?.let { values ->
@@ -221,7 +190,8 @@ private fun parseStatus(text: String): ScreenStatus {
         )
     }
 
-    val guard = broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
+    val guard = if (liveAuto.optBoolean("configured", false)) liveAuto.optJSONObject("guard") ?: JSONObject()
+        else broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
     val brokerState = BrokerState(
         connected = guard.optBoolean("connected", broker.optBoolean("connected", false)),
         entryAllowed = guard.optBoolean("entry_allowed", false),
@@ -229,8 +199,8 @@ private fun parseStatus(text: String): ScreenStatus {
         totalEquity = number(guard, "total_equity"),
         dailyPnl = number(guard, "daily_total_pnl"),
         openPnl = number(guard, "daily_open_pnl"),
-        openPositions = guard.optInt("open_positions", 0),
-        pendingOrders = guard.optInt("pending_orders_count", 0),
+        openPositions = liveAuto.optJSONArray("positions")?.length() ?: guard.optInt("open_positions", 0),
+        pendingOrders = liveAuto.optJSONArray("pending_orders")?.length() ?: guard.optInt("pending_orders_count", 0),
         maxEntryDebit = number(guard, "max_entry_debit"),
     )
 
@@ -270,7 +240,23 @@ private fun parseStatus(text: String): ScreenStatus {
         providers = providerStates,
     )
 
+    val livePositions = buildList {
+        liveAuto.optJSONArray("positions")?.let { rows ->
+            for (index in 0 until rows.length()) {
+                val row = rows.optJSONObject(index) ?: continue
+                add(LivePosition(row.optString("symbol"), row.optInt("quantity"), number(row, "average_price")))
+            }
+        }
+    }
     return ScreenStatus(
+        liveEnabled = liveAuto.optBoolean("enabled", false),
+        liveState = if (liveAuto.optBoolean("worker_current", false)) liveAuto.optString("state", "STARTING") else "RECOVERING",
+        liveReason = liveAuto.optString("reason", "Waiting for live worker"),
+        livePositions = livePositions,
+        workerState = if (isLive) liveAuto.optString("state", "STARTING") else autonomy.optJSONObject("worker")?.optString("state", "STARTING") ?: "STARTING",
+        paperBuys = paper.optInt("buy_count", 0),
+        paperSells = paper.optInt("sell_count", 0),
+        paperUnrealizedPnl = if (paper.optInt("open_positions", 0) == 0) 0.0 else number(paperAutomation.optJSONObject("position"), "unrealized_pnl"),
         mode = root.optString("mode", "PAPER"),
         connected = true,
         decision = automation.optString("state", "CONNECTING"),
@@ -301,7 +287,7 @@ private fun parseStatus(text: String): ScreenStatus {
         paperCash = number(paper, "settled_cash"),
         paperPnl = number(paper, "realized_pnl"),
         paperPositions = paper.optInt("open_positions", 0),
-        paperTrades = paper.optInt("trade_count", 0),
+        paperTrades = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
         paperArmed = autonomy.optBoolean("armed", false),
     )
 }
@@ -372,7 +358,7 @@ private fun WebullTradeApp(activity: Activity) {
         activity = activity,
         token = token!!,
         preview = token == "preview",
-        onSignOut = if (oauthConfigured) ({ token = null }) else null,
+        onSignOut = if (oauthConfigured) ({ activity.stopService(Intent(activity, TradeWatchService::class.java)); token = null }) else null,
     )
 }
 
@@ -391,9 +377,12 @@ private fun TradeConsole(
         startWatcher(activity, token)
         val socket = backend.connect(
             onStatus = { next -> activity.runOnUiThread { status = next; connectionError = null } },
-            onError = { error -> activity.runOnUiThread { connectionError = error } },
+            onError = { error -> activity.runOnUiThread {
+                status = status.copy(connected = false, brokerConnected = false)
+                connectionError = error
+            } },
         )
-        onDispose { socket?.close(1000, "screen closed") }
+        onDispose { socket.close() }
     }
 
     GlassDashboard(
@@ -402,11 +391,15 @@ private fun TradeConsole(
         connectionError = connectionError,
         actions = remember(backend) {
             GlassActions(
-                prepareTrade = { backend.prepareTrade() },
-                submitTrade = { trade ->
-                    backend.submitTrade(trade).map { result ->
-                        val state = result.optJSONObject("order_detail")?.optString("status")
-                        "WEBULL SUBMISSION · ${state?.ifBlank { "RECEIVED" }?.uppercase() ?: "RECEIVED"}"
+                saveCredentials = { key, secret ->
+                    backend.saveProductionCredentials(key, secret).map { "Production credentials saved securely on Railway." }
+                },
+                setLiveAutonomy = { enabled ->
+                    backend.setLiveAutonomy(enabled).map { result ->
+                        status = status.copy(liveEnabled = result.optBoolean("enabled", false),
+                            mode = if (enabled) "LIVE" else status.mode)
+                        if (enabled) "Auto trade is on. Railway will trade when all live checks pass."
+                        else "Auto trade is off. Pending buys are cancelled and owned positions are closed when executable."
                     }
                 },
                 setMode = { mode ->
@@ -418,7 +411,7 @@ private fun TradeConsole(
                     }
                 },
                 armRisk = { loss, gain, exposure, contracts ->
-                    backend.armRisk(loss, gain, exposure, contracts).map { "TODAY'S LIVE LIMITS · ARMED" }
+                    backend.armRisk(loss, gain, exposure, contracts).map { "Live limits saved. Turn on Auto trade to use them each session." }
                 },
                 disarmRisk = {
                     backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" }

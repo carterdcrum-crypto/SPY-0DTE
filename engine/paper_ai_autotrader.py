@@ -98,6 +98,11 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
         self._last_decision_blend: AIDecisionBlend | None = None
         self._last_decision_consensus = None
 
+    def tick(self, now: datetime | None = None) -> dict[str, object]:
+        self._last_decision_blend = None
+        self._last_decision_consensus = None
+        return super().tick(now)
+
     def _context(
         self,
         cycles: tuple[MarketCycle, ...],
@@ -119,7 +124,7 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
             else "REALTIME_COMPATIBLE"
         )
         return AIContext(
-            market_time=eastern.astimezone(timezone.utc).isoformat(),
+            market_time=cycles[0].received_at.astimezone(timezone.utc).isoformat(),
             data_mode=data_mode,
             spot=cycles[0].spot,
             horizon_minutes=horizon,
