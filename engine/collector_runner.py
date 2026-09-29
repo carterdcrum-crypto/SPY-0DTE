@@ -96,6 +96,7 @@ def run_forever(context: WorkerContext | None = None) -> None:
     source = provider_source(provider)
     store = SnapshotStore(settings.db_path)
     consecutive_failures = 0
+    last_error = None
 
     log.info(
         "collector started source=%s db=%s interval=%ss window=%s-%s ET",
@@ -121,6 +122,7 @@ def run_forever(context: WorkerContext | None = None) -> None:
                         observed_at=now,
                     )
                     consecutive_failures = 0
+                    last_error = None
                     max_delay = max(
                         (float(item.feed_delay_seconds) for item in snapshots),
                         default=float("nan"),
@@ -137,6 +139,7 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     # Transient rate/network failures slow the collector instead of
                     # hammering the provider or terminating the service.
                     consecutive_failures += 1
+                    last_error = type(exc).__name__
                     sleep_seconds = _backoff_seconds(settings, consecutive_failures)
                     log.warning(
                         "collection cycle failed source=%s type=%s retry_in=%ss failures=%d",
@@ -147,11 +150,15 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     )
             else:
                 consecutive_failures = 0
+                last_error = None
                 sleep_seconds = settings.idle_sleep_seconds
 
             context.heartbeat(
-                state="RUNNING" if is_collection_window(now, settings) else "IDLE",
+                state="RECOVERING" if consecutive_failures else (
+                    "RUNNING" if is_collection_window(now, settings) else "IDLE"
+                ),
                 collection_failures=consecutive_failures,
+                last_error=last_error,
                 retry_in_seconds=sleep_seconds if consecutive_failures else None,
             )
             context.wait(sleep_seconds)

@@ -1,4 +1,7 @@
 from datetime import date, datetime, timezone
+from types import SimpleNamespace
+
+import pytest
 
 from engine.collector import SnapshotStore, collect_and_store
 from engine.providers.webull_free import WebullFreeDataProvider
@@ -82,6 +85,23 @@ class FakeClient:
         self.instrument = FakeInstrument()
         self.market_data = FakeMarketData()
         self.option_market_data = FakeOptionMarketData()
+
+
+def test_history_pauses_before_disk_full_without_deleting_data_and_resumes(tmp_path, monkeypatch):
+    provider = WebullFreeDataProvider(data_client=FakeClient())
+    rows = provider.collect_once(date(2026, 9, 22), observed_at=datetime(2026, 9, 22, 15, 30, tzinfo=timezone.utc))
+    store = SnapshotStore(tmp_path / "history.sqlite")
+    try:
+        store.insert(rows[:1])
+        monkeypatch.setattr("engine.collector.shutil.disk_usage", lambda _: SimpleNamespace(free=1024))
+        with pytest.raises(OSError, match="expand storage"):
+            store.insert(rows[1:])
+        assert store.count() == 1
+        monkeypatch.setattr("engine.collector.shutil.disk_usage", lambda _: SimpleNamespace(free=32 * 1024 * 1024))
+        store.insert(rows[1:])
+        assert store.count() == 2
+    finally:
+        store.close()
 
 
 def test_free_provider_filters_to_zero_dte_computes_greeks_and_preserves_market_time():

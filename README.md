@@ -113,6 +113,9 @@ and simulated-broker tests do not establish live profitability.
 The API key alone does not grant broker permissions, realtime options access, or
 owner authentication. No credentials are included in the repository or APK.
 The paper T+1 model currently uses weekdays; live settlement comes from Webull.
+Market-history collection pauses below 16 MiB of free disk space to preserve
+room for execution journals, and resumes when capacity is restored. It does not
+delete research history or reset account records; monitor and expand the volume.
 
 Execution interface references:
 [Webull order detail](https://developer.webull.com/apis/docs/reference/order-detail/),

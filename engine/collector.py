@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import shutil
 import sqlite3
 from datetime import date
 from pathlib import Path
@@ -46,6 +47,10 @@ _MIGRATIONS = {
     "bid_size": "INTEGER NOT NULL DEFAULT 0",
     "ask_size": "INTEGER NOT NULL DEFAULT 0",
 }
+
+
+class StorageCapacityError(OSError):
+    """History collection paused to preserve space for execution journals."""
 
 
 class SnapshotStore:
@@ -106,6 +111,11 @@ class SnapshotStore:
             )
         if not rows:
             return 0
+        # Research quotes must not consume the final space needed by the
+        # paper/live execution journals sharing this volume. Preserve all
+        # history and resume collection when storage capacity is restored.
+        if self.path != ":memory:" and shutil.disk_usage(Path(self.path).parent).free < 16 * 1024 * 1024:
+            raise StorageCapacityError("Market history paused: less than 16 MiB free; expand storage")
         self.connection.executemany(
             """
             INSERT OR REPLACE INTO option_snapshots (
