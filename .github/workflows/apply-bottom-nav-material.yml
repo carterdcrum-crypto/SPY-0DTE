@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +25,10 @@ jobs:
           path = Path('android/app/src/main/java/app/spy0dte/mobile/GlassDashboard.kt')
           text = path.read_text()
 
-          replacement = r'''@Composable
+          replacement = '''@Composable
 private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
-    // Conventional Material-style bottom navigation: no decorative glyph bubbles,
-    // no floating-pill treatment, and no changes to destinations or behavior.
+    // Material-style navigation proportions, stripped down to match a normal brokerage app.
+    // Destinations and click behavior are intentionally unchanged.
     Surface(
         color = Color.White.copy(alpha = 0.96f),
         shadowElevation = 8.dp,
@@ -98,7 +97,7 @@ private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
           g = g.replace('versionName = "0.1.8"', 'versionName = "0.1.9"', 1)
           gradle.write_text(g)
           PY
-      - name: Remove temporary workflow
+      - name: Remove temporary workflow from resulting commit
         run: rm .github/workflows/apply-bottom-nav-material.yml
       - name: Commit scoped UI change
         run: |
