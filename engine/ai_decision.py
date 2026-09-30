@@ -43,11 +43,14 @@ def blend_ai_consensus_into_forecast(
     The AI is a real directional/model-health input before contract selection,
     scenario generation and dynamic sizing. Its influence is bounded by
     `maximum_ai_weight`, provider confidence, consensus disagreement and the
-    consensus risk multiplier. Hard account/risk rails remain downstream.
+    consensus risk multiplier. Quant always retains a strict majority of the
+    directional blend, and hard account/risk rails remain downstream.
     """
 
     quant_probability = _clip(forecast.probability_up, 0.0, 1.0)
-    maximum_ai_weight = _clip(maximum_ai_weight, 0.0, 0.75)
+    # Quant must remain the majority decision source even if an environment
+    # variable is misconfigured above the intended AI ceiling.
+    maximum_ai_weight = _clip(maximum_ai_weight, 0.0, 0.49)
     minimum_confidence = _clip(minimum_confidence, 0.0, 1.0)
 
     if advice is None or advice.confidence < minimum_confidence or not advice.signals:

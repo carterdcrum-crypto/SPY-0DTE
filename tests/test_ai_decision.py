@@ -106,3 +106,25 @@ def test_disagreement_and_ai_risk_multiplier_reduce_influence_and_model_health()
     assert split.effective_weight < aligned.effective_weight
     assert split.forecast.regime_match_score < aligned.forecast.regime_match_score
     assert split.forecast.agreement_score < aligned.forecast.agreement_score
+
+
+def test_ai_weight_is_hard_capped_below_quant_majority() -> None:
+    result = blend_ai_consensus_into_forecast(
+        _forecast(0.60),
+        _consensus(_signal("openai", 0.10, confidence=1.0, risk_multiplier=1.0)),
+        minimum_confidence=0.45,
+        maximum_ai_weight=0.75,
+    )
+
+    ai_total = sum(
+        weight for name, weight in result.forecast.model_weights
+        if name.startswith("ai_decision:")
+    )
+    quant_total = sum(
+        weight for name, weight in result.forecast.model_weights
+        if not name.startswith("ai_decision:")
+    )
+
+    assert result.effective_weight == 0.49
+    assert quant_total > ai_total
+    assert abs((quant_total + ai_total) - 1.0) < 1e-12

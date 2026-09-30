@@ -50,11 +50,8 @@ def _min_ai_confidence() -> float:
 
 
 def _maximum_ai_decision_weight() -> float:
-    return _env_float("PAPER_AI_DECISION_WEIGHT", 0.35, minimum=0.0, maximum=0.75)
-
-
-def _veto_support_threshold() -> float:
-    return _env_float("PAPER_AI_VETO_DIRECTION_SUPPORT", 0.38, minimum=0.05, maximum=0.49)
+    # AI is influential, but the quantitative ensemble always keeps the majority.
+    return _env_float("PAPER_AI_DECISION_WEIGHT", 0.45, minimum=0.0, maximum=0.49)
 
 
 def _safe_return(new: float, old: float) -> float:
@@ -88,8 +85,9 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
     The configured AI consensus is blended into the directional forecast before
     call/put selection, scenario generation, option ranking and dynamic sizing.
     Confidence, provider disagreement and the AI risk multiplier bound its
-    effective weight. AI can also veto a candidate or reduce exit confidence,
-    but it never bypasses account/risk rails or submits broker orders.
+    effective weight. AI can reduce model health and exit confidence, but it
+    cannot hard-veto a quant-backed candidate, bypass account/risk rails, or
+    submit broker orders.
     """
 
     def __init__(self, *args, ai_engine: AIAdvisoryEngine | None = None, **kwargs) -> None:
@@ -213,22 +211,8 @@ class AIAugmentedDynamicExitTrader(DynamicExitEnsemblePaperAutoTrader):
         if advice is None or advice.confidence < _min_ai_confidence():
             return signal, opportunity, forecast
 
-        direction_support = (
-            advice.probability_up
-            if signal.right == "call"
-            else 1.0 - advice.probability_up
-        )
-        if direction_support < _veto_support_threshold():
-            log.info(
-                "AI veto symbol=%s right=%s support=%.3f confidence=%.3f providers=%s",
-                signal.symbol,
-                signal.right,
-                direction_support,
-                advice.confidence,
-                ",".join(item.provider for item in advice.signals),
-            )
-            return None
-
+        # Disagreement is already reflected in the hybrid probability and model-health
+        # multipliers. Do not let the AI override a quant-majority candidate outright.
         providers = ",".join(item.provider for item in advice.signals)
         signal = replace(
             signal,
