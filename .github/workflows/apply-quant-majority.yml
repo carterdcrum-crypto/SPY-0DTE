@@ -1,0 +1,101 @@
+name: apply-quant-majority
+
+on:
+  push:
+    branches: [quant-majority-tuning]
+    paths:
+      - '.github/workflows/apply-quant-majority.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: quant-majority-tuning
+
+      - name: Make quant the majority signal
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # 1) Hard-cap AI below 50% so the quant ensemble always owns a strict majority.
+          p = Path('engine/ai_decision.py')
+          s = p.read_text()
+          old = '    maximum_ai_weight = _clip(maximum_ai_weight, 0.0, 0.75)\n'
+          new = '    # Quant must remain the majority decision source even if an environment\n    # variable is misconfigured above the intended AI ceiling.\n    maximum_ai_weight = _clip(maximum_ai_weight, 0.0, 0.49)\n'
+          if old not in s:
+              raise SystemExit('ai_decision weight clamp changed unexpectedly')
+          s = s.replace(old, new, 1)
+          s = s.replace(
+              '    consensus risk multiplier. Hard account/risk rails remain downstream.\n',
+              '    consensus risk multiplier. Quant always retains a strict majority of the\n    directional blend, and hard account/risk rails remain downstream.\n',
+              1,
+          )
+          p.write_text(s)
+
+          # 2) Default to a 55/45 quant/AI ceiling and remove the AI hard veto.
+          p = Path('engine/paper_ai_autotrader.py')
+          s = p.read_text()
+          old = '''def _maximum_ai_decision_weight() -> float:\n    return _env_float("PAPER_AI_DECISION_WEIGHT", 0.35, minimum=0.0, maximum=0.75)\n'''
+          new = '''def _maximum_ai_decision_weight() -> float:\n    # AI is influential, but the quantitative ensemble always keeps the majority.\n    return _env_float("PAPER_AI_DECISION_WEIGHT", 0.45, minimum=0.0, maximum=0.49)\n'''
+          if old not in s:
+              raise SystemExit('paper AI weight helper changed unexpectedly')
+          s = s.replace(old, new, 1)
+
+          old = '''def _veto_support_threshold() -> float:\n    return _env_float("PAPER_AI_VETO_DIRECTION_SUPPORT", 0.38, minimum=0.05, maximum=0.49)\n\n\n'''
+          if old not in s:
+              raise SystemExit('AI veto helper changed unexpectedly')
+          s = s.replace(old, '', 1)
+
+          s = s.replace(
+              '    effective weight. AI can also veto a candidate or reduce exit confidence,\n    but it never bypasses account/risk rails or submits broker orders.\n',
+              '    effective weight. AI can reduce model health and exit confidence, but it\n    cannot hard-veto a quant-backed candidate, bypass account/risk rails, or\n    submit broker orders.\n',
+              1,
+          )
+
+          old = '''        direction_support = (\n            advice.probability_up\n            if signal.right == "call"\n            else 1.0 - advice.probability_up\n        )\n        if direction_support < _veto_support_threshold():\n            log.info(\n                "AI veto symbol=%s right=%s support=%.3f confidence=%.3f providers=%s",\n                signal.symbol,\n                signal.right,\n                direction_support,\n                advice.confidence,\n                ",".join(item.provider for item in advice.signals),\n            )\n            return None\n\n'''
+          if old not in s:
+              raise SystemExit('operational AI veto block changed unexpectedly')
+          s = s.replace(
+              old,
+              '        # Disagreement is already reflected in the hybrid probability and model-health\n        # multipliers. Do not let the AI override a quant-majority candidate outright.\n',
+              1,
+          )
+          p.write_text(s)
+
+          # 3) Document the intended production default.
+          p = Path('.env.example')
+          s = p.read_text()
+          anchor = 'PAPER_ENGINE_TICK_SECONDS=1\n'
+          addition = '''PAPER_ENGINE_TICK_SECONDS=1\n# Quant-majority hybrid: AI can contribute at most 45% by default. The runtime\n# hard-caps AI below 50%, so the quant ensemble always remains the majority.\nPAPER_AI_DECISION_WEIGHT=0.45\nPAPER_AI_MIN_CONFIDENCE=0.45\n'''
+          if 'PAPER_AI_DECISION_WEIGHT=' not in s:
+              if anchor not in s:
+                  raise SystemExit('env paper settings anchor changed unexpectedly')
+              s = s.replace(anchor, addition, 1)
+          p.write_text(s)
+
+          # 4) Regression test: even a fully confident AI request cannot take majority control.
+          p = Path('tests/test_ai_decision.py')
+          s = p.read_text()
+          if 'test_ai_weight_is_hard_capped_below_quant_majority' not in s:
+              s += '''\n\ndef test_ai_weight_is_hard_capped_below_quant_majority() -> None:\n    result = blend_ai_consensus_into_forecast(\n        _forecast(0.60),\n        _consensus(_signal("openai", 0.10, confidence=1.0, risk_multiplier=1.0)),\n        minimum_confidence=0.45,\n        maximum_ai_weight=0.75,\n    )\n\n    ai_total = sum(\n        weight for name, weight in result.forecast.model_weights\n        if name.startswith("ai_decision:")\n    )\n    quant_total = sum(\n        weight for name, weight in result.forecast.model_weights\n        if not name.startswith("ai_decision:")\n    )\n\n    assert result.effective_weight == 0.49\n    assert quant_total > ai_total\n    assert abs((quant_total + ai_total) - 1.0) < 1e-12\n'''
+          p.write_text(s)
+          PY
+
+          python -m pytest -q tests/test_ai_decision.py tests/test_ai_validation.py
+          git diff --check
+
+      - name: Commit tuning and remove helper workflow
+        shell: bash
+        run: |
+          rm .github/workflows/apply-quant-majority.yml
+          git config user.name 'SPY-0DTE Quant Tuning'
+          git config user.email 'actions@users.noreply.github.com'
+          git add engine/ai_decision.py engine/paper_ai_autotrader.py tests/test_ai_decision.py .env.example .github/workflows/apply-quant-majority.yml
+          git commit -m 'Keep quant majority over AI consensus'
+          git push origin HEAD:quant-majority-tuning
