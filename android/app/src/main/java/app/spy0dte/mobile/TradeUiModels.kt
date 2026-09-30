@@ -66,6 +66,7 @@ internal data class ScreenStatus(
     val brokerState: BrokerState = BrokerState(),
     val ai: AiDecisionState = AiDecisionState(),
     val alert: LiveAlert? = null,
+    // Baseline used by the paper ledger after a confirmed account-size reset.
     val paperStartingCash: Double? = null,
     val paperCash: Double? = null,
     val paperPnl: Double? = null,
