@@ -87,6 +87,7 @@ jobs:
           p.write_text(s)
           PY
 
+          python -m pip install -q pytest
           python -m pytest -q tests/test_ai_decision.py tests/test_ai_validation.py
           git diff --check
 
