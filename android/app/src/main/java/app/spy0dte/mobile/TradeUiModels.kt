@@ -66,6 +66,7 @@ internal data class ScreenStatus(
     val brokerState: BrokerState = BrokerState(),
     val ai: AiDecisionState = AiDecisionState(),
     val alert: LiveAlert? = null,
+    val paperStartingCash: Double? = null,
     val paperCash: Double? = null,
     val paperPnl: Double? = null,
     val paperPositions: Int = 0,

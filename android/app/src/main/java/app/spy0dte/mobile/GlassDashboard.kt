@@ -68,6 +68,7 @@ internal data class GlassActions(
     val setLiveAutonomy: suspend (Boolean) -> Result<String>,
     val setMode: suspend (String) -> Result<String>,
     val setPaperAutonomy: suspend (Boolean) -> Result<String>,
+    val resetPaperAccount: suspend (Double) -> Result<String>,
     val armRisk: suspend (Double, Double, Double, Int) -> Result<String>,
     val disarmRisk: suspend () -> Result<String>,
 )
@@ -88,29 +89,70 @@ internal fun GlassDashboard(
     onSignOut: (() -> Unit)?,
 ) {
     var bottomTab by remember { mutableStateOf("LIVE") }
+    var showNavMenu by remember { mutableStateOf(false) }
+    var showModePicker by remember { mutableStateOf(false) }
+    var headerMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    fun selectMode(mode: String) {
+        showModePicker = false
+        if (mode == "LIVE") {
+            bottomTab = "LIVE"
+            headerMessage = if (preview) {
+                "LIVE view opened. Owner sign-in is required before real-money Auto trade can be enabled."
+            } else {
+                "LIVE view opened. Use Auto trade to enable or disable live automation."
+            }
+        } else {
+            scope.launch {
+                actions.setMode(mode)
+                    .onSuccess { headerMessage = it }
+                    .onFailure { headerMessage = it.message ?: "Could not switch to $mode." }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(
-                        Color(0xFFF9FDFE),
-                        GlassColors.BackgroundBlue,
-                        Color(0xFFF5FAFC),
-                    ),
+                    listOf(Color(0xFFF9FDFE), GlassColors.BackgroundBlue, Color(0xFFF5FAFC)),
                 ),
             )
             .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         GlassAmbientBackground()
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .widthIn(max = 620.dp)
-                .align(Alignment.TopCenter),
+            modifier = Modifier.fillMaxSize().widthIn(max = 620.dp).align(Alignment.TopCenter),
         ) {
-            GlassHeader(status)
+            GlassHeader(
+                status = status,
+                onMenuClick = {
+                    showNavMenu = !showNavMenu
+                    showModePicker = false
+                },
+                onModeClick = {
+                    showModePicker = !showModePicker
+                    showNavMenu = false
+                },
+            )
+            if (showNavMenu) {
+                GlassHeaderNavigation(bottomTab) {
+                    bottomTab = it
+                    showNavMenu = false
+                }
+            }
+            if (showModePicker) GlassHeaderModePicker(status.mode, ::selectMode)
+            headerMessage?.let { text ->
+                Box(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 3.dp)) {
+                    GlassNotice(
+                        text,
+                        danger = text.contains("required", true) || text.contains("locked", true) ||
+                            text.contains("fail", true) || text.contains("could not", true),
+                    )
+                }
+            }
             Box(Modifier.weight(1f)) {
                 when (bottomTab) {
                     "POSITIONS" -> GlassPositionsScreen(status)
@@ -120,6 +162,7 @@ internal fun GlassDashboard(
                         preview = preview,
                         actions = actions,
                         onSignOut = onSignOut,
+                        onOpenLive = { bottomTab = "LIVE" },
                     )
                     else -> GlassLiveScreen(
                         status = status,
@@ -157,13 +200,17 @@ private fun GlassAmbientBackground() {
 }
 
 @Composable
-private fun GlassHeader(status: ScreenStatus) {
+private fun GlassHeader(
+    status: ScreenStatus,
+    onMenuClick: () -> Unit,
+    onModeClick: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
-            modifier = Modifier.size(38.dp),
+            modifier = Modifier.size(38.dp).clickable(onClick = onMenuClick),
             shape = RoundedCornerShape(14.dp),
             color = Color.White.copy(alpha = 0.72f),
             border = BorderStroke(1.dp, GlassColors.Border),
@@ -181,6 +228,7 @@ private fun GlassHeader(status: ScreenStatus) {
             fontSize = 16.sp,
         )
         Surface(
+            modifier = Modifier.clickable(onClick = onModeClick),
             shape = RoundedCornerShape(22.dp),
             color = GlassColors.Mint.copy(alpha = 0.92f),
             border = BorderStroke(1.dp, Color(0xFFA8E7CF)),
@@ -192,6 +240,52 @@ private fun GlassHeader(status: ScreenStatus) {
                 fontWeight = FontWeight.Black,
                 fontSize = 10.sp,
             )
+        }
+    }
+}
+
+@Composable
+private fun GlassHeaderNavigation(selected: String, onSelect: (String) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        listOf("LIVE", "POSITIONS", "ANALYTICS", "SETTINGS").forEach { destination ->
+            val active = selected == destination
+            OutlinedButton(
+                onClick = { onSelect(destination) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (active) GlassColors.Mint else Color.White.copy(alpha = 0.50f),
+                    contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
+                ),
+                border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
+            ) {
+                Text(destination.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassHeaderModePicker(selected: String, onSelect: (String) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        listOf("LIVE", "PAPER", "SHADOW").forEach { mode ->
+            val active = selected == mode
+            OutlinedButton(
+                onClick = { onSelect(mode) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (active) GlassColors.Mint else Color.White.copy(alpha = 0.50f),
+                    contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
+                ),
+                border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
+            ) { Text(mode, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -765,6 +859,7 @@ private fun GlassSettingsScreen(
     preview: Boolean,
     actions: GlassActions,
     onSignOut: (() -> Unit)?,
+    onOpenLive: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var loss by remember(status.risk.loss) { mutableStateOf(status.risk.loss?.toString() ?: "25") }
@@ -772,10 +867,17 @@ private fun GlassSettingsScreen(
     var exposure by remember(status.risk.exposure) { mutableStateOf(status.risk.exposure?.let { (it * 100).toString() } ?: "20") }
     var contracts by remember(status.risk.contracts) { mutableStateOf(status.risk.contracts?.toString() ?: "1") }
     var message by remember { mutableStateOf<String?>(null) }
-
+    var modeMessage by remember { mutableStateOf<String?>(null) }
+    var paperMessage by remember { mutableStateOf<String?>(null) }
+    var paperLimit by remember(status.paperStartingCash) {
+        mutableStateOf(status.paperStartingCash?.let(::trimNumber) ?: status.paperCash?.let(::trimNumber) ?: "1000")
+    }
+    var resettingPaper by remember { mutableStateOf(false) }
+    var pendingPaperReset by remember { mutableStateOf<Double?>(null) }
     var appKey by remember { mutableStateOf("") }
     var appSecret by remember { mutableStateOf("") }
     var savingCredentials by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -789,13 +891,18 @@ private fun GlassSettingsScreen(
                     val active = status.mode == mode
                     OutlinedButton(
                         onClick = {
-                            scope.launch {
-                                if (mode == "LIVE") {
-                                    message = "Turn on Auto trade on the LIVE tab to start live automation."
+                            if (mode == "LIVE") {
+                                onOpenLive()
+                                modeMessage = if (preview) {
+                                    "LIVE view opened. Owner sign-in is required before real-money Auto trade can be enabled."
                                 } else {
+                                    "LIVE view opened. Use Auto trade to enable or disable live automation."
+                                }
+                            } else {
+                                scope.launch {
                                     actions.setMode(mode)
-                                        .onSuccess { message = it }
-                                        .onFailure { message = it.message }
+                                        .onSuccess { modeMessage = it }
+                                        .onFailure { modeMessage = it.message ?: "Could not switch to $mode." }
                                 }
                             }
                         },
@@ -806,10 +913,12 @@ private fun GlassSettingsScreen(
                             contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
                         ),
                         border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
-                    ) {
-                        Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
+                    ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                 }
+            }
+            modeMessage?.let {
+                Spacer(Modifier.height(7.dp))
+                GlassNotice(it, danger = it.contains("required", true) || it.contains("locked", true) || it.contains("fail", true) || it.contains("could not", true))
             }
         }
 
@@ -838,9 +947,7 @@ private fun GlassSettingsScreen(
                         message = "Enter valid numeric limits"
                     } else {
                         scope.launch {
-                            actions.armRisk(l, g, e, c)
-                                .onSuccess { message = it }
-                                .onFailure { message = it.message }
+                            actions.armRisk(l, g, e, c).onSuccess { message = it }.onFailure { message = it.message }
                         }
                     }
                 },
@@ -848,13 +955,7 @@ private fun GlassSettingsScreen(
             Spacer(Modifier.height(7.dp))
             GlassOutlineButton(
                 text = "Disarm Live",
-                onClick = {
-                    scope.launch {
-                        actions.disarmRisk()
-                            .onSuccess { message = it }
-                            .onFailure { message = it.message }
-                    }
-                },
+                onClick = { scope.launch { actions.disarmRisk().onSuccess { message = it }.onFailure { message = it.message } } },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -862,6 +963,7 @@ private fun GlassSettingsScreen(
         GlassPanel {
             Text("AUTONOMOUS PAPER", color = GlassColors.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             Spacer(Modifier.height(7.dp))
+            GlassKeyValue("Starting cash", money(status.paperStartingCash))
             GlassKeyValue("Cash", money(status.paperCash))
             GlassKeyValue("Realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
             GlassKeyValue("Executions", status.paperTrades.toString())
@@ -874,12 +976,62 @@ private fun GlassSettingsScreen(
                 onClick = {
                     scope.launch {
                         actions.setPaperAutonomy(!status.paperArmed)
-                            .onSuccess { message = it }
-                            .onFailure { message = it.message }
+                            .onSuccess { paperMessage = it }
+                            .onFailure { paperMessage = it.message }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(10.dp))
+            Text("PAPER ACCOUNT SIZE", color = GlassColors.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
+            GlassTextField(paperLimit, { paperLimit = it }, "Paper account size ($)")
+            Text(
+                "Changing this amount resets the paper ledger, including open paper positions, executions, and paper P&L. It never affects Webull.",
+                color = GlassColors.TextMuted,
+                fontSize = 10.sp,
+            )
+            Spacer(Modifier.height(7.dp))
+            GlassPrimaryButton(
+                text = if (resettingPaper) "Resetting…" else "Set Paper Account Size",
+                enabled = !resettingPaper && status.mode != "LIVE",
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    val amount = paperLimit.toDoubleOrNull()
+                    if (amount == null || !amount.isFinite() || amount <= 0.0 || amount > 1_000_000.0) {
+                        paperMessage = "Enter a paper account size from $0.01 to $1,000,000."
+                    } else pendingPaperReset = amount
+                },
+            )
+            pendingPaperReset?.let { amount ->
+                Spacer(Modifier.height(7.dp))
+                GlassNotice("Confirm reset to ${money(amount)}. Existing paper-only history and positions will be cleared.", danger = true)
+                Spacer(Modifier.height(7.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    GlassOutlineButton("Cancel", { pendingPaperReset = null }, Modifier.weight(1f))
+                    GlassPrimaryButton(
+                        text = "Confirm Reset",
+                        enabled = !resettingPaper,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            resettingPaper = true
+                            scope.launch {
+                                actions.resetPaperAccount(amount)
+                                    .onSuccess {
+                                        paperMessage = it
+                                        paperLimit = trimNumber(amount)
+                                        pendingPaperReset = null
+                                    }
+                                    .onFailure { paperMessage = it.message ?: "Paper account reset failed." }
+                                resettingPaper = false
+                            }
+                        },
+                    )
+                }
+            }
+            paperMessage?.let {
+                Spacer(Modifier.height(7.dp))
+                GlassNotice(it, danger = it.contains("fail", true) || it.contains("invalid", true) || it.contains("cannot", true))
+            }
         }
 
         GlassPanel {
@@ -903,7 +1055,8 @@ private fun GlassSettingsScreen(
                             .onFailure { message = it.message }
                         savingCredentials = false
                     }
-                }, modifier = Modifier.fillMaxWidth(),
+                },
+                modifier = Modifier.fillMaxWidth(),
             )
             GlassKeyValue("Broker connected", if (status.brokerConnected) "YES" else "NO")
             GlassKeyValue("Cash", money(status.brokerState.cashAvailable))

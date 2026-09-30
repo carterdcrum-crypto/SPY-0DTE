@@ -101,6 +101,13 @@ internal class TradeBackend(private val token: String) {
         post("/v1/paper/autonomy", JSONObject().put("armed", armed))
     }
 
+    suspend fun resetPaperAccount(startingCash: Double): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post(
+            "/v1/paper/reset",
+            JSONObject().put("starting_cash", startingCash).put("confirmation", "RESET PAPER ACCOUNT"),
+        )
+    }
+
     suspend fun armRisk(loss: Double, gain: Double, exposure: Double, contracts: Int): Result<JSONObject> =
         withContext(Dispatchers.IO) {
             post(
@@ -284,6 +291,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         brokerState = brokerState,
         ai = ai,
         alert = alert,
+        paperStartingCash = number(paper, "starting_cash"),
         paperCash = number(paper, "settled_cash"),
         paperPnl = number(paper, "realized_pnl"),
         paperPositions = paper.optInt("open_positions", 0),
@@ -389,35 +397,51 @@ private fun TradeConsole(
         status = status,
         preview = preview,
         connectionError = connectionError,
-        actions = remember(backend) {
-            GlassActions(
-                saveCredentials = { key, secret ->
-                    backend.saveProductionCredentials(key, secret).map { "Production credentials saved securely on Railway." }
-                },
-                setLiveAutonomy = { enabled ->
-                    backend.setLiveAutonomy(enabled).map { result ->
-                        status = status.copy(liveEnabled = result.optBoolean("enabled", false),
-                            mode = if (enabled) "LIVE" else status.mode)
-                        if (enabled) "Auto trade is on. Railway will trade when all live checks pass."
-                        else "Auto trade is off. Pending buys are cancelled and owned positions are closed when executable."
-                    }
-                },
-                setMode = { mode ->
-                    backend.setMode(mode).map { "MODE · $mode" }
-                },
-                setPaperAutonomy = { armed ->
-                    backend.setPaperAutonomy(armed).map {
-                        if (armed) "AUTONOMOUS PAPER · ARMED" else "AUTONOMOUS PAPER · NEW ENTRIES STOPPED"
-                    }
-                },
-                armRisk = { loss, gain, exposure, contracts ->
-                    backend.armRisk(loss, gain, exposure, contracts).map { "Live limits saved. Turn on Auto trade to use them each session." }
-                },
-                disarmRisk = {
-                    backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" }
-                },
+        actions = GlassActions(
+    saveCredentials = { key, secret ->
+        backend.saveProductionCredentials(key, secret).map { "Production credentials saved securely on Railway." }
+    },
+    setLiveAutonomy = { enabled ->
+        backend.setLiveAutonomy(enabled).map { result ->
+            status = status.copy(liveEnabled = result.optBoolean("enabled", false), mode = if (enabled) "LIVE" else status.mode)
+            if (enabled) "Auto trade is on. Railway will trade when all live checks pass."
+            else "Auto trade is off. Pending buys are cancelled and owned positions are closed when executable."
+        }
+    },
+    setMode = { mode ->
+        backend.setMode(mode).map { result ->
+            val confirmedMode = result.optString("mode", mode)
+            status = status.copy(mode = confirmedMode, paperArmed = confirmedMode == "PAPER")
+            "MODE · $confirmedMode"
+        }
+    },
+    setPaperAutonomy = { armed ->
+        backend.setPaperAutonomy(armed).map { result ->
+            val confirmedMode = result.optString("mode", if (armed) "PAPER" else "SHADOW")
+            status = status.copy(mode = confirmedMode, paperArmed = result.optBoolean("armed", armed))
+            if (armed) "AUTONOMOUS PAPER · ARMED" else "AUTONOMOUS PAPER · NEW ENTRIES STOPPED"
+        }
+    },
+    resetPaperAccount = { startingCash ->
+        backend.resetPaperAccount(startingCash).map { result ->
+            status = status.copy(
+                paperStartingCash = result.optDouble("starting_cash", startingCash),
+                paperCash = result.optDouble("settled_cash", startingCash),
+                paperPnl = result.optDouble("realized_pnl", 0.0),
+                paperPositions = result.optInt("open_positions", 0),
+                paperTrades = result.optInt("execution_count", result.optInt("trade_count", 0)),
+                paperBuys = result.optInt("buy_count", 0),
+                paperSells = result.optInt("sell_count", 0),
+                paperUnrealizedPnl = 0.0,
             )
-        },
+            "Paper account reset to $%.2f.".format(startingCash)
+        }
+    },
+    armRisk = { loss, gain, exposure, contracts ->
+        backend.armRisk(loss, gain, exposure, contracts).map { "Live limits saved. Turn on Auto trade to use them each session." }
+    },
+    disarmRisk = { backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" } },
+),
         onSignOut = onSignOut,
     )
 }
