@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import fmean
 
 from .ablation import block_bootstrap_ablation
+from .adaptive_weighting import AdaptiveWeightConfig, replay_adaptive_weights
 from .paper_autotrader import EASTERN
 from .paper_dynamic_autotrader import _env_float
+
+log = logging.getLogger("spy0dte.ai_validation")
 
 
 class AIValidationStore:
@@ -187,6 +191,23 @@ class AIValidationStore:
         )
         return len(active), correct / len(active)
 
+    def adaptive_replay(self) -> dict[str, object]:
+        rows = self._resolved_rows()
+        report = replay_adaptive_weights(
+            rows,
+            config=AdaptiveWeightConfig(
+                default_ai_weight=0.45,
+                maximum_ai_weight=0.45,
+                minimum_ai_weight=0.05,
+                warmup_samples=12,
+                shrinkage_samples=24.0,
+                half_life_samples=30.0,
+                loss_temperature=0.10,
+            ),
+            direction_threshold=0.55,
+        )
+        return report.as_dict()
+
     def summary(self) -> dict[str, object]:
         rows = self._resolved_rows()
         with self._connect() as connection:
@@ -199,6 +220,7 @@ class AIValidationStore:
                     """
                 ).fetchone()["count"]
             )
+        adaptive = self.adaptive_replay()
         if not rows:
             return {
                 "resolved_samples": 0,
@@ -213,6 +235,7 @@ class AIValidationStore:
                 "old_veto_signal_precision": None,
                 "hybrid_signals": 0,
                 "hybrid_signal_precision": None,
+                "adaptive_backtest": adaptive,
             }
 
         outcomes = [float(row["outcome_up"]) for row in rows]
@@ -246,6 +269,7 @@ class AIValidationStore:
             "old_veto_signal_precision": veto_precision,
             "hybrid_signals": hybrid_count,
             "hybrid_signal_precision": hybrid_precision,
+            "adaptive_backtest": adaptive,
         }
 
     def paired_ablation(self) -> dict[str, object] | None:
@@ -295,6 +319,17 @@ class AIValidationMixin:
         self._ai_validation_last_blend_id: int | None = None
         self._ai_validation_cached_ablation: dict[str, object] | None = None
         self._ai_validation_ablation_samples = -1
+        report = self._ai_validation_store.adaptive_replay()
+        log.info(
+            "adaptive backtest samples=%s quant_brier=%s ai_brier=%s fixed45_brier=%s adaptive_brier=%s mean_ai_weight=%s final_ai_weight=%s",
+            report.get("samples"),
+            report.get("quant_brier"),
+            report.get("ai_brier"),
+            report.get("fixed_45_brier"),
+            report.get("adaptive_brier"),
+            report.get("mean_ai_weight"),
+            report.get("final_ai_weight"),
+        )
 
     @staticmethod
     def _action(probability_up: float, threshold: float) -> str:
