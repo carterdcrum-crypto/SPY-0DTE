@@ -1,4 +1,4 @@
-name: quantconnect-v2-syntax
+name: quantconnect-research-syntax
 
 on:
   push:
@@ -25,4 +25,8 @@ jobs:
             quantconnect/v2_adaptive.py \
             quantconnect/v2_experts.py \
             quantconnect/v2_strategy.py \
+            quantconnect/v3_config.py \
+            quantconnect/v3_models.py \
+            quantconnect/v3_experts.py \
+            quantconnect/v3_strategy.py \
             quantconnect/spread_ledger.py
