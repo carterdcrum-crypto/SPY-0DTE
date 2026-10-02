@@ -1,1 +1,1 @@
-from diagnostic_strategy import SpyOdteDiagnosticValidation
+from v2_strategy import SpyOdteQuantFirstV2
