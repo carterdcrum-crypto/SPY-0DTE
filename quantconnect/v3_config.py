@@ -1,0 +1,54 @@
+# V3 is research-only. This already-inspected trailing year remains development data.
+BACKTEST_START = (2025, 10, 1)
+BACKTEST_END = (2026, 9, 30)
+
+# Separate signal-quality economics from $100 deployability.
+RESEARCH_CASH = 10000.0
+DEPLOY_CASH = 100.0
+
+# Forecasting / walk-forward learning.
+FORECAST_HORIZON_MINUTES = 5
+SCORING_INTERVAL_MINUTES = 5
+DIRECTION_THRESHOLD = 0.60
+LEARNED_PRIOR = 0.10
+LEARNED_MIN = 0.00
+LEARNED_MAX = 0.20
+LEARNED_WARMUP = 200
+LEARNED_MAX_STEP = 0.002
+EVIDENCE_WINDOW = 400
+EVIDENCE_Z = 1.64
+
+# Expert adaptation. Each regime also has its own online expert weights.
+EXPERT_ETA = 0.05
+EXPERT_SHARE = 0.03
+EXPERT_MIN_WEIGHT = 0.05
+EXPERT_MAX_WEIGHT = 0.60
+REGIME_BLEND = 0.70
+MAX_EXPERT_DISAGREEMENT = 0.18
+
+# Real bid/ask spread execution.
+MAX_LEG_RELATIVE_SPREAD = 0.10
+MAX_MONEYNESS_FRACTION = 0.02
+MAX_SPREAD_WIDTH = 2.0
+MIN_REWARD_RISK = 1.25
+COOLDOWN_MINUTES = 5
+MAX_HOLD_MINUTES = 15
+STOP_LOSS_FRACTION = 0.35
+TAKE_PROFIT_FRACTION = 0.50
+FEE_PER_LEG_EACH_SIDE = 0.0
+
+# Research ledgers should not be starved by a $100 account.
+RESEARCH_PREFERRED_RISK_FRACTION = 0.025
+RESEARCH_HARD_RISK_FRACTION = 0.05
+
+# The real deployment question remains a $100 cash account.
+DEPLOY_PREFERRED_RISK_FRACTION = 0.15
+DEPLOY_HARD_RISK_FRACTION = 0.20
+
+# Session controls kept fixed from V2 to avoid parameter mining.
+FIRST_SIGNAL_HOUR = 9
+FIRST_SIGNAL_MINUTE = 45
+LAST_SIGNAL_HOUR = 15
+LAST_SIGNAL_MINUTE = 35
+FORCE_FLAT_HOUR = 15
+FORCE_FLAT_MINUTE = 45
