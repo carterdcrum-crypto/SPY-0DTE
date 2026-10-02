@@ -1,0 +1,113 @@
+{
+  "method": "locked_holdout_daily_spy_synthetic_0dte_proxy",
+  "run_commit": "92fcc2e1a219e34217ee3759d97cd0630c570280",
+  "holdout_start": "2024-01-02",
+  "holdout_end": "2025-08-29",
+  "holdout_sessions": 417,
+  "starting_cash": 100.0,
+  "no_lookahead": true,
+  "direction_threshold": 0.55,
+  "forecast_metrics": {
+    "quant_only": {
+      "brier": 0.253212337750006,
+      "active_signals": 49,
+      "signal_coverage": 0.11750599520383694,
+      "directional_accuracy": 0.4489795918367347
+    },
+    "learned_proxy_only": {
+      "brier": 0.25292482048504483,
+      "active_signals": 180,
+      "signal_coverage": 0.4316546762589928,
+      "directional_accuracy": 0.5166666666666667
+    },
+    "fixed_55_45": {
+      "brier": 0.25169135437577744,
+      "active_signals": 24,
+      "signal_coverage": 0.05755395683453238,
+      "directional_accuracy": 0.25
+    },
+    "adaptive": {
+      "brier": 0.25169135437577744,
+      "active_signals": 24,
+      "signal_coverage": 0.05755395683453238,
+      "directional_accuracy": 0.25,
+      "mean_learned_proxy_weight": 0.45,
+      "first_learned_proxy_weight": 0.45,
+      "last_learned_proxy_weight": 0.45
+    }
+  },
+  "base_execution_assumptions": {
+    "prior_day_vix_multiplier": 1.25,
+    "synthetic_spread_fraction": 0.08,
+    "target_abs_delta": 0.15,
+    "fee_per_contract_each_side": 0.65,
+    "max_premium_fraction": 0.35,
+    "max_capital_fraction": 0.90,
+    "drawdown_halt": 0.25,
+    "max_moneyness_fraction": 0.025,
+    "position_size": "at most one synthetic long option contract"
+  },
+  "base_account_metrics": {
+    "quant_only": {
+      "ending_equity": 63.71887703660091,
+      "profit_dollars": -36.28112296339909,
+      "growth_pct": -36.28112296339909,
+      "trades": 2,
+      "trade_win_rate": 0.0,
+      "max_drawdown_pct": 36.28112296339909,
+      "drawdown_halt_reached": true
+    },
+    "fixed_55_45": {
+      "ending_equity": 61.859264558688444,
+      "profit_dollars": -38.140735441311556,
+      "growth_pct": -38.140735441311556,
+      "trades": 2,
+      "trade_win_rate": 0.0,
+      "max_drawdown_pct": 38.140735441311556,
+      "drawdown_halt_reached": true
+    },
+    "adaptive": {
+      "ending_equity": 61.859264558688444,
+      "profit_dollars": -38.140735441311556,
+      "growth_pct": -38.140735441311556,
+      "trades": 2,
+      "trade_win_rate": 0.0,
+      "max_drawdown_pct": 38.140735441311556,
+      "drawdown_halt_reached": true
+    }
+  },
+  "adaptive_execution_sensitivity": {
+    "iv_1.00x_vix_spread_0.08": {
+      "ending_equity": 268.0057078880552,
+      "growth_pct": 168.0057078880552,
+      "trades": 12,
+      "trade_win_rate": 0.16666666666666666,
+      "max_drawdown_pct": 26.36243291461725
+    },
+    "iv_1.25x_vix_spread_0.08": {
+      "ending_equity": 61.859264558688444,
+      "growth_pct": -38.140735441311556,
+      "trades": 2,
+      "trade_win_rate": 0.0,
+      "max_drawdown_pct": 38.140735441311556
+    },
+    "iv_1.50x_vix_spread_0.08": {
+      "ending_equity": 74.84998455971217,
+      "growth_pct": -25.15001544028783,
+      "trades": 1,
+      "trade_win_rate": 0.0,
+      "max_drawdown_pct": 25.15001544028783
+    }
+  },
+  "interpretation": {
+    "historical_directional_edge_detected": false,
+    "synthetic_option_profitability_robust_to_iv_assumption": false,
+    "reason": "The locked holdout directional metrics do not show an edge, and synthetic option P&L changes sign when the assumed 0DTE implied volatility changes. Real historical minute option quotes are required before treating option profitability as credible."
+  },
+  "limitations": [
+    "Daily SPY OHLC is used rather than intraday SPY tape.",
+    "Option premiums are Black-Scholes proxies using prior-day VIX rather than archived 0DTE bid/ask quotes.",
+    "The learned side is an online point-in-time statistical proxy, not a historical LLM replay.",
+    "The proxy cannot reproduce option breadth, intraday dynamic exits, historical news context, or actual historical liquidity/open-interest."
+  ]
+}
