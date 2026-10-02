@@ -4,7 +4,7 @@ from datetime import timedelta
 class VirtualSpreadLedger:
     def __init__(self, name, starting_cash=100.0, fee_per_leg_each_side=0.65):
         self.name = name
-        self.balance = float(starting_cash)
+        self.balance = float(starting_cash)  # available cash
         self.starting_cash = float(starting_cash)
         self.fee = float(fee_per_leg_each_side)
         self.position = None
@@ -41,7 +41,14 @@ class VirtualSpreadLedger:
         )
         if debit <= 0.0:
             return False
+
         entry_fees = 2.0 * self.fee
+        total_entry_cost = debit + entry_fees
+        if total_entry_cost > self.balance + 1e-9:
+            return False
+
+        # Cash-account accounting: pay the spread debit and entry fees immediately.
+        self.balance -= total_entry_cost
         self.position = {
             "long": long_contract.symbol,
             "short": short_contract.symbol,
@@ -49,6 +56,16 @@ class VirtualSpreadLedger:
             "entry_time": now,
             "entry_fees": entry_fees,
         }
+
+        # Mark the just-opened position at immediately executable liquidation prices
+        # so bid/ask slippage appears in drawdown from the moment of entry.
+        immediate_credit = max(
+            0.0,
+            (float(long_contract.bid_price) - float(short_contract.ask_price)) * 100.0,
+        )
+        exit_fees = 2.0 * self.fee
+        marked_equity = self.balance + max(0.0, immediate_credit - exit_fees)
+        self._update_drawdown(marked_equity)
         return True
 
     def _mark_credit(self, quotes):
@@ -76,14 +93,21 @@ class VirtualSpreadLedger:
         if self.position is None:
             self._update_drawdown(self.balance)
             return None
+
         credit = self._mark_credit(quotes)
         if credit is None:
             return None
-        round_trip_fees = 4.0 * self.fee
-        pnl = credit - float(self.position["entry_debit"]) - round_trip_fees
-        base = max(1e-9, float(self.position["entry_debit"]) + float(self.position["entry_fees"]))
+
+        entry_debit = float(self.position["entry_debit"])
+        entry_fees = float(self.position["entry_fees"])
+        exit_fees = 2.0 * self.fee
+        pnl = credit - exit_fees - entry_debit - entry_fees
+        base = max(1e-9, entry_debit + entry_fees)
         trade_return = pnl / base
-        marked_equity = self.balance + pnl
+
+        # balance is cash after the original debit was paid; add only current
+        # executable liquidation proceeds to obtain marked account equity.
+        marked_equity = self.balance + max(0.0, credit - exit_fees)
         self._update_drawdown(marked_equity)
 
         held = now - self.position["entry_time"]
@@ -98,9 +122,15 @@ class VirtualSpreadLedger:
         return self._close(credit, now)
 
     def _close(self, credit, now):
-        round_trip_fees = 4.0 * self.fee
-        pnl = float(credit) - float(self.position["entry_debit"]) - round_trip_fees
-        self.balance += pnl
+        entry_debit = float(self.position["entry_debit"])
+        entry_fees = float(self.position["entry_fees"])
+        exit_fees = 2.0 * self.fee
+        proceeds = max(0.0, float(credit) - exit_fees)
+        pnl = proceeds - entry_debit - entry_fees
+
+        # Return liquidation proceeds to cash. The original debit was already
+        # removed at entry, so adding P&L again here would double-count it.
+        self.balance += proceeds
         self.trades += 1
         if pnl > 0.0:
             self.wins += 1
@@ -122,7 +152,8 @@ class VirtualSpreadLedger:
             )
 
     def metrics(self):
-        growth = self.balance / self.starting_cash - 1.0
+        ending_equity = self.balance
+        growth = ending_equity / self.starting_cash - 1.0
         win_rate = self.wins / self.trades if self.trades else 0.0
         if self.gross_loss > 0.0:
             profit_factor = self.gross_profit / self.gross_loss
@@ -131,8 +162,8 @@ class VirtualSpreadLedger:
         else:
             profit_factor = 0.0
         return {
-            "ending_equity": self.balance,
-            "profit_dollars": self.balance - self.starting_cash,
+            "ending_equity": ending_equity,
+            "profit_dollars": ending_equity - self.starting_cash,
             "growth_pct": growth * 100.0,
             "trades": self.trades,
             "trade_win_rate_pct": win_rate * 100.0,
