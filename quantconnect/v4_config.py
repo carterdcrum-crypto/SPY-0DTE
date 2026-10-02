@@ -9,6 +9,7 @@ DEPLOY_CASH = 100.0
 # Align the forecast target with the maximum intended holding window.
 FORECAST_HORIZON_MINUTES = 15
 SCORING_INTERVAL_MINUTES = 5
+DIRECTION_DIAGNOSTIC_THRESHOLD = 0.60
 
 # Quant remains the controlling model. The learned spread-outcome challenger
 # can earn weight only from already-resolved candidate outcomes.
