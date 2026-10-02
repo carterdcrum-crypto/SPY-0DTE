@@ -29,4 +29,7 @@ jobs:
             quantconnect/v3_models.py \
             quantconnect/v3_experts.py \
             quantconnect/v3_strategy.py \
+            quantconnect/v4_config.py \
+            quantconnect/v4_models.py \
+            quantconnect/v4_strategy.py \
             quantconnect/spread_ledger.py
