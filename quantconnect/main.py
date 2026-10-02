@@ -1,1 +1,1 @@
-from strategy import SpyOdteAdaptiveValidation
+from diagnostic_strategy import SpyOdteDiagnosticValidation
