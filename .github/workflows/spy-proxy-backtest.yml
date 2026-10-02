@@ -1,0 +1,23 @@
+name: spy-proxy-backtest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'research/spy_daily_adaptive_proxy_backtest.py'
+      - '.github/workflows/spy-proxy-backtest.yml'
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install engine
+        run: python -m pip install -e .
+      - name: Run locked holdout
+        run: python research/spy_daily_adaptive_proxy_backtest.py
