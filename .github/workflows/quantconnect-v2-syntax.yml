@@ -1,0 +1,28 @@
+name: quantconnect-v2-syntax
+
+on:
+  push:
+    paths:
+      - 'quantconnect/**'
+      - '.github/workflows/quantconnect-v2-syntax.yml'
+  pull_request:
+    paths:
+      - 'quantconnect/**'
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile QuantConnect research modules
+        run: |
+          python -m py_compile \
+            quantconnect/main.py \
+            quantconnect/v2_config.py \
+            quantconnect/v2_adaptive.py \
+            quantconnect/v2_experts.py \
+            quantconnect/v2_strategy.py \
+            quantconnect/spread_ledger.py
