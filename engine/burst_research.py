@@ -5,9 +5,9 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
-from typing import Iterable, Sequence, Tuple
+from typing import Iterable, Iterator, Sequence, Tuple
 
-from .backtest import BacktestConfig, BacktestContext, BacktestResult, BacktestSignal, run_backtest
+from .backtest import BacktestConfig, BacktestContext, BacktestResult, BacktestSignal, run_backtest, run_backtest_stream
 from .data import HistoricalFrame, load_canonical_path
 from .market import OptionQuote
 
@@ -69,25 +69,33 @@ def _percentile(values: Sequence[float], q: float) -> float:
     return ordered[low] * (1.0 - weight) + ordered[high] * weight
 
 
-def load_research_directory(path: str | Path) -> Tuple[HistoricalFrame, ...]:
-    """Load one canonical history file per day, preferring compressed copies."""
-
+def _research_files(path: str | Path) -> Tuple[Path, ...]:
     root = Path(path)
     compressed = {item.name.removesuffix(".gz"): item for item in root.glob("spy_0dte_*.csv.gz")}
     plain = {item.name: item for item in root.glob("spy_0dte_*.csv")}
-
     selected = list(compressed.values())
     selected.extend(item for name, item in plain.items() if name not in compressed)
+    return tuple(sorted(selected))
 
-    frames: list[HistoricalFrame] = []
-    seen: set[datetime] = set()
-    for item in sorted(selected):
+
+def iter_research_directory(path: str | Path) -> Iterator[HistoricalFrame]:
+    """Yield canonical history in strict time order without materializing all days."""
+
+    last_timestamp: datetime | None = None
+    for item in _research_files(path):
         for frame in load_canonical_path(item):
-            if frame.timestamp in seen:
-                raise ValueError(f"duplicate research frame timestamp: {frame.timestamp.isoformat()}")
-            seen.add(frame.timestamp)
-            frames.append(frame)
-    return tuple(sorted(frames, key=lambda frame: frame.timestamp))
+            if last_timestamp is not None and frame.timestamp <= last_timestamp:
+                raise ValueError(
+                    f"research frames must be strictly increasing: {frame.timestamp.isoformat()}"
+                )
+            last_timestamp = frame.timestamp
+            yield frame
+
+
+def load_research_directory(path: str | Path) -> Tuple[HistoricalFrame, ...]:
+    """Materialized compatibility loader; use iter_research_directory for large runs."""
+
+    return tuple(iter_research_directory(path))
 
 
 def _affordable_call(
@@ -252,6 +260,36 @@ def run_burst_stress(
                 starting_cash=starting_cash,
                 # Webull equity options are modeled commission-free here; the
                 # bid/ask crossing and adverse ticks remain explicit.
+                fee_per_contract=0.0,
+                slippage_spread_fraction=0.0,
+                adverse_ticks_per_side=ticks,
+                option_tick_size=0.01,
+                maximum_contracts=1,
+            ),
+        )
+        evaluations.append(BurstStressResult(ticks, result))
+    return tuple(evaluations)
+
+
+def run_burst_stress_directory(
+    path: str | Path,
+    *,
+    starting_cash: float,
+    config: CausalBurstConfig = CausalBurstConfig(),
+    adverse_ticks: Iterable[int] = (0, 1, 2),
+) -> Tuple[BurstStressResult, ...]:
+    """Stream large research datasets from disk for each execution-stress pass."""
+
+    evaluations: list[BurstStressResult] = []
+    for ticks in adverse_ticks:
+        if ticks < 0:
+            raise ValueError("adverse ticks cannot be negative")
+        strategy = CausalBurstStrategy(config)
+        result = run_backtest_stream(
+            iter_research_directory(path),
+            strategy,
+            config=BacktestConfig(
+                starting_cash=starting_cash,
                 fee_per_contract=0.0,
                 slippage_spread_fraction=0.0,
                 adverse_ticks_per_side=ticks,
