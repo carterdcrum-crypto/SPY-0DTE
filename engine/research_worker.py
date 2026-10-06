@@ -5,7 +5,7 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 
-from .burst_research import load_research_directory, run_burst_stress
+from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
 from .providers.databento_history import DatabentoHistoryProvider
 
@@ -195,9 +195,9 @@ def run_range_backfill() -> tuple[Path, ...]:
 
 
 def run_burst_validation() -> None:
-    frames = load_research_directory(_data_dir())
-    if not frames:
-        raise RuntimeError("no canonical research frames available for burst validation")
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for burst validation")
 
     balances = [
         float(value.strip())
@@ -205,7 +205,11 @@ def run_burst_validation() -> None:
         if value.strip()
     ]
     for starting_cash in balances:
-        results = run_burst_stress(frames, starting_cash=starting_cash, adverse_ticks=(0, 1, 2))
+        results = run_burst_stress_directory(
+            data_dir,
+            starting_cash=starting_cash,
+            adverse_ticks=(0, 1, 2),
+        )
         for stress in results:
             metrics = stress.result.metrics
             print(
