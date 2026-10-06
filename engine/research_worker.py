@@ -20,6 +20,15 @@ def _output_path(trade_date: date) -> Path:
     return _data_dir() / f"spy_0dte_{trade_date.isoformat()}.csv.gz"
 
 
+def _is_no_data_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return (
+        "symbology_invalid_request" in text
+        or "none of the symbols could be resolved" in text
+        or "no data found" in text
+    )
+
+
 def _retry_databento(operation, *, label: str):
     attempts = max(1, int(os.getenv("RESEARCH_DATABENTO_RETRIES", "5")))
     base_delay = max(0.0, float(os.getenv("RESEARCH_DATABENTO_RETRY_DELAY_SECONDS", "3")))
@@ -28,7 +37,19 @@ def _retry_databento(operation, *, label: str):
             return operation()
         except Exception as exc:
             module = type(exc).__module__
-            retryable = module.startswith("databento.")
+            name = type(exc).__name__
+            text = str(exc).lower()
+            retryable = (
+                module.startswith("databento.")
+                and not _is_no_data_error(exc)
+                and (
+                    "servererror" in name.lower()
+                    or "timeout" in name.lower()
+                    or "connection" in name.lower()
+                    or "gateway timed out" in text
+                    or "temporarily unavailable" in text
+                )
+            )
             if not retryable or attempt >= attempts:
                 raise
             delay = min(30.0, base_delay * attempt)
@@ -99,10 +120,20 @@ def run_range_backfill() -> tuple[Path, ...]:
             day += timedelta(days=1)
             continue
 
-        estimate = _retry_databento(
-            lambda: provider.estimate_day_cost(day),
-            label=f"estimate_day_cost:{day}",
-        )
+        try:
+            estimate = _retry_databento(
+                lambda: provider.estimate_day_cost(day),
+                label=f"estimate_day_cost:{day}",
+            )
+        except Exception as exc:
+            if _is_no_data_error(exc):
+                print(
+                    f"research backfill skip no market data: date={day} reason={type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                day += timedelta(days=1)
+                continue
+            raise
         projected = estimated_cost + estimate.total_cost_usd
         print(
             f"research cost estimate: date={day} symbols={estimate.option_symbols} "
@@ -123,10 +154,20 @@ def run_range_backfill() -> tuple[Path, ...]:
 
         estimated_cost = projected
         attempted_days += 1
-        frames = _retry_databento(
-            lambda: provider.fetch_day(day),
-            label=f"fetch_day:{day}",
-        )
+        try:
+            frames = _retry_databento(
+                lambda: provider.fetch_day(day),
+                label=f"fetch_day:{day}",
+            )
+        except Exception as exc:
+            if _is_no_data_error(exc):
+                print(
+                    f"research backfill skip no market data: date={day} reason={type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                day += timedelta(days=1)
+                continue
+            raise
         if not frames:
             print(f"research backfill no data: date={day}", flush=True)
             day += timedelta(days=1)
