@@ -339,18 +339,23 @@ class DatabentoHistoryProvider:
             start=trade_date,
         )
         definition_rows = _rows(definitions)
-        zero_dte = [
-            contract
-            for row in definition_rows
-            if (contract := _definition_contract(row)) is not None
-            and contract.expiration == trade_date
-        ]
+        zero_dte: list[tuple[_Contract, str]] = []
+        for row in definition_rows:
+            contract = _definition_contract(row)
+            if contract is None or contract.expiration != trade_date:
+                continue
+            raw_symbol = row.get("raw_symbol") or row.get("symbol")
+            if raw_symbol in (None, ""):
+                continue
+            # Preserve Databento/OCC's fixed-width raw symbol exactly for API
+            # requests. Our internal canonical symbol can stay whitespace-free.
+            zero_dte.append((contract, str(raw_symbol)))
         if not zero_dte:
             return ()
 
         first_spot = float(stock_rows[0].get("close") or stock_rows[0].get("price") or 0.0)
         symbols = []
-        for contract in zero_dte:
+        for contract, raw_symbol in zero_dte:
             if (
                 self.config.max_strike_distance_pct is not None
                 and first_spot > 0
@@ -358,7 +363,7 @@ class DatabentoHistoryProvider:
                 > max(0.0, self.config.max_strike_distance_pct)
             ):
                 continue
-            symbols.append(contract.symbol)
+            symbols.append(raw_symbol)
 
         if not symbols:
             return ()
