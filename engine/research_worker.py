@@ -29,9 +29,10 @@ def run_smoke_backfill() -> Path:
     provider = DatabentoHistoryProvider()
     frames = provider.fetch_day(trade_date)
     rows = write_canonical_csv(frames, output)
+    size_mb = output.stat().st_size / (1024 * 1024)
     print(
         f"research smoke complete: date={trade_date.isoformat()} "
-        f"frames={len(frames)} rows={rows} output={output}",
+        f"frames={len(frames)} rows={rows} size_mb={size_mb:.3f} output={output}",
         flush=True,
     )
     if not frames or rows == 0:
@@ -102,9 +103,10 @@ def run_range_backfill() -> tuple[Path, ...]:
             continue
 
         rows = write_canonical_csv(frames, output)
+        size_mb = output.stat().st_size / (1024 * 1024)
         print(
             f"research backfill day complete: date={day} frames={len(frames)} "
-            f"rows={rows} output={output}",
+            f"rows={rows} size_mb={size_mb:.3f} output={output}",
             flush=True,
         )
         if rows > 0:
