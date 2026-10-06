@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
+from .frontier_research import pareto_frontier, run_regime_frontier
 from .providers.databento_history import DatabentoHistoryProvider
 from .regime_long_option import run_regime_stress_directory
 
@@ -263,12 +264,60 @@ def run_regime_validation() -> None:
             )
 
 
+def run_frontier_validation() -> None:
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for frontier validation")
+
+    balances = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_FRONTIER_BALANCES", "500").split(",")
+        if value.strip()
+    ]
+    budgets = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_FRONTIER_DD_BUDGETS", "0.05,0.10,0.15,0.20").split(",")
+        if value.strip()
+    ]
+    for starting_cash in balances:
+        points = run_regime_frontier(
+            data_dir,
+            starting_cash=starting_cash,
+            drawdown_budgets=budgets,
+        )
+        for point in points:
+            print(
+                "frontier candidate: "
+                f"cash={starting_cash:.2f} name={point.candidate} "
+                f"dd_budget={point.drawdown_budget:.3f} accepted={int(point.accepted)} "
+                f"score={point.score:.6f} "
+                f"ret1_pct={point.one_tick_return * 100.0:.3f} "
+                f"dd1_pct={point.one_tick_drawdown * 100.0:.3f} "
+                f"ret2_pct={point.two_tick_return * 100.0:.3f} "
+                f"dd2_pct={point.two_tick_drawdown * 100.0:.3f} "
+                f"reason={point.reason or 'accepted'}",
+                flush=True,
+            )
+        for point in pareto_frontier(points):
+            print(
+                "frontier pareto: "
+                f"cash={starting_cash:.2f} name={point.candidate} "
+                f"dd_budget={point.drawdown_budget:.3f} "
+                f"ret1_pct={point.one_tick_return * 100.0:.3f} "
+                f"dd1_pct={point.one_tick_drawdown * 100.0:.3f} "
+                f"score={point.score:.6f}",
+                flush=True,
+            )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
     if mode == "burst":
         run_burst_validation()
     elif mode == "regime":
         run_regime_validation()
+    elif mode == "frontier":
+        run_frontier_validation()
     elif mode == "backfill":
         if os.getenv("RESEARCH_RANGE_START", "").strip():
             run_range_backfill()
