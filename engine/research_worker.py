@@ -67,7 +67,8 @@ def run_range_backfill() -> tuple[Path, ...]:
             continue
 
         output = _output_path(day)
-        if output.exists() and output.stat().st_size > 0:
+        overwrite = os.getenv("RESEARCH_OVERWRITE", "false").lower() in {"1", "true", "yes"}
+        if output.exists() and output.stat().st_size > 0 and not overwrite:
             print(f"research backfill skip existing: date={day} output={output}", flush=True)
             completed.append(output)
             day += timedelta(days=1)
