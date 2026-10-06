@@ -156,15 +156,6 @@ class CausalBurstStrategy:
             self._reset_day(day)
 
         spot = frame.market.spot
-
-        if context.position is not None:
-            held_minutes = (frame.timestamp - context.position.entry_timestamp).total_seconds() / 60.0
-            if held_minutes >= self.config.hold_minutes or frame.market.minutes_to_close <= 2.0:
-                self._spots.append(spot)
-                return BacktestSignal("close", reason="burst_time_exit")
-            self._spots.append(spot)
-            return BacktestSignal("hold")
-
         prior_spots = tuple(self._spots)
         current_return: float | None = None
         acceleration: float | None = None
@@ -215,11 +206,21 @@ class CausalBurstStrategy:
             else:
                 self._reclaim_expires_after -= 1
 
+        # Every market frame updates the causal feature state, including frames
+        # observed while a position is open. The current acceleration is added
+        # only AFTER today's threshold/signals are evaluated, so it cannot
+        # influence its own percentile.
         if acceleration is not None:
             self._prior_accelerations.append(acceleration)
         if current_return is not None:
             self._last_return = current_return
         self._spots.append(spot)
+
+        if context.position is not None:
+            held_minutes = (frame.timestamp - context.position.entry_timestamp).total_seconds() / 60.0
+            if held_minutes >= self.config.hold_minutes or frame.market.minutes_to_close <= 2.0:
+                return BacktestSignal("close", reason="burst_time_exit")
+            return BacktestSignal("hold")
 
         if signal_reason is None:
             return BacktestSignal("hold")
