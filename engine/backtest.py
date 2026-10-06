@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Literal, Protocol, Sequence, Tuple
+from typing import Iterable, Literal, Protocol, Sequence, Tuple
 
 from .data import HistoricalFrame
 from .metrics import EquityPoint, PerformanceMetrics, performance_metrics
@@ -96,8 +96,8 @@ def _next_business_day(day: date) -> date:
     return nxt
 
 
-def run_backtest(
-    frames: Sequence[HistoricalFrame],
+def run_backtest_stream(
+    frames: Iterable[HistoricalFrame],
     strategy: BacktestStrategy,
     *,
     config: BacktestConfig = BacktestConfig(),
@@ -119,9 +119,7 @@ def run_backtest(
     if config.option_tick_size < 0:
         raise ValueError("option_tick_size cannot be negative")
 
-    ordered = tuple(sorted(frames, key=lambda f: f.timestamp))
-    if any(a.timestamp == b.timestamp for a, b in zip(ordered, ordered[1:])):
-        raise ValueError("backtest frames must have unique timestamps")
+    ordered = frames
 
     settled_cash = float(config.starting_cash)
     unsettled: list[tuple[date, float]] = []
@@ -157,7 +155,15 @@ def run_backtest(
                 )
         return value
 
+    last_timestamp: datetime | None = None
+    last_frame: HistoricalFrame | None = None
+
     for frame in ordered:
+        if last_timestamp is not None and frame.timestamp <= last_timestamp:
+            raise ValueError("streaming backtest frames must be strictly increasing")
+        last_timestamp = frame.timestamp
+        last_frame = frame
+
         release_settled(frame.timestamp.date())
 
         # Execute only orders generated from a previous frame.
@@ -249,8 +255,8 @@ def run_backtest(
         elif signal.action == "close" and position is not None:
             pending = _Pending(signal)
 
-    if ordered and position is not None and config.liquidate_at_end:
-        frame = ordered[-1]
+    if last_frame is not None and position is not None and config.liquidate_at_end:
+        frame = last_frame
         quote = quote_for(frame, position.option_symbol)
         if quote is not None:
             fill = max(
@@ -293,3 +299,17 @@ def run_backtest(
         trade_returns=[t.return_on_cost for t in trades],
     )
     return BacktestResult(tuple(trades), tuple(curve), metrics)
+
+
+def run_backtest(
+    frames: Sequence[HistoricalFrame],
+    strategy: BacktestStrategy,
+    *,
+    config: BacktestConfig = BacktestConfig(),
+) -> BacktestResult:
+    """Materialized convenience wrapper that preserves historical sort behavior."""
+
+    ordered = tuple(sorted(frames, key=lambda frame: frame.timestamp))
+    if any(a.timestamp == b.timestamp for a, b in zip(ordered, ordered[1:])):
+        raise ValueError("backtest frames must have unique timestamps")
+    return run_backtest_stream(ordered, strategy, config=config)
