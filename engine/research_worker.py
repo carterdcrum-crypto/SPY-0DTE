@@ -5,6 +5,7 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 
+from .burst_research import load_research_directory, run_burst_stress
 from .data import write_canonical_csv
 from .providers.databento_history import DatabentoHistoryProvider
 
@@ -123,11 +124,44 @@ def run_range_backfill() -> tuple[Path, ...]:
     return tuple(completed)
 
 
+def run_burst_validation() -> None:
+    frames = load_research_directory(_data_dir())
+    if not frames:
+        raise RuntimeError("no canonical research frames available for burst validation")
+
+    balances = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_BURST_BALANCES", "100,250,500,1000,10000").split(",")
+        if value.strip()
+    ]
+    for starting_cash in balances:
+        results = run_burst_stress(frames, starting_cash=starting_cash, adverse_ticks=(0, 1, 2))
+        for stress in results:
+            metrics = stress.result.metrics
+            print(
+                "burst validation: "
+                f"cash={starting_cash:.2f} ticks={stress.adverse_ticks_per_side} "
+                f"trades={metrics.trades} ending={metrics.ending_equity:.2f} "
+                f"return_pct={metrics.total_return * 100.0:.3f} "
+                f"win_pct={metrics.win_rate * 100.0:.2f} "
+                f"pf={metrics.profit_factor:.4f} "
+                f"avg_trade_pct={metrics.average_trade_return * 100.0:.3f} "
+                f"max_dd_pct={metrics.max_drawdown * 100.0:.3f}",
+                flush=True,
+            )
+
+
 def main() -> None:
-    if os.getenv("RESEARCH_RANGE_START", "").strip():
-        run_range_backfill()
+    mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
+    if mode == "burst":
+        run_burst_validation()
+    elif mode == "backfill":
+        if os.getenv("RESEARCH_RANGE_START", "").strip():
+            run_range_backfill()
+        else:
+            run_smoke_backfill()
     else:
-        run_smoke_backfill()
+        raise RuntimeError(f"unsupported RESEARCH_MODE: {mode}")
 
     if os.getenv("RESEARCH_KEEP_ALIVE", "false").lower() in {"1", "true", "yes"}:
         print("research worker idle; dataset persisted", flush=True)
