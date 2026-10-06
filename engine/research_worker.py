@@ -8,6 +8,7 @@ from pathlib import Path
 from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
 from .providers.databento_history import DatabentoHistoryProvider
+from .regime_long_option import run_regime_stress_directory
 
 
 def _data_dir() -> Path:
@@ -225,10 +226,49 @@ def run_burst_validation() -> None:
             )
 
 
+def run_regime_validation() -> None:
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for regime validation")
+
+    balances = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_REGIME_BALANCES", "100,250,500,1000,10000").split(",")
+        if value.strip()
+    ]
+    for starting_cash in balances:
+        results = run_regime_stress_directory(
+            data_dir,
+            starting_cash=starting_cash,
+            adverse_ticks=(0, 1, 2),
+        )
+        for stress in results:
+            metrics = stress.result.metrics
+            ratio = (
+                metrics.total_return / metrics.max_drawdown
+                if metrics.max_drawdown > 0
+                else (float("inf") if metrics.total_return > 0 else 0.0)
+            )
+            print(
+                "regime validation: "
+                f"cash={starting_cash:.2f} ticks={stress.adverse_ticks_per_side} "
+                f"trades={metrics.trades} ending={metrics.ending_equity:.2f} "
+                f"return_pct={metrics.total_return * 100.0:.3f} "
+                f"max_dd_pct={metrics.max_drawdown * 100.0:.3f} "
+                f"return_dd={ratio:.4f} "
+                f"win_pct={metrics.win_rate * 100.0:.2f} "
+                f"pf={metrics.profit_factor:.4f} "
+                f"avg_trade_pct={metrics.average_trade_return * 100.0:.3f}",
+                flush=True,
+            )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
     if mode == "burst":
         run_burst_validation()
+    elif mode == "regime":
+        run_regime_validation()
     elif mode == "backfill":
         if os.getenv("RESEARCH_RANGE_START", "").strip():
             run_range_backfill()
