@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Iterable, Mapping, TextIO, Tuple
 
 from .market import MarketSnapshot, OptionQuote
@@ -121,3 +122,73 @@ def load_canonical_rows(rows: Iterable[Mapping[str, str]]) -> Tuple[HistoricalFr
 
 def load_canonical_csv(handle: TextIO) -> Tuple[HistoricalFrame, ...]:
     return load_canonical_rows(csv.DictReader(handle))
+
+
+def write_canonical_csv(
+    frames: Iterable[HistoricalFrame], path: str | Path
+) -> int:
+    """Persist provider-neutral research frames without a vendor lock-in."""
+
+    fieldnames = [
+        "timestamp",
+        "spot",
+        "spy_bid",
+        "spy_ask",
+        "realized_volatility",
+        "market_implied_volatility",
+        "volume_ratio",
+        "minutes_to_close",
+        "data_age_seconds",
+        "ood_score",
+        "option_symbol",
+        "right",
+        "strike",
+        "option_bid",
+        "option_ask",
+        "delta",
+        "gamma",
+        "theta",
+        "vega",
+        "option_implied_volatility",
+        "volume",
+        "open_interest",
+        "underlying_price",
+        "minutes_to_expiry",
+    ]
+    rows = 0
+    with open(path, "w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for frame in sorted(frames, key=lambda item: item.timestamp):
+            market = frame.market
+            for quote in sorted(frame.options, key=lambda item: item.symbol):
+                writer.writerow(
+                    {
+                        "timestamp": frame.timestamp.astimezone(timezone.utc).isoformat(),
+                        "spot": market.spot,
+                        "spy_bid": market.bid,
+                        "spy_ask": market.ask,
+                        "realized_volatility": market.realized_volatility,
+                        "market_implied_volatility": market.implied_volatility,
+                        "volume_ratio": market.volume_ratio,
+                        "minutes_to_close": market.minutes_to_close,
+                        "data_age_seconds": market.data_age_seconds,
+                        "ood_score": market.ood_score,
+                        "option_symbol": quote.symbol,
+                        "right": quote.right,
+                        "strike": quote.strike,
+                        "option_bid": quote.bid,
+                        "option_ask": quote.ask,
+                        "delta": quote.delta,
+                        "gamma": quote.gamma,
+                        "theta": quote.theta,
+                        "vega": quote.vega,
+                        "option_implied_volatility": quote.implied_volatility,
+                        "volume": quote.volume,
+                        "open_interest": quote.open_interest,
+                        "underlying_price": quote.underlying_price,
+                        "minutes_to_expiry": quote.minutes_to_expiry,
+                    }
+                )
+                rows += 1
+    return rows
