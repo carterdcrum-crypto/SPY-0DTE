@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from engine.data import load_canonical_csv, write_canonical_csv
+from engine.data import load_canonical_csv, load_canonical_path, write_canonical_csv
 from engine.providers.databento_history import build_frames_from_databento_rows
 
 
@@ -63,3 +63,33 @@ def test_databento_rows_normalize_and_roundtrip(tmp_path):
     assert len(loaded) == 1
     assert loaded[0].timestamp == frames[0].timestamp
     assert [q.symbol for q in loaded[0].options] == [q.symbol for q in frames[0].options]
+
+
+def test_canonical_gzip_roundtrip(tmp_path):
+    trade_date = date(2026, 10, 2)
+    definitions = [{
+        "raw_symbol": "SPY   261002C00750000",
+        "expiration": "2026-10-02",
+        "instrument_class": "C",
+        "strike_price": 750.0,
+    }]
+    stock = [{"ts_event": "2026-10-02T19:30:00+00:00", "close": 750.2, "volume": 120000}]
+    options = [{
+        "ts_recv": "2026-10-02T19:30:00+00:00",
+        "ts_event": "2026-10-02T19:29:42+00:00",
+        "symbol": "SPY   261002C00750000",
+        "bid_px_00": 1.00,
+        "ask_px_00": 1.10,
+    }]
+    frames = build_frames_from_databento_rows(
+        trade_date=trade_date,
+        definition_rows=definitions,
+        option_rows=options,
+        underlying_rows=stock,
+    )
+    path = tmp_path / "spy.csv.gz"
+    assert write_canonical_csv(frames, path) == 1
+    loaded = load_canonical_path(path)
+    assert len(loaded) == 1
+    assert loaded[0].timestamp == frames[0].timestamp
+    assert loaded[0].options[0].symbol == frames[0].options[0].symbol
