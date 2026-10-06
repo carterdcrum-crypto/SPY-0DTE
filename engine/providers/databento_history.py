@@ -5,7 +5,7 @@ import os
 import re
 import statistics
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Any, Iterable, Mapping, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
@@ -53,8 +53,11 @@ def _timestamp(value: object) -> datetime:
     else:
         text = str(value).replace("Z", "+00:00")
         dt = datetime.fromisoformat(text)
+    # Databento event timestamps are UTC. Pandas/numpy conversions can strip
+    # the timezone metadata when a Databento DataFrame index is reset, so a
+    # naive SDK-origin timestamp is safely restored to UTC here.
     if dt.tzinfo is None:
-        raise ValueError("Databento timestamps must be timezone-aware")
+        dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
 
