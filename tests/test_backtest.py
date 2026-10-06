@@ -5,7 +5,7 @@ from io import StringIO
 
 import pytest
 
-from engine.backtest import BacktestConfig, BacktestSignal, run_backtest
+from engine.backtest import BacktestConfig, BacktestSignal, run_backtest, run_backtest_stream
 from engine.data import HistoricalFrame, load_canonical_csv
 from engine.market import MarketSnapshot, OptionQuote
 
@@ -132,3 +132,17 @@ def test_adverse_tick_stress_applies_to_both_sides():
     assert len(result.trades) == 1
     assert result.trades[0].entry_price == pytest.approx(1.01)
     assert result.trades[0].exit_price == pytest.approx(1.89)
+
+
+def test_streaming_backtest_matches_materialized_backtest():
+    frames = (
+        frame(0, .90, 1.00),
+        frame(1, 1.90, 2.00),
+        frame(2, 2.40, 2.50),
+    )
+    config = BacktestConfig(starting_cash=1000, fee_per_contract=0.0, slippage_spread_fraction=0.0)
+    materialized = run_backtest(frames, OpenThenClose(), config=config)
+    streamed = run_backtest_stream((item for item in frames), OpenThenClose(), config=config)
+    assert streamed.trades == materialized.trades
+    assert streamed.metrics.ending_equity == pytest.approx(materialized.metrics.ending_equity)
+    assert streamed.metrics.total_return == pytest.approx(materialized.metrics.total_return)
