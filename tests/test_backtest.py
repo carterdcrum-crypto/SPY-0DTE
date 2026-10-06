@@ -110,3 +110,25 @@ def test_cash_sale_proceeds_are_not_reused_same_day():
         config=BacktestConfig(starting_cash=110, slippage_spread_fraction=0.0),
     )
     assert len(result.trades) == 1
+
+
+def test_adverse_tick_stress_applies_to_both_sides():
+    frames = (
+        frame(0, .90, 1.00),
+        frame(1, .90, 1.00),
+        frame(2, 1.90, 2.00),
+    )
+    result = run_backtest(
+        frames,
+        OpenThenClose(),
+        config=BacktestConfig(
+            starting_cash=1000,
+            fee_per_contract=0.0,
+            slippage_spread_fraction=0.0,
+            adverse_ticks_per_side=1,
+            option_tick_size=0.01,
+        ),
+    )
+    assert len(result.trades) == 1
+    assert result.trades[0].entry_price == pytest.approx(1.01)
+    assert result.trades[0].exit_price == pytest.approx(1.89)
