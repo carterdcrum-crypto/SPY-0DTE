@@ -20,6 +20,26 @@ def _output_path(trade_date: date) -> Path:
     return _data_dir() / f"spy_0dte_{trade_date.isoformat()}.csv.gz"
 
 
+def _retry_databento(operation, *, label: str):
+    attempts = max(1, int(os.getenv("RESEARCH_DATABENTO_RETRIES", "5")))
+    base_delay = max(0.0, float(os.getenv("RESEARCH_DATABENTO_RETRY_DELAY_SECONDS", "3")))
+    for attempt in range(1, attempts + 1):
+        try:
+            return operation()
+        except Exception as exc:
+            module = type(exc).__module__
+            retryable = module.startswith("databento.")
+            if not retryable or attempt >= attempts:
+                raise
+            delay = min(30.0, base_delay * attempt)
+            print(
+                f"Databento transient error: label={label} attempt={attempt}/{attempts} "
+                f"type={type(exc).__name__} retry_in_seconds={delay:.1f}: {exc}",
+                flush=True,
+            )
+            time.sleep(delay)
+
+
 def run_smoke_backfill() -> Path:
     raw_date = os.getenv("RESEARCH_SMOKE_DATE")
     if not raw_date:
@@ -28,7 +48,10 @@ def run_smoke_backfill() -> Path:
     output = _output_path(trade_date)
 
     provider = DatabentoHistoryProvider()
-    frames = provider.fetch_day(trade_date)
+    frames = _retry_databento(
+        lambda: provider.fetch_day(trade_date),
+        label=f"fetch_day:{trade_date}",
+    )
     rows = write_canonical_csv(frames, output)
     size_mb = output.stat().st_size / (1024 * 1024)
     print(
@@ -76,7 +99,10 @@ def run_range_backfill() -> tuple[Path, ...]:
             day += timedelta(days=1)
             continue
 
-        estimate = provider.estimate_day_cost(day)
+        estimate = _retry_databento(
+            lambda: provider.estimate_day_cost(day),
+            label=f"estimate_day_cost:{day}",
+        )
         projected = estimated_cost + estimate.total_cost_usd
         print(
             f"research cost estimate: date={day} symbols={estimate.option_symbols} "
@@ -97,7 +123,10 @@ def run_range_backfill() -> tuple[Path, ...]:
 
         estimated_cost = projected
         attempted_days += 1
-        frames = provider.fetch_day(day)
+        frames = _retry_databento(
+            lambda: provider.fetch_day(day),
+            label=f"fetch_day:{day}",
+        )
         if not frames:
             print(f"research backfill no data: date={day}", flush=True)
             day += timedelta(days=1)
