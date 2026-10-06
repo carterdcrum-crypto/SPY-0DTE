@@ -16,7 +16,7 @@ def _data_dir() -> Path:
 
 
 def _output_path(trade_date: date) -> Path:
-    return _data_dir() / f"spy_0dte_{trade_date.isoformat()}.csv"
+    return _data_dir() / f"spy_0dte_{trade_date.isoformat()}.csv.gz"
 
 
 def run_smoke_backfill() -> Path:
