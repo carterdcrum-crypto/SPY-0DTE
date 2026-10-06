@@ -2,11 +2,21 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from .data import write_canonical_csv
 from .providers.databento_history import DatabentoHistoryProvider
+
+
+def _data_dir() -> Path:
+    output_dir = Path(os.getenv("RESEARCH_DATA_DIR", "/data/research"))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def _output_path(trade_date: date) -> Path:
+    return _data_dir() / f"spy_0dte_{trade_date.isoformat()}.csv"
 
 
 def run_smoke_backfill() -> Path:
@@ -14,27 +24,110 @@ def run_smoke_backfill() -> Path:
     if not raw_date:
         raise RuntimeError("RESEARCH_SMOKE_DATE is required")
     trade_date = date.fromisoformat(raw_date)
-
-    output_dir = Path(os.getenv("RESEARCH_DATA_DIR", "/data/research"))
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output = output_dir / f"spy_0dte_{trade_date.isoformat()}.csv"
+    output = _output_path(trade_date)
 
     provider = DatabentoHistoryProvider()
     frames = provider.fetch_day(trade_date)
     rows = write_canonical_csv(frames, output)
     print(
         f"research smoke complete: date={trade_date.isoformat()} "
-        f"frames={len(frames)} rows={rows} output={output}"
+        f"frames={len(frames)} rows={rows} output={output}",
+        flush=True,
     )
     if not frames or rows == 0:
         raise RuntimeError("Databento smoke fetch returned no usable SPY 0DTE quotes")
     return output
 
 
+def run_range_backfill() -> tuple[Path, ...]:
+    raw_start = os.getenv("RESEARCH_RANGE_START", "").strip()
+    raw_end = os.getenv("RESEARCH_RANGE_END", "").strip()
+    if not raw_start or not raw_end:
+        raise RuntimeError("RESEARCH_RANGE_START and RESEARCH_RANGE_END are required")
+
+    start = date.fromisoformat(raw_start)
+    end = date.fromisoformat(raw_end)
+    if end < start:
+        raise RuntimeError("RESEARCH_RANGE_END must be on or after RESEARCH_RANGE_START")
+
+    max_days = int(os.getenv("RESEARCH_MAX_DAYS", "10"))
+    max_cost = float(os.getenv("RESEARCH_MAX_ESTIMATED_COST_USD", "5.00"))
+    if max_days < 1 or max_cost <= 0:
+        raise RuntimeError("research backfill limits must be positive")
+
+    provider = DatabentoHistoryProvider()
+    completed: list[Path] = []
+    estimated_cost = 0.0
+    attempted_days = 0
+    day = start
+
+    while day <= end and attempted_days < max_days:
+        if day.weekday() >= 5:
+            day += timedelta(days=1)
+            continue
+
+        output = _output_path(day)
+        if output.exists() and output.stat().st_size > 0:
+            print(f"research backfill skip existing: date={day} output={output}", flush=True)
+            completed.append(output)
+            day += timedelta(days=1)
+            continue
+
+        estimate = provider.estimate_day_cost(day)
+        projected = estimated_cost + estimate.total_cost_usd
+        print(
+            f"research cost estimate: date={day} symbols={estimate.option_symbols} "
+            f"underlying_usd={estimate.underlying_cost_usd:.4f} "
+            f"definitions_usd={estimate.definition_cost_usd:.4f} "
+            f"options_usd={estimate.option_cost_usd:.4f} "
+            f"day_total_usd={estimate.total_cost_usd:.4f} "
+            f"projected_total_usd={projected:.4f}",
+            flush=True,
+        )
+        if projected > max_cost:
+            print(
+                f"research budget stop: projected_usd={projected:.4f} "
+                f"limit_usd={max_cost:.4f} before date={day}",
+                flush=True,
+            )
+            break
+
+        estimated_cost = projected
+        attempted_days += 1
+        frames = provider.fetch_day(day)
+        if not frames:
+            print(f"research backfill no data: date={day}", flush=True)
+            day += timedelta(days=1)
+            continue
+
+        rows = write_canonical_csv(frames, output)
+        print(
+            f"research backfill day complete: date={day} frames={len(frames)} "
+            f"rows={rows} output={output}",
+            flush=True,
+        )
+        if rows > 0:
+            completed.append(output)
+        day += timedelta(days=1)
+
+    print(
+        f"research range complete: files={len(completed)} attempted_days={attempted_days} "
+        f"estimated_cost_usd={estimated_cost:.4f} start={start} end={end}",
+        flush=True,
+    )
+    if not completed:
+        raise RuntimeError("research range backfill produced no usable files")
+    return tuple(completed)
+
+
 def main() -> None:
-    run_smoke_backfill()
+    if os.getenv("RESEARCH_RANGE_START", "").strip():
+        run_range_backfill()
+    else:
+        run_smoke_backfill()
+
     if os.getenv("RESEARCH_KEEP_ALIVE", "false").lower() in {"1", "true", "yes"}:
-        print("research worker idle; smoke dataset persisted")
+        print("research worker idle; dataset persisted", flush=True)
         while True:
             time.sleep(3600)
 
