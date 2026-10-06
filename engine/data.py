@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -124,6 +125,17 @@ def load_canonical_csv(handle: TextIO) -> Tuple[HistoricalFrame, ...]:
     return load_canonical_rows(csv.DictReader(handle))
 
 
+def load_canonical_path(path: str | Path) -> Tuple[HistoricalFrame, ...]:
+    """Load canonical research history from plain CSV or .csv.gz."""
+
+    source = Path(path)
+    if source.suffix == ".gz":
+        with gzip.open(source, "rt", encoding="utf-8", newline="") as handle:
+            return load_canonical_csv(handle)
+    with source.open("r", encoding="utf-8", newline="") as handle:
+        return load_canonical_csv(handle)
+
+
 def write_canonical_csv(
     frames: Iterable[HistoricalFrame], path: str | Path
 ) -> int:
@@ -156,7 +168,9 @@ def write_canonical_csv(
         "minutes_to_expiry",
     ]
     rows = 0
-    with open(path, "w", newline="", encoding="utf-8") as handle:
+    destination = Path(path)
+    opener = gzip.open if destination.suffix == ".gz" else open
+    with opener(destination, "wt", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for frame in sorted(frames, key=lambda item: item.timestamp):
