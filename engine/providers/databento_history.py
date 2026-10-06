@@ -328,13 +328,15 @@ class DatabentoHistoryProvider:
         if not stock_rows:
             return ()
 
+        # Databento definition snapshots must begin at UTC midnight. Asking
+        # only for the regular-session window can omit instruments that were
+        # already effective before the open and produces an empty 0DTE chain.
         definitions = self.client.timeseries.get_range(
             dataset=self.config.option_dataset,
             schema="definition",
             symbols=self.config.option_parent,
             stype_in="parent",
-            start=start,
-            end=end,
+            start=trade_date,
         )
         definition_rows = _rows(definitions)
         zero_dte = [
