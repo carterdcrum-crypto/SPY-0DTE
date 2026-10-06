@@ -45,6 +45,8 @@ class BacktestConfig:
     starting_cash: float = 10_000.0
     fee_per_contract: float = 0.65
     slippage_spread_fraction: float = 0.25
+    adverse_ticks_per_side: int = 0
+    option_tick_size: float = 0.01
     liquidate_at_end: bool = True
     maximum_contracts: int = 100
 
@@ -112,6 +114,10 @@ def run_backtest(
         raise ValueError("starting_cash must be positive")
     if config.maximum_contracts < 1:
         raise ValueError("maximum_contracts must be positive")
+    if config.adverse_ticks_per_side < 0:
+        raise ValueError("adverse_ticks_per_side cannot be negative")
+    if config.option_tick_size < 0:
+        raise ValueError("option_tick_size cannot be negative")
 
     ordered = tuple(sorted(frames, key=lambda f: f.timestamp))
     if any(a.timestamp == b.timestamp for a, b in zip(ordered, ordered[1:])):
@@ -140,7 +146,9 @@ def run_backtest(
             if quote is not None:
                 liquidation = max(
                     0.0,
-                    quote.bid - quote.spread * max(0.0, config.slippage_spread_fraction),
+                    quote.bid
+                    - quote.spread * max(0.0, config.slippage_spread_fraction)
+                    - config.adverse_ticks_per_side * config.option_tick_size,
                 )
                 value += max(
                     0.0,
@@ -161,7 +169,11 @@ def run_backtest(
                 quote = quote_for(frame, signal.option_symbol)
                 if quote is not None:
                     quantity = min(max(0, signal.quantity), config.maximum_contracts)
-                    fill = quote.ask + quote.spread * max(0.0, config.slippage_spread_fraction)
+                    fill = (
+                        quote.ask
+                        + quote.spread * max(0.0, config.slippage_spread_fraction)
+                        + config.adverse_ticks_per_side * config.option_tick_size
+                    )
                     total_cost = fill * 100.0 * quantity + config.fee_per_contract * quantity
                     if quantity > 0 and total_cost <= settled_cash + 1e-12:
                         settled_cash -= total_cost
@@ -179,7 +191,9 @@ def run_backtest(
                 if quote is not None:
                     fill = max(
                         0.0,
-                        quote.bid - quote.spread * max(0.0, config.slippage_spread_fraction),
+                        quote.bid
+                    - quote.spread * max(0.0, config.slippage_spread_fraction)
+                    - config.adverse_ticks_per_side * config.option_tick_size,
                     )
                     exit_value = max(
                         0.0,
@@ -241,7 +255,9 @@ def run_backtest(
         if quote is not None:
             fill = max(
                 0.0,
-                quote.bid - quote.spread * max(0.0, config.slippage_spread_fraction),
+                quote.bid
+                    - quote.spread * max(0.0, config.slippage_spread_fraction)
+                    - config.adverse_ticks_per_side * config.option_tick_size,
             )
             exit_value = max(
                 0.0,
