@@ -19,6 +19,7 @@ dependencies = [
 dev = ["pytest>=8.3", "httpx>=0.28"]
 webull = ["webull-openapi-python-sdk==3.0.2"]
 thetadata = ["thetadata>=1.0.10"]
+databento = ["databento>=0.87,<1", "pandas>=2.2,<3"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
