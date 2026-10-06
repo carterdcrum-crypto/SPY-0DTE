@@ -86,6 +86,17 @@ def _minute(value: datetime) -> datetime:
     return value.replace(second=0, microsecond=0)
 
 
+def _option_row_timestamp(row: Mapping[str, Any]) -> datetime:
+    # CBBO interval bars are keyed by ts_recv (the interval boundary). ts_event
+    # is the timestamp of the last trade and can be stale, so using it would
+    # misalign options with the underlying minute bars.
+    for key in ("ts_recv", "ts_event", "timestamp", "index"):
+        value = row.get(key)
+        if value not in (None, ""):
+            return _timestamp(value)
+    raise ValueError("option row has no timestamp")
+
+
 def _parse_expiration(value: object) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -202,7 +213,7 @@ def build_frames_from_databento_rows(
         contract = contracts.get(symbol) or _parse_contract_from_symbol(symbol)
         if contract is None or contract.expiration != trade_date:
             continue
-        ts = _minute(_row_timestamp(row))
+        ts = _minute(_option_row_timestamp(row))
         option_by_minute.setdefault(ts, []).append(row)
         contracts.setdefault(contract.symbol, contract)
 
