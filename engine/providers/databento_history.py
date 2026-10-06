@@ -5,7 +5,7 @@ import os
 import re
 import statistics
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping, Sequence, Tuple
 from zoneinfo import ZoneInfo
 
@@ -31,6 +31,19 @@ class DatabentoHistoryConfig:
     max_strike_distance_pct: float | None = 0.08
     risk_free_rate: float = 0.0
     dividend_yield: float = 0.0
+
+
+@dataclass(frozen=True)
+class DatabentoDayCost:
+    trade_date: date
+    option_symbols: int
+    underlying_cost_usd: float
+    definition_cost_usd: float
+    option_cost_usd: float
+
+    @property
+    def total_cost_usd(self) -> float:
+        return self.underlying_cost_usd + self.definition_cost_usd + self.option_cost_usd
 
 
 @dataclass(frozen=True)
@@ -315,10 +328,97 @@ class DatabentoHistoryProvider:
         key = api_key or os.getenv("DATABENTO_API_KEY")
         self.client = db.Historical(key) if key else db.Historical()
 
-    def fetch_day(self, trade_date: date) -> Tuple[HistoricalFrame, ...]:
+    def _window(self, trade_date: date) -> tuple[str, str]:
         open_et = datetime.combine(trade_date, time(9, 30), tzinfo=EASTERN)
         close_et = datetime.combine(trade_date, time(16, 0), tzinfo=EASTERN)
-        start, end = open_et.isoformat(), close_et.isoformat()
+        return open_et.isoformat(), close_et.isoformat()
+
+    def estimate_day_cost(self, trade_date: date) -> DatabentoDayCost:
+        """Estimate historical-data spend before downloading the option CBBO stream."""
+
+        start, end = self._window(trade_date)
+        underlying_cost = float(
+            self.client.metadata.get_cost(
+                dataset=self.config.underlying_dataset,
+                symbols=[self.config.underlying_symbol],
+                schema=self.config.underlying_schema,
+                start=start,
+                end=end,
+            )
+        )
+        definition_cost = float(
+            self.client.metadata.get_cost(
+                dataset=self.config.option_dataset,
+                symbols=self.config.option_parent,
+                schema="definition",
+                stype_in="parent",
+                start=trade_date,
+                end=trade_date + timedelta(days=1),
+            )
+        )
+
+        first_bar = self.client.timeseries.get_range(
+            dataset=self.config.underlying_dataset,
+            schema=self.config.underlying_schema,
+            symbols=[self.config.underlying_symbol],
+            start=start,
+            end=end,
+            limit=1,
+        )
+        stock_rows = _rows(first_bar)
+        if not stock_rows:
+            return DatabentoDayCost(trade_date, 0, underlying_cost, definition_cost, 0.0)
+
+        definitions = self.client.timeseries.get_range(
+            dataset=self.config.option_dataset,
+            schema="definition",
+            symbols=self.config.option_parent,
+            stype_in="parent",
+            start=trade_date,
+        )
+        definition_rows = _rows(definitions)
+        first_spot = float(stock_rows[0].get("close") or stock_rows[0].get("price") or 0.0)
+
+        symbols: list[str] = []
+        for row in definition_rows:
+            contract = _definition_contract(row)
+            if contract is None or contract.expiration != trade_date:
+                continue
+            raw_symbol = row.get("raw_symbol") or row.get("symbol")
+            if raw_symbol in (None, ""):
+                continue
+            if (
+                self.config.max_strike_distance_pct is not None
+                and first_spot > 0
+                and abs(contract.strike - first_spot) / first_spot
+                > max(0.0, self.config.max_strike_distance_pct)
+            ):
+                continue
+            symbols.append(str(raw_symbol))
+
+        if not symbols:
+            return DatabentoDayCost(trade_date, 0, underlying_cost, definition_cost, 0.0)
+
+        option_cost = float(
+            self.client.metadata.get_cost(
+                dataset=self.config.option_dataset,
+                symbols=symbols,
+                schema=self.config.option_schema,
+                stype_in="raw_symbol",
+                start=start,
+                end=end,
+            )
+        )
+        return DatabentoDayCost(
+            trade_date=trade_date,
+            option_symbols=len(symbols),
+            underlying_cost_usd=underlying_cost,
+            definition_cost_usd=definition_cost,
+            option_cost_usd=option_cost,
+        )
+
+    def fetch_day(self, trade_date: date) -> Tuple[HistoricalFrame, ...]:
+        start, end = self._window(trade_date)
 
         underlying = self.client.timeseries.get_range(
             dataset=self.config.underlying_dataset,
