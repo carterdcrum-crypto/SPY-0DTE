@@ -31,6 +31,26 @@ def _is_no_data_error(exc: Exception) -> bool:
     )
 
 
+def _is_transient_databento_error(exc: Exception) -> bool:
+    module = type(exc).__module__
+    name = type(exc).__name__.lower()
+    text = str(exc).lower()
+    return (
+        module.startswith("databento.")
+        and not _is_no_data_error(exc)
+        and (
+            "servererror" in name
+            or "timeout" in name
+            or "connection" in name
+            or "gateway timed out" in text
+            or "temporarily unavailable" in text
+            or text.startswith("502 ")
+            or text.startswith("503 ")
+            or text.startswith("504 ")
+        )
+    )
+
+
 def _retry_databento(operation, *, label: str):
     attempts = max(1, int(os.getenv("RESEARCH_DATABENTO_RETRIES", "5")))
     base_delay = max(0.0, float(os.getenv("RESEARCH_DATABENTO_RETRY_DELAY_SECONDS", "3")))
@@ -38,20 +58,7 @@ def _retry_databento(operation, *, label: str):
         try:
             return operation()
         except Exception as exc:
-            module = type(exc).__module__
-            name = type(exc).__name__
-            text = str(exc).lower()
-            retryable = (
-                module.startswith("databento.")
-                and not _is_no_data_error(exc)
-                and (
-                    "servererror" in name.lower()
-                    or "timeout" in name.lower()
-                    or "connection" in name.lower()
-                    or "gateway timed out" in text
-                    or "temporarily unavailable" in text
-                )
-            )
+            retryable = _is_transient_databento_error(exc)
             if not retryable or attempt >= attempts:
                 raise
             delay = min(30.0, base_delay * attempt)
@@ -135,6 +142,14 @@ def run_range_backfill() -> tuple[Path, ...]:
                 )
                 day += timedelta(days=1)
                 continue
+            if _is_transient_databento_error(exc):
+                print(
+                    f"research backfill defer transient Databento failure: "
+                    f"date={day} stage=estimate type={type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                day += timedelta(days=1)
+                continue
             raise
         projected = estimated_cost + estimate.total_cost_usd
         print(
@@ -165,6 +180,14 @@ def run_range_backfill() -> tuple[Path, ...]:
             if _is_no_data_error(exc):
                 print(
                     f"research backfill skip no market data: date={day} reason={type(exc).__name__}: {exc}",
+                    flush=True,
+                )
+                day += timedelta(days=1)
+                continue
+            if _is_transient_databento_error(exc):
+                print(
+                    f"research backfill defer transient Databento failure: "
+                    f"date={day} stage=fetch type={type(exc).__name__}: {exc}",
                     flush=True,
                 )
                 day += timedelta(days=1)
