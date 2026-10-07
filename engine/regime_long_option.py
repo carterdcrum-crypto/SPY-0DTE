@@ -297,13 +297,15 @@ def run_regime_stress_directory(
     starting_cash: float,
     config: RegimeLongOptionConfig = RegimeLongOptionConfig(),
     adverse_ticks: Iterable[int] = (0, 1, 2),
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> Tuple[RegimeStressResult, ...]:
     evaluations: list[RegimeStressResult] = []
     for ticks in adverse_ticks:
         if ticks < 0:
             raise ValueError("adverse ticks cannot be negative")
         result = run_backtest_stream(
-            iter_research_directory(path),
+            iter_research_directory(path, start_date=start_date, end_date=end_date),
             RegimeLongOptionStrategy(config),
             config=BacktestConfig(
                 starting_cash=starting_cash,
