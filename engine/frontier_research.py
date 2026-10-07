@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from datetime import date
 from pathlib import Path
 from typing import Iterable, Sequence, Tuple
 
@@ -100,6 +101,8 @@ def _evaluate_candidate(
     candidate: RegimeCandidate,
     drawdown_budget: float,
     starting_cash: float,
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> FrontierPoint:
     config = replace(candidate.config, hard_drawdown=drawdown_budget)
     stresses = run_regime_stress_directory(
@@ -107,6 +110,8 @@ def _evaluate_candidate(
         starting_cash=starting_cash,
         config=config,
         adverse_ticks=(0, 1, 2),
+        start_date=start_date,
+        end_date=end_date,
     )
     by_tick = {item.adverse_ticks_per_side: item.result for item in stresses}
     evaluation: StressGrowthDrawdownEvaluation = stressed_growth_drawdown_evaluation(
@@ -151,6 +156,8 @@ def run_regime_frontier(
     starting_cash: float,
     candidates: Sequence[RegimeCandidate] | None = None,
     drawdown_budgets: Iterable[float] = (0.05, 0.10, 0.15, 0.20),
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> Tuple[FrontierPoint, ...]:
     selected = tuple(candidates or default_regime_candidates())
     budgets = tuple(float(value) for value in drawdown_budgets)
@@ -168,6 +175,8 @@ def run_regime_frontier(
                     candidate=candidate,
                     drawdown_budget=budget,
                     starting_cash=starting_cash,
+                    start_date=start_date,
+                    end_date=end_date,
                 )
             )
     return tuple(points)
