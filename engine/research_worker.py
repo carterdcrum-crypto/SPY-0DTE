@@ -302,11 +302,18 @@ def run_frontier_validation() -> None:
         for value in os.getenv("RESEARCH_FRONTIER_DD_BUDGETS", "0.05,0.10,0.15,0.20").split(",")
         if value.strip()
     ]
+    raw_start = os.getenv("RESEARCH_FRONTIER_START", "").strip()
+    raw_end = os.getenv("RESEARCH_FRONTIER_END", "").strip()
+    start_date = date.fromisoformat(raw_start) if raw_start else None
+    end_date = date.fromisoformat(raw_end) if raw_end else None
+
     for starting_cash in balances:
         points = run_regime_frontier(
             data_dir,
             starting_cash=starting_cash,
             drawdown_budgets=budgets,
+            start_date=start_date,
+            end_date=end_date,
         )
         for point in points:
             print(
