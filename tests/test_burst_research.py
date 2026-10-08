@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from dataclasses import replace
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -78,3 +79,18 @@ def test_research_directory_prefers_gzip_copy(tmp_path):
     assert len(loaded) == 1
     assert loaded[0].timestamp == frame.timestamp
     assert len(loaded[0].options) == 4
+
+
+def test_research_directory_can_be_date_scoped(tmp_path):
+    first = replace(_frame(), timestamp=datetime(2026, 9, 25, 15, 0, tzinfo=timezone.utc))
+    later = replace(_frame(), timestamp=datetime(2026, 9, 28, 15, 0, tzinfo=timezone.utc))
+    assert write_canonical_csv((first,), tmp_path / "spy_0dte_2026-09-25.csv.gz") == 4
+    assert write_canonical_csv((later,), tmp_path / "spy_0dte_2026-09-28.csv.gz") == 4
+
+    loaded = load_research_directory(
+        tmp_path,
+        start_date=date(2026, 9, 25),
+        end_date=date(2026, 9, 25),
+    )
+    assert len(loaded) == 1
+    assert loaded[0].timestamp.date() == date(2026, 9, 25)
