@@ -2,7 +2,7 @@ name: engine-tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, research/rocket-vault-profit-ratchet]
   pull_request:
     branches: [main]
 
