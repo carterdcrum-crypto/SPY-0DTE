@@ -19,8 +19,12 @@ For the initial version use **SPY underlying equity prints**, not OPRA.
 
 ### Causal signal recipe — predeclared, not optimized
 
-1. Existing 1-minute bullish breakout/acceleration detector triggers a
-   **candidate** (the baseline no-tape event study is not yet good enough).
+1. Either the existing 1-minute bullish breakout/acceleration detector
+   or a **fresh eight-minute bullish high / bearish low break** triggers
+   a candidate. For the independent structure variant, the price trend must
+   exceed 2 basis points in the relevant direction. All price structure
+   comparisons use only **preceding** frames, not the current frame in
+   its own reference window. The original no-tape event study remains weak.
 2. TapeReader considers only timestamped prints **observed** before the
    decision and within the last **30 seconds**; last print must be
    no older than **5 seconds**. Source-latency >2 seconds fails closed.
@@ -121,3 +125,22 @@ unit tests or any subsequently optimized research-window results.**
   https://databento.com/docs/examples/options/equity-options-introduction
 - Cont, Kukanov & Stoikov (2014), *The Price Impact of Order Book Events*:
   https://papers.ssrn.com/sol3/papers.cfm?abstract_id=1712822
+
+## Completed data audit, October 8, 2026
+
+The existing Railway **research-only** persistent volume contained
+**128 daily 1-minute market/option files and ZERO genuine individual
+SPY trade tape sidecars**. The tape research worker correctly emitted
+`TAPE NOT BACKTESTABLE` and **no tape-enhanced P&L**.
+The only completed P&L tests remain the separate **non-tape** 25/100
+allocation studies in `docs/quarter_risk_research.md`, in which none
+of the tested variants achieved +100% in a five-trading-day block.
+
+Python unit tests use **synthetic prints only to test code behavior**
+(chronological safety, buy/sell inference, possible absorption rejection,
+fresh high / low entries, and rejection when tape is unavailable).
+These tests are **not historical tape backtests** and cannot establish
+an economic edge.
+
+Before collecting new tick data, quantify the proposed vendor costs
+and licensing restrictions; no historical tick purchases were made.
