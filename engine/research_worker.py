@@ -10,6 +10,7 @@ from .data import write_canonical_csv
 from .event_study import run_causal_event_study
 from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
 from .frontier_research import pareto_frontier, run_regime_frontier
+from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
 from .regime_long_option import run_regime_stress_directory
 
@@ -430,6 +431,32 @@ def run_event_alpha_validation() -> None:
                     f"win_pct={metrics.win_rate * 100.0:.2f} "
                     f"pf={metrics.profit_factor:.4f} "
                     f"avg_trade_pct={metrics.average_trade_return * 100.0:.3f}",
+                    flush=True,
+                )
+                daily_start = trade_start_date or start_date
+                daily = daily_account_metrics(
+                    stress.result.equity_curve,
+                    start_date=daily_start,
+                    end_date=end_date,
+                )
+                trades_per_day = metrics.trades / daily.days if daily.days else 0.0
+                print(
+                    "event alpha daily: "
+                    f"hold={hold_minutes} cash={starting_cash:.2f} "
+                    f"ticks={stress.adverse_ticks_per_side} days={daily.days} "
+                    f"mean_pct={daily.mean_return * 100.0:.3f} "
+                    f"median_pct={daily.median_return * 100.0:.3f} "
+                    f"geo_pct={daily.geometric_return * 100.0:.3f} "
+                    f"positive_pct={daily.positive_day_rate * 100.0:.2f} "
+                    f"hit5_pct={daily.hit_5_rate * 100.0:.2f} "
+                    f"hit10_pct={daily.hit_10_rate * 100.0:.2f} "
+                    f"hit15_pct={daily.hit_15_rate * 100.0:.2f} "
+                    f"hit20_pct={daily.hit_20_rate * 100.0:.2f} "
+                    f"hit25_pct={daily.hit_25_rate * 100.0:.2f} "
+                    f"best_pct={daily.best_day_return * 100.0:.3f} "
+                    f"worst_pct={daily.worst_day_return * 100.0:.3f} "
+                    f"cvar99_loss_pct={daily.daily_loss_cvar_99 * 100.0:.3f} "
+                    f"trades_per_day={trades_per_day:.3f}",
                     flush=True,
                 )
 
