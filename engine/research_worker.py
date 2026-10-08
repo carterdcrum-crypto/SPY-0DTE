@@ -540,11 +540,24 @@ def run_adaptive_vault_validation() -> None:
         raise RuntimeError("no canonical research files available for adaptive-vault validation")
     # Override only when explicitly requesting a larger development window;
     # otherwise reuse Rocket Vault's existing warmup / trade date split.
-    raw_start = os.getenv("RESEARCH_ADAPTIVE_START", "").strip() or os.getenv("RESEARCH_EVENT_ALPHA_START", "").strip()
-    raw_end = os.getenv("RESEARCH_ADAPTIVE_END", "").strip() or os.getenv("RESEARCH_EVENT_ALPHA_END", "").strip()
-    raw_trade_start = (
-        os.getenv("RESEARCH_ADAPTIVE_TRADE_START", "").strip()
-        or os.getenv("RESEARCH_EVENT_ALPHA_TRADE_START", "").strip()
+    all_dates = os.getenv("RESEARCH_ADAPTIVE_ALL_DATES", "").lower() in {"true", "yes", "1"}
+    if all_dates:
+        raw_start = raw_end = raw_trade_start = ""
+    else:
+        raw_start = os.getenv("RESEARCH_ADAPTIVE_START", "").strip() or os.getenv("RESEARCH_EVENT_ALPHA_START", "").strip()
+        raw_end = os.getenv("RESEARCH_ADAPTIVE_END", "").strip() or os.getenv("RESEARCH_EVENT_ALPHA_END", "").strip()
+        raw_trade_start = (
+            os.getenv("RESEARCH_ADAPTIVE_TRADE_START", "").strip()
+            or os.getenv("RESEARCH_EVENT_ALPHA_TRADE_START", "").strip()
+        )
+    datasets = sorted(data_dir.glob("spy_0dte_*.csv*"))
+    available_dates = sorted({item.name[9:19] for item in datasets})
+    print(
+        f"adaptive vault coverage: files={len(datasets)} "
+        f"distinct_sessions={len(available_dates)} "
+        f"earliest={available_dates[0] if available_dates else 'none'} "
+        f"latest={available_dates[-1] if available_dates else 'none'} "
+        f"all_dates={all_dates}", flush=True,
     )
     start_date = date.fromisoformat(raw_start) if raw_start else None
     end_date = date.fromisoformat(raw_end) if raw_end else None
