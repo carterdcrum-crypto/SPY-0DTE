@@ -11,6 +11,7 @@ from .event_study import run_causal_event_study
 from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
 from .rocket_vault import RocketVaultConfig, run_rocket_vault_stress_directory
 from .adaptive_vault import AdaptiveVaultConfig, run_adaptive_vault_stress_directory
+from .inverse_research import run_inverted_adaptive_comparison
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
@@ -618,9 +619,49 @@ def run_adaptive_vault_validation() -> None:
                 )
 
 
+
+def run_inverse_validation() -> None:
+    """Reverse actual CALL orders into matching PUT purchases on the same event.
+
+    Frozen policy and dates mirror the 20-session adaptive vault stress run.
+    This is a new independently re-simulated account, not arithmetic negation.
+    """
+    root = _data_dir()
+    start = os.getenv("RESEARCH_ADAPTIVE_START", "2026-09-01").strip()
+    end = os.getenv("RESEARCH_ADAPTIVE_END", "2026-10-06").strip()
+    trade_start = os.getenv("RESEARCH_ADAPTIVE_TRADE_START", "2026-09-09").strip()
+    day_start = date.fromisoformat(start) if start else None
+    day_end = date.fromisoformat(end) if end else None
+    trade_day = date.fromisoformat(trade_start) if trade_start else None
+    balances = [float(s) for s in os.getenv("RESEARCH_ADAPTIVE_BALANCES","300,1000").split(",") if s.strip()]
+    event = EventAlphaConfig(hold_minutes=15)
+    for balance in balances:
+        comparisons = run_inverted_adaptive_comparison(
+            root, starting_cash=balance, event_config=event,
+            adaptive_config=AdaptiveVaultConfig(), adverse_ticks=(0,1,2),
+            start_date=day_start, end_date=day_end, trade_start_date=trade_day,
+        )
+        for comparison in comparisons:
+            a=comparison.original.metrics
+            b=comparison.inverted.metrics
+            print(
+                "call put inversion: "
+                f"cash={balance:.2f} ticks={comparison.adverse_ticks_per_side} "
+                f"original_ending={a.ending_equity:.2f} original_return_pct={a.total_return*100:.3f} "
+                f"original_trades={a.trades} "
+                f"inverted_ending={b.ending_equity:.2f} inverted_return_pct={b.total_return*100:.3f} "
+                f"inverted_trades={b.trades} inverted_max_dd_pct={b.max_drawdown*100:.3f} "
+                f"inverted_win_pct={b.win_rate*100:.3f} "
+                f"skipped_unavailable_or_unaffordable_put_signals={comparison.inverse_entries_without_put}",
+                flush=True,
+            )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "adaptivevault":
+    if mode == "inverse":
+        run_inverse_validation()
+    elif mode == "adaptivevault":
         run_adaptive_vault_validation()
     elif mode == "rocketvault":
         run_rocket_vault_validation()
