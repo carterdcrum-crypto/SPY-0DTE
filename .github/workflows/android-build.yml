@@ -2,7 +2,7 @@ name: android-build
 
 on:
   push:
-    branches: [main]
+    branches: [main, research/rocket-vault-profit-ratchet]
     paths:
       - 'android/**'
       - '.github/workflows/android-build.yml'
