@@ -12,6 +12,7 @@ from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
 from .rocket_vault import RocketVaultConfig, run_rocket_vault_stress_directory
 from .adaptive_vault import AdaptiveVaultConfig, run_adaptive_vault_stress_directory
 from .inverse_research import run_inverted_adaptive_comparison, replay_original_trades_as_puts
+from .quarter_risk import QuarterRiskConfig, run_quarter_risk_directory, nonoverlapping_weekly_returns
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
@@ -714,9 +715,69 @@ def run_exact_inverse_mirror_validation() -> None:
         )
 
 
+
+def run_quarter_risk_validation() -> None:
+    """Quarter-account entry and one-account-day gross spend controls."""
+    root = _data_dir()
+    raw_start = os.getenv("RESEARCH_QUARTER_START", "2026-09-01").strip()
+    raw_end = os.getenv("RESEARCH_QUARTER_END", "2026-10-06").strip()
+    raw_trade_start = os.getenv("RESEARCH_QUARTER_TRADE_START", "2026-09-09").strip()
+    start = date.fromisoformat(raw_start) if raw_start else None
+    end = date.fromisoformat(raw_end) if raw_end else None
+    trade_start = date.fromisoformat(raw_trade_start) if raw_trade_start else None
+    balances = [float(v) for v in os.getenv("RESEARCH_QUARTER_BALANCES","300,1000").split(",") if v.strip()]
+    sides = [v.strip().lower() for v in os.getenv("RESEARCH_QUARTER_SIDES","call,put").split(",") if v.strip()]
+    ticks = [int(v.strip()) for v in os.getenv("RESEARCH_QUARTER_TICKS","1").split(",") if v.strip()]
+    policies = [v.strip().lower() for v in os.getenv("RESEARCH_QUARTER_POLICIES","plain,guarded").split(",") if v.strip()]
+    for policy in policies:
+        if policy not in ("plain", "guarded", "locked"):
+            raise ValueError(f"unknown quarter policy: {policy}")
+        for side in sides:
+            risk = QuarterRiskConfig(
+                side=side,
+                guard_enabled=(policy != "plain"),
+                lifetime_drawdown_lock_enabled=(policy == "locked"),
+            )
+            for balance in balances:
+                evaluations = run_quarter_risk_directory(
+                    root, starting_cash=balance, quarter_config=risk,
+                    event_config=EventAlphaConfig(hold_minutes=15),
+                    adverse_ticks=ticks, start_date=start, end_date=end,
+                    trade_start_date=trade_start,
+                )
+                for study in evaluations:
+                    perf = study.result.metrics
+                    weeks = nonoverlapping_weekly_returns(study.result, trade_start_date=trade_start)
+                    positive_weeks = sum(ret > 0 for ret in weeks)
+                    doubling_weeks = sum(ret >= 1.0 for ret in weeks)
+                    text_weeks = ",".join(f"{100*ret:.2f}" for ret in weeks)
+                    print(
+                        "QUARTER RISK: "
+                        f"policy={policy} "
+                        f"side={side} cash={balance:.2f} ticks={study.adverse_ticks} "
+                        f"start={start} end={end} trade_start={trade_start} "
+                        f"end_equity={perf.ending_equity:.2f} return_pct={perf.total_return*100:.3f} "
+                        f"max_dd_pct={perf.max_drawdown*100:.3f} "
+                        f"trades={perf.trades} win_pct={perf.win_rate*100:.2f} "
+                        f"gross_premium={study.total_entry_premium:.2f} "
+                        f"maximum_daily_spend_pct={study.daily_spend_max_fraction*100:.2f} "
+                        f"locked_profit={study.locked_profit:.2f} "
+                        f"entry_pauses={study.entry_pauses} stop_triggers={study.stop_triggers} "
+                        f"lifetime_locked={study.lifetime_lock_triggered} "
+                        f"missed_option_quotes={study.missing_position_quote_frames} "
+                        f"held_frames={study.held_position_frames} "
+                        f"skipped_unaffordable_signals={study.skipped_for_affordability} "
+                        f"five_day_blocks={len(weeks)} weeks_positive={positive_weeks} "
+                        f"weeks_doubled={doubling_weeks} weekly_pct=[{text_weeks}]",
+                        flush=True,
+                    )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "inversemirror":
+    if mode == "quarterrisk":
+        run_quarter_risk_validation()
+    elif mode == "inversemirror":
         run_exact_inverse_mirror_validation()
     elif mode == "inverse":
         run_inverse_validation()

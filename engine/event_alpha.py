@@ -140,6 +140,10 @@ class EventAlphaStrategy:
         """Research extension point; the baseline still uses all settled cash."""
         return context.settled_cash
 
+    def _select_entry_option(self, frame: HistoricalFrame, budget: float) -> OptionQuote | None:
+        """Overridable research entry-direction hook; baseline remains CALL-only."""
+        return _select_call(frame, settled_cash=budget, config=self.config)
+
     def _entry_signal(self, option: OptionQuote, budget: float) -> BacktestSignal:
         """The published one-contract Event Alpha baseline is unchanged."""
         return BacktestSignal("open", option.symbol, 1, "BULL_ACCEL90_BREAKOUT")
@@ -202,11 +206,7 @@ class EventAlphaStrategy:
 
             if event:
                 budget = self._entry_budget(context)
-                option = _select_call(
-                    frame,
-                    settled_cash=budget,
-                    config=self.config,
-                )
+                option = self._select_entry_option(frame, budget)
                 if option is not None:
                     signal = self._entry_signal(option, budget)
         self._spots.append(spot)
