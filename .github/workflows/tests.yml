@@ -2,7 +2,7 @@ name: engine-tests
 
 on:
   push:
-    branches: [main, research/rocket-vault-profit-ratchet, research/quarter-allocation-risk]
+    branches: [main, research/rocket-vault-profit-ratchet, research/quarter-allocation-risk, research/tape-entry]
   pull_request:
     branches: [main]
 
