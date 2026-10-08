@@ -136,6 +136,21 @@ class EventAlphaStrategy:
             self._roll_day(day)
 
         spot = frame.market.spot
+        i = len(self._spots)
+
+        # Update the causal acceleration stream on EVERY market frame, including
+        # frames observed while a position is open. Otherwise the next day's
+        # 5-day threshold would depend on whether we happened to be trading.
+        acceleration: float | None = None
+        if i >= self.config.momentum_lookback + 1:
+            momentum_now = spot / self._spots[i - self.config.momentum_lookback] - 1.0
+            momentum_prev = (
+                self._spots[i - 1]
+                / self._spots[i - 1 - self.config.momentum_lookback]
+                - 1.0
+            )
+            acceleration = momentum_now - momentum_prev
+            self._day_accels.append(acceleration)
 
         if context.position is not None:
             held_minutes = (
@@ -147,22 +162,13 @@ class EventAlphaStrategy:
             return BacktestSignal("hold")
 
         signal = BacktestSignal("hold")
-        i = len(self._spots)
         minimum_index = max(
             self.config.momentum_lookback + 1,
             self.config.trend_lookback,
             self.config.breakout_lookback,
         )
 
-        if i >= minimum_index:
-            momentum_now = spot / self._spots[i - self.config.momentum_lookback] - 1.0
-            momentum_prev = (
-                self._spots[i - 1]
-                / self._spots[i - 1 - self.config.momentum_lookback]
-                - 1.0
-            )
-            acceleration = momentum_now - momentum_prev
-            self._day_accels.append(acceleration)
+        if i >= minimum_index and acceleration is not None:
             threshold = self._threshold()
 
             trend = spot / self._spots[i - self.config.trend_lookback] - 1.0
@@ -189,15 +195,6 @@ class EventAlphaStrategy:
                         1,
                         "BULL_ACCEL90_BREAKOUT",
                     )
-        elif i >= self.config.momentum_lookback + 1:
-            momentum_now = spot / self._spots[i - self.config.momentum_lookback] - 1.0
-            momentum_prev = (
-                self._spots[i - 1]
-                / self._spots[i - 1 - self.config.momentum_lookback]
-                - 1.0
-            )
-            self._day_accels.append(momentum_now - momentum_prev)
-
         self._spots.append(spot)
         return signal
 
