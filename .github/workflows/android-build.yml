@@ -69,7 +69,7 @@ jobs:
           working-directory: android
           script: |
             gradle --no-daemon :app:connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/app.spy0dte.mobile/files/screenshots ./ui-screenshots
+            adb pull /sdcard/Pictures/spy0dte-ui ./ui-screenshots
 
       - name: Upload UI verification
         if: always()
