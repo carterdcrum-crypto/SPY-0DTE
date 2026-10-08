@@ -11,7 +11,7 @@ from .event_study import run_causal_event_study
 from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
 from .rocket_vault import RocketVaultConfig, run_rocket_vault_stress_directory
 from .adaptive_vault import AdaptiveVaultConfig, run_adaptive_vault_stress_directory
-from .inverse_research import run_inverted_adaptive_comparison
+from .inverse_research import run_inverted_adaptive_comparison, replay_original_trades_as_puts
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
@@ -653,6 +653,25 @@ def run_inverse_validation() -> None:
                 f"inverted_trades={b.trades} inverted_max_dd_pct={b.max_drawdown*100:.3f} "
                 f"inverted_win_pct={b.win_rate*100:.3f} "
                 f"skipped_unavailable_or_unaffordable_put_signals={comparison.inverse_entries_without_put}",
+                flush=True,
+            )
+            mirror = replay_original_trades_as_puts(
+                root,
+                comparison.original,
+                starting_cash=balance,
+                adverse_ticks_per_side=comparison.adverse_ticks_per_side,
+                start_date=day_start,
+                end_date=day_end,
+            )
+            print(
+                "exact put mirror: "
+                f"cash={balance:.2f} ticks={comparison.adverse_ticks_per_side} "
+                f"original_trades={mirror.original_trades} "
+                f"paired_trades={mirror.mirrored_trades} "
+                f"missing_quote_pairs={mirror.missing_put_quote_pairs} "
+                f"unaffordable={mirror.unaffordable_put_trades} "
+                f"ending={mirror.ending_cash_equity:.2f} "
+                f"return_pct={(mirror.ending_cash_equity/balance-1)*100:.3f}",
                 flush=True,
             )
 
