@@ -88,6 +88,8 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
         trade_start_date: date | None = None,
     ) -> None:
         self.quarter_config = quarter_config
+        # Default to fixed research side; tape-aware research may override per frame.
+        self._signal_direction = quarter_config.side
         super().__init__(
             starting_cash=starting_cash,
             event_config=event_config,
@@ -113,7 +115,7 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
     def _select_entry_option(self, frame: HistoricalFrame, budget: float) -> OptionQuote | None:
         eligible = [
             option for option in frame.options
-            if option.right == self.quarter_config.side
+            if option.right == self._signal_direction
             and option.ask > option.bid > 0
             and option.ask * 100 <= budget + 1e-12
             and option.spread_fraction <= self.config.max_spread_fraction
@@ -148,9 +150,15 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
         if signal.action == "open":
             return BacktestSignal(
                 "open", option.symbol, signal.quantity,
-                f"EVENT_ALPHA_{self.quarter_config.side.upper()}_QUARTER_CAP",
+                f"EVENT_ALPHA_{self._signal_direction.upper()}_QUARTER_CAP",
                 max_total_cost=budget,
             )
+        return signal
+
+    def _supplemental_entry_signal(
+        self, frame: HistoricalFrame, context: BacktestContext, signal: BacktestSignal
+    ) -> BacktestSignal:
+        """Research hook: pass supplemental tape setups through EVERY risk guard."""
         return signal
 
     def decide(self, frame: HistoricalFrame, context: BacktestContext) -> BacktestSignal:
@@ -182,6 +190,7 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
                 self._daily_premiums_spent / self._session_start_equity,
             )
         baseline_signal = super().decide(frame, context)
+        baseline_signal = self._supplemental_entry_signal(frame, context, baseline_signal)
         if self.quarter_config.lifetime_drawdown_lock_enabled:
             peak = max(self.starting_cash, self.realized_high_watermark)
             threshold = peak * (1.0 - self.quarter_config.lifetime_drawdown_trigger_fraction)
