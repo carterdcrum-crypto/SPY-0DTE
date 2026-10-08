@@ -730,10 +730,14 @@ def run_quarter_risk_validation() -> None:
     ticks = [int(v.strip()) for v in os.getenv("RESEARCH_QUARTER_TICKS","1").split(",") if v.strip()]
     policies = [v.strip().lower() for v in os.getenv("RESEARCH_QUARTER_POLICIES","plain,guarded").split(",") if v.strip()]
     for policy in policies:
-        if policy not in ("plain", "guarded"):
+        if policy not in ("plain", "guarded", "locked"):
             raise ValueError(f"unknown quarter policy: {policy}")
         for side in sides:
-            risk = QuarterRiskConfig(side=side, guard_enabled=(policy == "guarded"))
+            risk = QuarterRiskConfig(
+                side=side,
+                guard_enabled=(policy != "plain"),
+                lifetime_drawdown_lock_enabled=(policy == "locked"),
+            )
             for balance in balances:
                 evaluations = run_quarter_risk_directory(
                     root, starting_cash=balance, quarter_config=risk,
@@ -759,6 +763,7 @@ def run_quarter_risk_validation() -> None:
                         f"maximum_daily_spend_pct={study.daily_spend_max_fraction*100:.2f} "
                         f"locked_profit={study.locked_profit:.2f} "
                         f"entry_pauses={study.entry_pauses} stop_triggers={study.stop_triggers} "
+                        f"lifetime_locked={study.lifetime_lock_triggered} "
                         f"missed_option_quotes={study.missing_position_quote_frames} "
                         f"held_frames={study.held_position_frames} "
                         f"skipped_unaffordable_signals={study.skipped_for_affordability} "
