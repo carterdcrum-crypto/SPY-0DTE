@@ -13,6 +13,7 @@ from .rocket_vault import RocketVaultConfig, run_rocket_vault_stress_directory
 from .adaptive_vault import AdaptiveVaultConfig, run_adaptive_vault_stress_directory
 from .inverse_research import run_inverted_adaptive_comparison, replay_original_trades_as_puts
 from .quarter_risk import QuarterRiskConfig, run_quarter_risk_directory, nonoverlapping_weekly_returns
+from .tape_reader import run_tape_research_directory
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
@@ -773,9 +774,63 @@ def run_quarter_risk_validation() -> None:
                     )
 
 
+
+
+def run_tape_entry_research() -> None:
+    """Audit actual tick-data availability; refuse to backtest bar proxies.
+
+    No Databento billable historical API requests occur in this mode.
+    Historical tape sidecars must be independently supplied and provenance
+    verified before the printed result can be called a tape backtest.
+    """
+    root = _data_dir()
+    tape_files = sorted(root.glob("spy_tape_*.csv*"))
+    base_files = sorted(root.glob("spy_0dte_*.csv*"))
+    print(
+        "TAPE AUDIT: "
+        f"underlying_option_minute_files={len(base_files)} "
+        f"genuine_spy_trade_tape_sidecars={len(tape_files)} "
+        f"source=SPY_equities_individual_trades",
+        flush=True,
+    )
+    if not tape_files:
+        print(
+            "TAPE NOT BACKTESTABLE: existing EQUS.MINI ohlcv-1m and "
+            "OPRA.PILLAR cbbo-1m do not contain actual time-and-sales, "
+            "aggressor volume, or order-book depth. No fabricated results.",
+            flush=True,
+        )
+        return
+    raw_start = os.getenv("RESEARCH_TAPE_START", "2026-09-01").strip()
+    raw_end = os.getenv("RESEARCH_TAPE_END", "2026-10-06").strip()
+    raw_trade_start = os.getenv("RESEARCH_TAPE_TRADE_START", "2026-09-09").strip()
+    start = date.fromisoformat(raw_start) if raw_start else None
+    end = date.fromisoformat(raw_end) if raw_end else None
+    trade_start = date.fromisoformat(raw_trade_start) if raw_trade_start else None
+    for cash in [float(v) for v in os.getenv("RESEARCH_TAPE_BALANCES", "300,1000").split(",") if v.strip()]:
+        trial = run_tape_research_directory(
+            root, starting_cash=cash, start_date=start,
+            end_date=end, trade_start_date=trade_start, adverse_ticks=(0,1,2),
+        )
+        for ticks, result in zip((0,1,2),trial.results):
+            m = result.metrics
+            print(
+                "TAPE RESEARCH: "
+                f"cash={cash:.2f} ticks={ticks} ending={m.ending_equity:.2f} "
+                f"return_pct={m.total_return*100:.3f} "
+                f"max_dd_pct={m.max_drawdown*100:.3f} "
+                f"trades={m.trades} tape_files={trial.tape_files} "
+                f"accepted_tape_entries={trial.accepted} "
+                f"rejected_tape_entries={trial.rejected}",
+                flush=True,
+            )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "quarterrisk":
+    if mode == "tapeaudit":
+        run_tape_entry_research()
+    elif mode == "quarterrisk":
         run_quarter_risk_validation()
     elif mode == "inversemirror":
         run_exact_inverse_mirror_validation()
