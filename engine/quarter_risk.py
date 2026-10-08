@@ -29,6 +29,12 @@ class QuarterRiskConfig:
     daily_gross_premium_fraction: float = 1.00
     side: Direction = "put"
     maximum_contracts: int = 10
+    # Optional, predeclared risk-controller variant. These are trigger levels,
+    # not guaranteed loss caps: close orders fill on a later market frame.
+    guard_enabled: bool = False
+    stop_loss_of_paid_premium: float = 0.30
+    daily_loss_pause_fraction: float = 0.10
+    weekly_loss_pause_fraction: float = 0.15
     # Predeclared signal confidence filter: we use the exact same original
     # breakout-event detector in either direction to isolate direction risk.
     # No tuning against the 20-day test period is performed here.
@@ -42,6 +48,10 @@ class QuarterRiskConfig:
             raise ValueError("side must be call or put")
         if self.maximum_contracts < 1:
             raise ValueError("maximum_contracts must be >= 1")
+        for name in ("stop_loss_of_paid_premium", "daily_loss_pause_fraction", "weekly_loss_pause_fraction"):
+            value = getattr(self, name)
+            if not math.isfinite(value) or not 0 < value < 1:
+                raise ValueError(f"{name} must be finite and in (0, 1)")
 
 
 @dataclass(frozen=True)
@@ -54,6 +64,8 @@ class QuarterRiskStressResult:
     filled_entry_count: int
     locked_profit: float
     skipped_for_affordability: int
+    entry_pauses: int
+    stop_triggers: int
     missing_position_quote_frames: int
     held_position_frames: int
 
@@ -87,6 +99,10 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
         self.total_entry_premium = 0.0
         self.filled_entry_count = 0
         self.skipped_for_affordability = 0
+        self._week_id: tuple[int, int] | None = None
+        self._week_start_equity = starting_cash
+        self.entry_pauses = 0
+        self.stop_triggers = 0
         self.missing_position_quote_frames = 0
         self.held_position_frames = 0
 
@@ -139,6 +155,11 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
             self._session = today
             self._session_start_equity = context.equity
             self._daily_premiums_spent = 0.0
+        week = frame.timestamp.isocalendar()
+        week_id = (week.year, week.week)
+        if week_id != self._week_id:
+            self._week_id = week_id
+            self._week_start_equity = context.equity
         position = context.position
         if position is not None:
             self.held_position_frames += 1
@@ -156,7 +177,27 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
                 self.max_daily_spend_fraction,
                 self._daily_premiums_spent / self._session_start_equity,
             )
-        return super().decide(frame, context)
+        baseline_signal = super().decide(frame, context)
+        if not self.quarter_config.guard_enabled:
+            return baseline_signal
+
+        # Stop at the *observable* bid. The next-frame fill may be much lower;
+        # no simulated/real broker guarantees a maximum loss at this trigger.
+        if position is not None and baseline_signal.action == "hold":
+            quote = frame.option(position.option_symbol)
+            if quote is not None and quote.bid > 0:
+                limit = position.entry_price * (1.0 - self.quarter_config.stop_loss_of_paid_premium)
+                if quote.bid <= limit:
+                    self.stop_triggers += 1
+                    return BacktestSignal("close", reason="quarter_guard_premium_stop")
+
+        if position is None and baseline_signal.action == "open":
+            day_floor = self._session_start_equity * (1.0 - self.quarter_config.daily_loss_pause_fraction)
+            week_floor = self._week_start_equity * (1.0 - self.quarter_config.weekly_loss_pause_fraction)
+            if context.equity < day_floor or context.equity < week_floor:
+                self.entry_pauses += 1
+                return BacktestSignal("hold")
+        return baseline_signal
 
 
 def run_quarter_risk_directory(
@@ -195,6 +236,7 @@ def run_quarter_risk_directory(
             ticks, quarter_config.side, result, strategy.total_entry_premium,
             strategy.max_daily_spend_fraction, strategy.filled_entry_count,
             strategy.locked_profit, strategy.skipped_for_affordability,
+            strategy.entry_pauses, strategy.stop_triggers,
             strategy.missing_position_quote_frames, strategy.held_position_frames,
         ))
     return tuple(results)
