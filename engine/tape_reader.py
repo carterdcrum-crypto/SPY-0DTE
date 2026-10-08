@@ -124,7 +124,12 @@ class TapeReader:
         newest = current[-1]
         if (as_of-newest.observed_at).total_seconds() > self.config.stale_after_seconds:
             return reject("stale")
-        if (newest.observed_at-newest.event_time).total_seconds() > self.config.max_observation_delay_seconds:
+        # Every print in this decision window must be timely; filtering only
+        # the most recent print could let a late block report dominate delta.
+        if any(
+            (item.observed_at-item.event_time).total_seconds() >
+            self.config.max_observation_delay_seconds for item in current
+        ):
             return reject("late_feed")
         if len(current) < self.config.min_prints:
             return reject("too_few_prints")
