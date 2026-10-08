@@ -118,3 +118,45 @@ def test_insufficient_budget_causes_no_exposure_not_fractional_contract():
     budget=s._entry_budget(_context(300))
     assert budget==75
     assert s._select_entry_option(_frame(),budget) is None
+
+
+def test_guarded_mode_cuts_losing_long_put_at_observed_bid():
+    s=QuarterRiskStrategy(starting_cash=1000,quarter_config=QuarterRiskConfig(guard_enabled=True))
+    s.decide(_frame(minute=0),_context(1000))
+    position=PositionView("P",2,1.25,250,_frame(minute=1).timestamp)
+    x=s.decide(
+        _frame(minute=1,options=(_option(bid=.74,ask=.80),)),
+        _context(900,settled=750,position=position),
+    )
+    assert x.action=="close"
+    assert x.reason=="quarter_guard_premium_stop"
+    assert s.stop_triggers==1
+
+
+def test_guarded_mode_blocks_new_order_after_daily_or_weekly_realized_loss(monkeypatch):
+    s=QuarterRiskStrategy(starting_cash=1000,quarter_config=QuarterRiskConfig(guard_enabled=True))
+    s.decide(_frame(minute=0),_context(1000))
+    import engine.adaptive_vault as av
+    original=av.RocketVaultEventAlphaStrategy.decide
+    from engine.backtest import BacktestSignal
+    monkeypatch.setattr(av.RocketVaultEventAlphaStrategy,"decide",lambda *_: BacktestSignal("open","P",1,max_total_cost=200))
+    try:
+        day_paused=s.decide(_frame(minute=1),_context(890))
+        assert day_paused.action=="hold"
+        assert s.entry_pauses==1
+        # No pause after a small realized loss.
+        ok=s.decide(_frame(minute=2),_context(950))
+        assert ok.action=="open"
+        # Week starts with 1000, so a 16% loss at next day's opening
+        # still prevents entries even though new session's day floor resets.
+        next_day=s.decide(_frame(day=9),_context(840))
+        assert next_day.action=="hold"
+        assert s.entry_pauses==2
+    finally:
+        monkeypatch.setattr(av.RocketVaultEventAlphaStrategy,"decide",original)
+
+
+def test_invalid_loss_guard_parameters():
+    for name in ("stop_loss_of_paid_premium","daily_loss_pause_fraction","weekly_loss_pause_fraction"):
+        with pytest.raises(ValueError):
+            QuarterRiskConfig(**{name:0})
