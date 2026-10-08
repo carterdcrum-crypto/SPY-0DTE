@@ -155,6 +155,12 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
             )
         return signal
 
+    def _supplemental_entry_signal(
+        self, frame: HistoricalFrame, context: BacktestContext, signal: BacktestSignal
+    ) -> BacktestSignal:
+        """Research hook: pass supplemental tape setups through EVERY risk guard."""
+        return signal
+
     def decide(self, frame: HistoricalFrame, context: BacktestContext) -> BacktestSignal:
         today = frame.timestamp.date()
         if today != self._session:
@@ -184,6 +190,7 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
                 self._daily_premiums_spent / self._session_start_equity,
             )
         baseline_signal = super().decide(frame, context)
+        baseline_signal = self._supplemental_entry_signal(frame, context, baseline_signal)
         if self.quarter_config.lifetime_drawdown_lock_enabled:
             peak = max(self.starting_cash, self.realized_high_watermark)
             threshold = peak * (1.0 - self.quarter_config.lifetime_drawdown_trigger_fraction)
