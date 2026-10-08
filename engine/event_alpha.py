@@ -103,8 +103,14 @@ class EventAlphaStrategy:
     development event study found those families materially weaker.
     """
 
-    def __init__(self, config: EventAlphaConfig = EventAlphaConfig()) -> None:
+    def __init__(
+        self,
+        config: EventAlphaConfig = EventAlphaConfig(),
+        *,
+        trade_start_date: date | None = None,
+    ) -> None:
         self.config = config
+        self.trade_start_date = trade_start_date
         self._day: date | None = None
         self._spots: list[float] = []
         self._day_accels: list[float] = []
@@ -161,6 +167,10 @@ class EventAlphaStrategy:
                 return BacktestSignal("close", reason="event_alpha_time_exit")
             return BacktestSignal("hold")
 
+        if self.trade_start_date is not None and day < self.trade_start_date:
+            self._spots.append(spot)
+            return BacktestSignal("hold")
+
         signal = BacktestSignal("hold")
         minimum_index = max(
             self.config.momentum_lookback + 1,
@@ -207,6 +217,7 @@ def run_event_alpha_stress_directory(
     adverse_ticks: Iterable[int] = (0, 1, 2),
     start_date: date | None = None,
     end_date: date | None = None,
+    trade_start_date: date | None = None,
 ) -> Tuple[EventAlphaStressResult, ...]:
     evaluations: list[EventAlphaStressResult] = []
     for ticks in adverse_ticks:
@@ -214,7 +225,7 @@ def run_event_alpha_stress_directory(
             raise ValueError("adverse ticks cannot be negative")
         result = run_backtest_stream(
             iter_research_directory(path, start_date=start_date, end_date=end_date),
-            EventAlphaStrategy(config),
+            EventAlphaStrategy(config, trade_start_date=trade_start_date),
             config=BacktestConfig(
                 starting_cash=starting_cash,
                 fee_per_contract=0.0,
