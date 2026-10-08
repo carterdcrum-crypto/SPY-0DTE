@@ -396,7 +396,10 @@ def run_event_alpha_validation() -> None:
     ]
 
     for hold_minutes in holds:
-        config = EventAlphaConfig(hold_minutes=hold_minutes)
+        config = EventAlphaConfig(
+            hold_minutes=hold_minutes,
+            minimum_minutes_to_close=max(25.0, float(hold_minutes + 5)),
+        )
         for starting_cash in balances:
             results = run_event_alpha_stress_directory(
                 data_dir,
