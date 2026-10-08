@@ -110,3 +110,94 @@ def run_inverted_adaptive_comparison(
             inverse_entries_without_put=inverse_strategy.inverse_entries_without_put,
         ))
     return tuple(results)
+
+
+@dataclass(frozen=True)
+class ExactTradeMirror:
+    """Retrospective same-contract-strike, same-entry/exit-time PUT replay.
+
+    This keeps the original trade schedule and number of contracts; a
+    *hypothetical* counterfactual, not a causal strategy. Execution uses
+    actual PUT ask/bid at the original timestamps. It obeys settled cash
+    and skips unfinanceable trades instead of borrowing. Incomplete put
+    quotes are counted, never inferred from call option P&L.
+    """
+    starting_cash: float
+    ending_cash_equity: float
+    original_trades: int
+    mirrored_trades: int
+    missing_put_quote_pairs: int
+    unaffordable_put_trades: int
+
+
+def replay_original_trades_as_puts(
+    path: str | Path,
+    original: BacktestResult,
+    *,
+    starting_cash: float,
+    adverse_ticks_per_side: int,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> ExactTradeMirror:
+    from .backtest import _next_business_day
+
+    if adverse_ticks_per_side < 0:
+        raise ValueError("adverse ticks cannot be negative")
+
+    wanted = {
+        timestamp
+        for trade in original.trades
+        for timestamp in (trade.entry_timestamp, trade.exit_timestamp)
+    }
+    by_timestamp = {}
+    for frame in iter_research_directory(path, start_date=start_date, end_date=end_date):
+        if frame.timestamp in wanted:
+            by_timestamp[frame.timestamp] = frame
+
+    settled = float(starting_cash)
+    unsettled: list[tuple[date,float]] = []
+    completed = missing = unaffordable = 0
+    for trade in sorted(original.trades, key=lambda t: t.entry_timestamp):
+        matured = sum(value for dt, value in unsettled if dt <= trade.entry_timestamp.date())
+        settled += matured
+        unsettled = [(dt,value) for dt,value in unsettled if dt > trade.entry_timestamp.date()]
+
+        entry_frame = by_timestamp.get(trade.entry_timestamp)
+        exit_frame = by_timestamp.get(trade.exit_timestamp)
+        if entry_frame is None or exit_frame is None:
+            missing += 1
+            continue
+        call_quote = entry_frame.option(trade.option_symbol)
+        if call_quote is None:
+            missing += 1
+            continue
+        entry_put = _matched_put(call_quote, entry_frame.options)
+        exit_put = exit_frame.option(entry_put.symbol) if entry_put is not None else None
+        if (
+            entry_put is None or exit_put is None
+            or entry_put.ask <= entry_put.bid or entry_put.ask <= 0
+            or exit_put.bid <= 0
+        ):
+            missing += 1
+            continue
+
+        buy_price = entry_put.ask + adverse_ticks_per_side * 0.01
+        cost = buy_price * 100 * trade.quantity
+        if cost > settled + 1e-12:
+            unaffordable += 1
+            continue
+        settled -= cost
+        sale_price = max(0.0, exit_put.bid - adverse_ticks_per_side * 0.01)
+        proceeds = sale_price * 100 * trade.quantity
+        unsettled.append((_next_business_day(trade.exit_timestamp.date()), proceeds))
+        completed += 1
+
+    final_equity = settled + sum(value for _, value in unsettled)
+    return ExactTradeMirror(
+        starting_cash=starting_cash,
+        ending_cash_equity=final_equity,
+        original_trades=len(original.trades),
+        mirrored_trades=completed,
+        missing_put_quote_pairs=missing,
+        unaffordable_put_trades=unaffordable,
+    )
