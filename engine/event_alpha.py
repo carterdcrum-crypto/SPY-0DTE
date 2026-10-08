@@ -136,6 +136,14 @@ class EventAlphaStrategy:
             return None
         return _percentile(values, self.config.acceleration_quantile)
 
+    def _entry_budget(self, context: BacktestContext) -> float:
+        """Research extension point; the baseline still uses all settled cash."""
+        return context.settled_cash
+
+    def _entry_signal(self, option: OptionQuote, budget: float) -> BacktestSignal:
+        """The published one-contract Event Alpha baseline is unchanged."""
+        return BacktestSignal("open", option.symbol, 1, "BULL_ACCEL90_BREAKOUT")
+
     def decide(self, frame: HistoricalFrame, context: BacktestContext) -> BacktestSignal:
         day = frame.timestamp.date()
         if self._day != day:
@@ -193,18 +201,14 @@ class EventAlphaStrategy:
             )
 
             if event:
+                budget = self._entry_budget(context)
                 option = _select_call(
                     frame,
-                    settled_cash=context.settled_cash,
+                    settled_cash=budget,
                     config=self.config,
                 )
                 if option is not None:
-                    signal = BacktestSignal(
-                        "open",
-                        option.symbol,
-                        1,
-                        "BULL_ACCEL90_BREAKOUT",
-                    )
+                    signal = self._entry_signal(option, budget)
         self._spots.append(spot)
         return signal
 
