@@ -676,9 +676,49 @@ def run_inverse_validation() -> None:
             )
 
 
+
+def run_exact_inverse_mirror_validation() -> None:
+    """Replay the *actual* call trades as same-strike PUTs, fixed times/size.
+
+    Only this retrospective replay answers the literal 'inverse those trades'
+    question. Missing bid/ask is never made up, and cash settlement applies.
+    """
+    root = _data_dir()
+    start = os.getenv("RESEARCH_ADAPTIVE_START", "2026-09-01").strip()
+    end = os.getenv("RESEARCH_ADAPTIVE_END", "2026-10-06").strip()
+    trade_start = os.getenv("RESEARCH_ADAPTIVE_TRADE_START", "2026-09-09").strip()
+    day_start = date.fromisoformat(start) if start else None
+    day_end = date.fromisoformat(end) if end else None
+    trade_day = date.fromisoformat(trade_start) if trade_start else None
+    for balance in [float(x.strip()) for x in os.getenv("RESEARCH_ADAPTIVE_BALANCES","300,1000").split(",") if x.strip()]:
+        originals = run_adaptive_vault_stress_directory(
+            root, starting_cash=balance, event_config=EventAlphaConfig(hold_minutes=15),
+            adaptive_config=AdaptiveVaultConfig(), adverse_ticks=(1,),
+            start_date=day_start, end_date=day_end, trade_start_date=trade_day,
+        )
+        original = originals[0].result
+        mirror = replay_original_trades_as_puts(
+            root, original, starting_cash=balance, adverse_ticks_per_side=1,
+            start_date=day_start, end_date=day_end,
+        )
+        print(
+            "EXACT INVERSE: "
+            f"cash={balance:.2f} original_ending={original.metrics.ending_equity:.2f} "
+            f"actual_original_trades={len(original.trades)} "
+            f"matched_put_trades={mirror.mirrored_trades} "
+            f"missing_put_quote_pairs={mirror.missing_put_quote_pairs} "
+            f"unaffordable_put_trades={mirror.unaffordable_put_trades} "
+            f"counterfactual_ending={mirror.ending_cash_equity:.2f} "
+            f"counterfactual_return_pct={(mirror.ending_cash_equity/balance-1)*100:.3f}",
+            flush=True,
+        )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "inverse":
+    if mode == "inversemirror":
+        run_exact_inverse_mirror_validation()
+    elif mode == "inverse":
         run_inverse_validation()
     elif mode == "adaptivevault":
         run_adaptive_vault_validation()
