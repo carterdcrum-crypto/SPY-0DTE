@@ -63,3 +63,34 @@ either no exposure or a large fraction of wealth to be risked.
    option size at bid/ask, delayed quotes, and settlement.
 4. Forward-test with timestamped decisions and broker-side paper fills.
    Do **not** promote this research strategy to live from one good backtest.
+
+## Adaptive profit ratchet research (experimental)
+
+An independent `adaptivevault` research mode adds four frozen changes for
+paired evaluation against the original Rocket Vault and Event Alpha:
+
+- At **+10% realized account gains**, reserve at least **35% of gains**, rising
+  smoothly toward 90% of gains at higher realized account peaks.
+- Scale the fraction of *unreserved, settled cash* exposed to long calls as
+  `0.90 × (equity / realized_peak)^3 / (1 + 0.25 × consecutive_losses)`.
+  This compounds fastest near highs but shrinks when the account draws down,
+  automatically re-expanding on recovery. Contract indivisibility can force
+  zero trades even if a fractional budget is positive.
+- Add a bid-price trailing exit: arm after a 30% executable bid gain relative
+  to the filled entry price, and submit an exit when the bid gives back 60%
+  of the maximum favorable gain. The exit still fills on the next recorded
+  option bid and may occur below cost if the quote gaps.
+- Retain strict next-frame fill caps, the locked cash reserve, the original
+  causal Event Alpha entry filters, and 0/1/2 adverse-tick stress tests.
+  No live Webull settings or actual live accounts are modified.
+
+Use `RESEARCH_MODE=adaptivevault`. Inputs:
+`RESEARCH_ADAPTIVE_BALANCES=300,1000`,
+`RESEARCH_ADAPTIVE_HOLDS=15`, and optional
+`RESEARCH_ADAPTIVE_START`, `RESEARCH_ADAPTIVE_END`,
+`RESEARCH_ADAPTIVE_TRADE_START`. By default the date scope comes from
+existing `RESEARCH_EVENT_ALPHA_*` values.
+
+These inputs were selected for a conceptual test rather than tuned against
+the resulting P&L. This is neither an options straddle nor a guarantee that
+a simulated profit reserve survives a broker or market outage.
