@@ -111,22 +111,17 @@ def run_causal_event_study(
     """Mine causal SPY event families before mapping them to option P&L.
 
     Event thresholds use only PRIOR trading days. Forward returns are outcomes
-    used for evaluation, never inputs to the event detector.
+    used for evaluation, never inputs to the event detector. The dataset is
+    streamed one trading day at a time so the option-chain payload is never
+    retained across the full research window.
     """
-
-    frames = iter_research_directory(path, start_date=start_date, end_date=end_date)
-    by_day: dict[date, list] = {}
-    for frame in frames:
-        by_day.setdefault(frame.timestamp.date(), []).append(frame)
 
     prior_day_accelerations: deque[tuple[float, ...]] = deque(maxlen=config.threshold_days)
     observations: list[EventObservation] = []
 
-    for trade_day in sorted(by_day):
-        day_frames = sorted(by_day[trade_day], key=lambda frame: frame.timestamp)
-        spots = [frame.market.spot for frame in day_frames]
+    def process_day(spots: Sequence[float]) -> None:
         if len(spots) < max(config.breakout_lookback, max(config.horizons)) + 2:
-            continue
+            return
 
         prior_accels = [
             abs(value)
@@ -134,8 +129,9 @@ def run_causal_event_study(
             for value in day_values
             if math.isfinite(value)
         ]
-        q90 = _percentile(prior_accels, 0.90) if len(prior_day_accelerations) >= config.threshold_days and prior_accels else None
-        q95 = _percentile(prior_accels, 0.95) if len(prior_day_accelerations) >= config.threshold_days and prior_accels else None
+        enough_history = len(prior_day_accelerations) >= config.threshold_days
+        q90 = _percentile(prior_accels, 0.90) if enough_history and prior_accels else None
+        q95 = _percentile(prior_accels, 0.95) if enough_history and prior_accels else None
 
         day_accels: list[float] = []
         reclaim_reference: float | None = None
@@ -205,4 +201,20 @@ def run_causal_event_study(
 
         prior_day_accelerations.append(tuple(day_accels))
 
+    current_day: date | None = None
+    spots: list[float] = []
+    for frame in iter_research_directory(path, start_date=start_date, end_date=end_date):
+        trade_day = frame.timestamp.date()
+        if current_day is None:
+            current_day = trade_day
+        elif trade_day != current_day:
+            process_day(spots)
+            spots = []
+            current_day = trade_day
+        spots.append(frame.market.spot)
+
+    if spots:
+        process_day(spots)
+
     return _summarize(observations)
+
