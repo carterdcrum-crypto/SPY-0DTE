@@ -8,6 +8,7 @@ from pathlib import Path
 from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
 from .event_study import run_causal_event_study
+from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .providers.databento_history import DatabentoHistoryProvider
 from .regime_long_option import run_regime_stress_directory
@@ -374,12 +375,67 @@ def run_event_study_validation() -> None:
         )
 
 
+def run_event_alpha_validation() -> None:
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for event-alpha validation")
+
+    raw_start = os.getenv("RESEARCH_EVENT_ALPHA_START", "").strip()
+    raw_end = os.getenv("RESEARCH_EVENT_ALPHA_END", "").strip()
+    start_date = date.fromisoformat(raw_start) if raw_start else None
+    end_date = date.fromisoformat(raw_end) if raw_end else None
+    balances = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_EVENT_ALPHA_BALANCES", "500,1000,10000").split(",")
+        if value.strip()
+    ]
+    holds = [
+        int(value.strip())
+        for value in os.getenv("RESEARCH_EVENT_ALPHA_HOLDS", "15,30").split(",")
+        if value.strip()
+    ]
+
+    for hold_minutes in holds:
+        config = EventAlphaConfig(hold_minutes=hold_minutes)
+        for starting_cash in balances:
+            results = run_event_alpha_stress_directory(
+                data_dir,
+                starting_cash=starting_cash,
+                config=config,
+                adverse_ticks=(0, 1, 2),
+                start_date=start_date,
+                end_date=end_date,
+            )
+            for stress in results:
+                metrics = stress.result.metrics
+                ratio = (
+                    metrics.total_return / metrics.max_drawdown
+                    if metrics.max_drawdown > 0
+                    else (float("inf") if metrics.total_return > 0 else 0.0)
+                )
+                print(
+                    "event alpha: "
+                    f"hold={hold_minutes} cash={starting_cash:.2f} "
+                    f"ticks={stress.adverse_ticks_per_side} trades={metrics.trades} "
+                    f"ending={metrics.ending_equity:.2f} "
+                    f"return_pct={metrics.total_return * 100.0:.3f} "
+                    f"max_dd_pct={metrics.max_drawdown * 100.0:.3f} "
+                    f"return_dd={ratio:.4f} "
+                    f"win_pct={metrics.win_rate * 100.0:.2f} "
+                    f"pf={metrics.profit_factor:.4f} "
+                    f"avg_trade_pct={metrics.average_trade_return * 100.0:.3f}",
+                    flush=True,
+                )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
     if mode == "burst":
         run_burst_validation()
     elif mode == "eventstudy":
         run_event_study_validation()
+    elif mode == "eventalpha":
+        run_event_alpha_validation()
     elif mode == "regime":
         run_regime_validation()
     elif mode == "frontier":
