@@ -56,3 +56,63 @@ def test_unchanged_call_only_parent_does_not_enter_put_without_call():
         options=(put,),
     )
     assert _select_call(frame,settled_cash=1000,config=EventAlphaConfig()) is None
+
+
+def test_exact_inverse_uses_real_put_entry_and_exit_quotes(monkeypatch):
+    """The opposite of a losing call is NOT the negative of call P&L."""
+    from datetime import timedelta
+    from engine.backtest import BacktestConfig, BacktestSignal, run_backtest
+    from engine.inverse_research import replay_original_trades_as_puts
+    import engine.inverse_research as inv
+
+    base=datetime(2026,9,9,14,tzinfo=timezone.utc)
+    market=MarketSnapshot(
+        spot=700,bid=699.99,ask=700.01,
+        realized_volatility=.2,implied_volatility=.2,
+        volume_ratio=1,minutes_to_close=300,data_age_seconds=.1,
+    )
+    call=option("C700","call",1.0,1.05,0.45)
+    put=option("P700","put",1.95,2.00,-.55)
+    frames=[
+        HistoricalFrame(base,market,(call,put)),
+        HistoricalFrame(base+timedelta(minutes=1),market,(call,put)),
+        HistoricalFrame(base+timedelta(minutes=2),market,(
+            replace(call,bid=.75,ask=.80),replace(put,bid=3,ask=3.1),
+        )),
+    ]
+
+    class TradeOnce:
+        def __init__(self): self.n=0
+        def decide(self,frame,context):
+            self.n+=1
+            if self.n==1:
+                return BacktestSignal("open","C700",1)
+            if self.n==2:
+                return BacktestSignal("close")
+            return BacktestSignal("hold")
+
+    baseline=run_backtest(frames,TradeOnce(),config=BacktestConfig(
+        starting_cash=300,fee_per_contract=0,slippage_spread_fraction=0,
+        adverse_ticks_per_side=0,
+    ))
+    assert len(baseline.trades)==1
+    assert baseline.metrics.ending_equity==270
+    monkeypatch.setattr(inv,"iter_research_directory",lambda *args,**kwargs: iter(frames))
+    mirror=replay_original_trades_as_puts(
+        "/ignored",baseline,starting_cash=300,adverse_ticks_per_side=0,
+    )
+    assert mirror.original_trades==mirror.mirrored_trades==1
+    assert mirror.missing_put_quote_pairs==0
+    assert mirror.ending_cash_equity==400  # actual put premium +100, not merely +30
+
+    costly_frames=[
+        frames[0],replace(frames[1],options=(
+            call,replace(put,bid=4.95,ask=5.0),
+        )),frames[2],
+    ]
+    monkeypatch.setattr(inv,"iter_research_directory",lambda *args,**kwargs: iter(costly_frames))
+    blocked=replay_original_trades_as_puts(
+        "/ignored",baseline,starting_cash=300,adverse_ticks_per_side=0,
+    )
+    assert blocked.unaffordable_put_trades==1
+    assert blocked.ending_cash_equity==300
