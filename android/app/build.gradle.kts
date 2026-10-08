@@ -17,6 +17,7 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
+        // Research companion APK: new strategy remains backend research-only.
         versionCode = 14
         versionName = "0.3.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
