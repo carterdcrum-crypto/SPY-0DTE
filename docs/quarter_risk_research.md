@@ -35,3 +35,36 @@ Report return, raw maximum drawdown, gross premium, worst single-day spend fract
 ### Interpretation
 
 A 25% per-trade premium cap does **not** imply a 25% daily loss cap. Four full-premium losers can consume the entire day's starting capital, and a 30% premium-stop signal cannot guarantee the exit price. **+100% every week with low drawdown cannot be promised**, even if a short backtest achieves it. Avoid optimizing parameters on the last 20 trading sessions then calling the resulting success out-of-sample.
+
+
+## 20-session development replay, October 8, 2026
+
+Range: September 9–October 6, 2026, with September 1–8 historical warmup.
+All runs start with cash accounts, execute on next-minute actual option bid/ask
+plus one adverse tick on each side, and assume $0 in modeled transaction fees.
+
+| Policy | Option side | $300 end | $300 raw max DD | $1,000 end | $1,000 raw max DD |
+| --- | --- | ---: | ---: | ---: | ---: |
+| plain | call | $334 (+11.3%) | 42.2% | $675 (-32.5%) | 44.3% |
+| plain | put | $247 (-17.7%) | 45.6% | $881 (-11.9%) | 38.3% |
+| guarded | call | $335 (+11.7%) | 26.9% | $731 (-26.9%) | 33.0% |
+| guarded | put | $260 (-13.3%) | 40.8% | $917 (-8.3%) | 33.9% |
+
+**Zero of the four nonoverlapping five-session blocks returned +100%** in any
+of these eight studied combinations. Adding stops improved drawdown on this
+sample but did not validate a strategy meeting both goals. Drawdown is based
+on the full raw mark-to-market equity curve; quote gaps in held positions
+occurred 0–1 times in these scenarios, and can create temporary valuation
+distortions. Stops do not guarantee fills.
+
+A third **optional and as-yet-unvalidated** experimental policy,
+`QuarterRiskConfig(guard_enabled=True, lifetime_drawdown_lock_enabled=True)`,
+permanently suspends new orders after an observed 15% portfolio drawdown
+from the realized equity peak and requests closing an open position. An
+exit executes on the next quote; this is not a strict 15% loss guarantee.
+It passed unit tests but has **not** produced a completed historical run.
+The live/paper account configuration is unaffected.
+
+Given all eight initial weekly failure rates, do not enable this model for
+autonomous real-money SPY 0DTE trading. The unresolved bottleneck is credible
+directional edge and realized option P&L net of fills, *not* position sizing.
