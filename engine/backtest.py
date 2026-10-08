@@ -17,6 +17,9 @@ class BacktestSignal:
     option_symbol: str | None = None
     quantity: int = 1
     reason: str = ""
+    # Research-only per-order exposure ceiling. Checked at next-frame fill,
+    # not just at signal time, so a quote jump cannot consume reserved profit.
+    max_total_cost: float | None = None
 
 
 @dataclass(frozen=True)
@@ -181,7 +184,14 @@ def run_backtest_stream(
                         + config.adverse_ticks_per_side * config.option_tick_size
                     )
                     total_cost = fill * 100.0 * quantity + config.fee_per_contract * quantity
-                    if quantity > 0 and total_cost <= settled_cash + 1e-12:
+                    within_order_budget = (
+                        signal.max_total_cost is None
+                        or (
+                            0.0 <= signal.max_total_cost < float("inf")
+                            and total_cost <= signal.max_total_cost + 1e-12
+                        )
+                    )
+                    if quantity > 0 and total_cost <= settled_cash + 1e-12 and within_order_budget:
                         settled_cash -= total_cost
                         position = _Position(
                             option_symbol=signal.option_symbol,
