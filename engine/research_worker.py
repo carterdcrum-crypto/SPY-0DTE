@@ -9,6 +9,7 @@ from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
 from .event_study import run_causal_event_study
 from .event_alpha import EventAlphaConfig, run_event_alpha_stress_directory
+from .rocket_vault import RocketVaultConfig, run_rocket_vault_stress_directory
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .metrics import daily_account_metrics
 from .providers.databento_history import DatabentoHistoryProvider
@@ -461,9 +462,76 @@ def run_event_alpha_validation() -> None:
                 )
 
 
+
+def run_rocket_vault_validation() -> None:
+    """Research-only compare aggressive sizing and locked-profit reserve.
+
+    Uses the same date-scoped historical quotes and warmup-only dates as
+    event-alpha. A separate mode avoids activating changes in live execution.
+    """
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for rocket-vault validation")
+
+    raw_start = os.getenv("RESEARCH_EVENT_ALPHA_START", "").strip()
+    raw_end = os.getenv("RESEARCH_EVENT_ALPHA_END", "").strip()
+    raw_trade_start = os.getenv("RESEARCH_EVENT_ALPHA_TRADE_START", "").strip()
+    start_date = date.fromisoformat(raw_start) if raw_start else None
+    end_date = date.fromisoformat(raw_end) if raw_end else None
+    trade_start_date = date.fromisoformat(raw_trade_start) if raw_trade_start else None
+    balances = [
+        float(value.strip())
+        for value in os.getenv("RESEARCH_ROCKET_VAULT_BALANCES", "300,1000").split(",")
+        if value.strip()
+    ]
+    holds = [
+        int(value.strip())
+        for value in os.getenv("RESEARCH_ROCKET_VAULT_HOLDS", "15").split(",")
+        if value.strip()
+    ]
+    vault = RocketVaultConfig()
+    for hold in holds:
+        event = EventAlphaConfig(
+            hold_minutes=hold,
+            minimum_minutes_to_close=max(25.0, float(hold + 5)),
+        )
+        for balance in balances:
+            runs = run_rocket_vault_stress_directory(
+                data_dir,
+                starting_cash=balance,
+                event_config=event,
+                vault_config=vault,
+                adverse_ticks=(0, 1, 2),
+                start_date=start_date,
+                end_date=end_date,
+                trade_start_date=trade_start_date,
+            )
+            for stress in runs:
+                metrics = stress.result.metrics
+                daily = daily_account_metrics(
+                    stress.result.equity_curve,
+                    start_date=trade_start_date or start_date,
+                    end_date=end_date,
+                )
+                print(
+                    "rocket vault: "
+                    f"hold={hold} cash={balance:.2f} ticks={stress.adverse_ticks_per_side} "
+                    f"trades={metrics.trades} ending={metrics.ending_equity:.2f} "
+                    f"return_pct={metrics.total_return * 100:.3f} "
+                    f"max_dd_pct={metrics.max_drawdown * 100:.3f} "
+                    f"win_pct={metrics.win_rate * 100:.2f} "
+                    f"locked_profit={stress.locked_profit:.2f} "
+                    f"realized_peak={stress.realized_high_watermark:.2f} "
+                    f"daily_geo_pct={daily.geometric_return * 100:.3f} "
+                    f"positive_days_pct={daily.positive_day_rate * 100:.2f} "
+                    f"days={daily.days}", flush=True,
+                )
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "burst":
+    if mode == "rocketvault":
+        run_rocket_vault_validation()
+    elif mode == "burst":
         run_burst_validation()
     elif mode == "eventstudy":
         run_event_study_validation()
