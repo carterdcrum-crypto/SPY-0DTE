@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .burst_research import run_burst_stress_directory
 from .data import write_canonical_csv
+from .event_study import run_causal_event_study
 from .frontier_research import pareto_frontier, run_regime_frontier
 from .providers.databento_history import DatabentoHistoryProvider
 from .regime_long_option import run_regime_stress_directory
@@ -340,10 +341,45 @@ def run_frontier_validation() -> None:
             )
 
 
+def run_event_study_validation() -> None:
+    data_dir = _data_dir()
+    if not any(data_dir.glob("spy_0dte_*.csv*")):
+        raise RuntimeError("no canonical research files available for event study")
+
+    raw_start = os.getenv("RESEARCH_EVENT_START", "").strip()
+    raw_end = os.getenv("RESEARCH_EVENT_END", "").strip()
+    start_date = date.fromisoformat(raw_start) if raw_start else None
+    end_date = date.fromisoformat(raw_end) if raw_end else None
+
+    summaries = run_causal_event_study(
+        data_dir,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    if not summaries:
+        raise RuntimeError("event study produced no observations")
+
+    for summary in summaries:
+        print(
+            "event study: "
+            f"event={summary.event} direction={summary.direction} "
+            f"horizon={summary.horizon_minutes} n={summary.observations} "
+            f"mean_bps={summary.mean_bps:.3f} "
+            f"median_bps={summary.median_bps:.3f} "
+            f"win_pct={summary.win_rate * 100.0:.2f} "
+            f"p10_bps={summary.p10_bps:.3f} "
+            f"p90_bps={summary.p90_bps:.3f} "
+            f"mean_to_p10={summary.mean_to_p10:.4f}",
+            flush=True,
+        )
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
     if mode == "burst":
         run_burst_validation()
+    elif mode == "eventstudy":
+        run_event_study_validation()
     elif mode == "regime":
         run_regime_validation()
     elif mode == "frontier":
