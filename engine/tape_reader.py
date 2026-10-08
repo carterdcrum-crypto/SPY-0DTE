@@ -65,6 +65,8 @@ class TapeConfig:
     # Trading venue stock NBBO sanity. Full book depth not yet available.
     max_stock_spread_bps: float = 3.0
     max_observation_delay_seconds: float = 2.0
+    structure_lookback_minutes: int = 8
+    min_structure_trend_bps: float = 2.0
 
     def __post_init__(self) -> None:
         if min(self.window_seconds,self.stale_after_seconds,self.min_prints,self.min_shares) < 1:
@@ -77,6 +79,8 @@ class TapeConfig:
             raise ValueError("invalid spread guard")
         if self.max_observation_delay_seconds <= 0:
             raise ValueError("invalid latency guard")
+        if self.structure_lookback_minutes < 3 or self.min_structure_trend_bps <= 0:
+            raise ValueError("invalid price-structure confirmation")
 
 
 @dataclass(frozen=True)
@@ -212,10 +216,10 @@ def iter_spy_stock_tape(path: str|Path, *, start_date:date|None=None, end_date:d
 
 
 class TapeAwareQuarterStrategy(QuarterRiskStrategy):
-    """Gates original momentum setup with real tape, selects call/put by flow.
+    """Gate bullish momentum with tape and add bearish/bullish structure breakouts.
 
-    The one-minute event family still decides WHEN there is a candidate.
-    Only true nonstale tape chooses the DIRECTION; otherwise abstain.
+    Both types require nonstale true SPY prints to select CALL versus PUT.
+    All supplemental entries pass through unchanged quarter-risk controls.
     """
 
     def __init__(
@@ -230,23 +234,74 @@ class TapeAwareQuarterStrategy(QuarterRiskStrategy):
         self._events=iter(tape_events)
         self._next_event=next(self._events,None)
         self.tape=TapeReader(tape_config)
+        self._spot_history: deque[float] = deque(maxlen=tape_config.structure_lookback_minutes)
+        self._spot_history_session: date | None = None
+        self.structure_entries = 0
         self.last_tape_snapshot:TapeSnapshot|None=None
         self.eligible_signals=0
         self.rejected_signals=0
         self.accepted_signals=0
 
     def decide(self,frame:HistoricalFrame,context:BacktestContext)->BacktestSignal:
+        if self._spot_history_session != frame.timestamp.date():
+            self._spot_history_session = frame.timestamp.date()
+            self._spot_history.clear()
         while self._next_event is not None and self._next_event.observed_at <= frame.timestamp:
             self.tape.ingest(self._next_event)
             self._next_event=next(self._events,None)
         self.last_tape_snapshot=self.tape.snapshot(frame.timestamp)
         self._signal_direction=self.last_tape_snapshot.direction
         signal=super().decide(frame,context)
+        # Add this frame only AFTER all decisions, preventing same-frame leakage
+        # into the eight-minute price-structure reference window.
+        self._spot_history.append(frame.market.spot)
         # The parent advances its full causal market-momentum stream first.
         if signal.action=="open":
             # Genuine quarter-risk budget and option pricing remain enforced.
             self.accepted_signals+=1
         return signal
+
+    def _supplemental_entry_signal(
+        self, frame: HistoricalFrame, context: BacktestContext, signal: BacktestSignal
+    ) -> BacktestSignal:
+        # Parent Event Alpha detects bullish acceleration. Also allow tape
+        # to trigger a *fresh bearish breakdown* or a fresh bullish breakout
+        # when its independently observed order flow confirms direction.
+        if signal.action != "hold" or context.position is not None:
+            return signal
+        if self._signal_direction is None:
+            return signal
+        if self.trade_start_date is not None and frame.timestamp.date() < self.trade_start_date:
+            return signal
+        if frame.market.minutes_to_close < self.config.minimum_minutes_to_close:
+            return signal
+        previous = tuple(self._spot_history)
+        if len(previous) < self.tape.config.structure_lookback_minutes:
+            return signal
+        spot = frame.market.spot
+        move_bps = (spot/previous[0]-1.0)*10000
+        if self._signal_direction == "call":
+            confirmed = spot > max(previous) and move_bps >= self.tape.config.min_structure_trend_bps
+        else:
+            confirmed = spot < min(previous) and move_bps <= -self.tape.config.min_structure_trend_bps
+        if not confirmed:
+            return signal
+        budget = self._entry_budget(context)
+        if budget <= 0:
+            return signal
+        selected = self._select_entry_option(frame,budget)
+        if selected is None:
+            return signal
+        proposed = self._entry_signal(selected,budget)
+        if proposed.action != "open":
+            return signal
+        self.structure_entries += 1
+        return BacktestSignal(
+            action="open",option_symbol=proposed.option_symbol,
+            quantity=proposed.quantity,
+            reason=f"TAPE_CONFIRMED_STRUCTURE_{self._signal_direction.upper()}_QUARTER_CAP",
+            max_total_cost=proposed.max_total_cost,
+        )
 
     def _select_entry_option(self,frame:HistoricalFrame,budget:float):
         # This hook is called only after the historical price-based event fires;
