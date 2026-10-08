@@ -35,6 +35,8 @@ class QuarterRiskConfig:
     stop_loss_of_paid_premium: float = 0.30
     daily_loss_pause_fraction: float = 0.10
     weekly_loss_pause_fraction: float = 0.15
+    lifetime_drawdown_lock_enabled: bool = False
+    lifetime_drawdown_trigger_fraction: float = 0.15
     # Predeclared signal confidence filter: we use the exact same original
     # breakout-event detector in either direction to isolate direction risk.
     # No tuning against the 20-day test period is performed here.
@@ -48,7 +50,7 @@ class QuarterRiskConfig:
             raise ValueError("side must be call or put")
         if self.maximum_contracts < 1:
             raise ValueError("maximum_contracts must be >= 1")
-        for name in ("stop_loss_of_paid_premium", "daily_loss_pause_fraction", "weekly_loss_pause_fraction"):
+        for name in ("stop_loss_of_paid_premium", "daily_loss_pause_fraction", "weekly_loss_pause_fraction", "lifetime_drawdown_trigger_fraction"):
             value = getattr(self, name)
             if not math.isfinite(value) or not 0 < value < 1:
                 raise ValueError(f"{name} must be finite and in (0, 1)")
@@ -66,6 +68,7 @@ class QuarterRiskStressResult:
     skipped_for_affordability: int
     entry_pauses: int
     stop_triggers: int
+    lifetime_lock_triggered: bool
     missing_position_quote_frames: int
     held_position_frames: int
 
@@ -103,6 +106,7 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
         self._week_start_equity = starting_cash
         self.entry_pauses = 0
         self.stop_triggers = 0
+        self.lifetime_lock_triggered = False
         self.missing_position_quote_frames = 0
         self.held_position_frames = 0
 
@@ -178,6 +182,21 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
                 self._daily_premiums_spent / self._session_start_equity,
             )
         baseline_signal = super().decide(frame, context)
+        if self.quarter_config.lifetime_drawdown_lock_enabled:
+            peak = max(self.starting_cash, self.realized_high_watermark)
+            threshold = peak * (1.0 - self.quarter_config.lifetime_drawdown_trigger_fraction)
+            # Never mark a missing quote as proof of a position loss.
+            valid_mark = position is None or frame.option(position.option_symbol) is not None
+            if valid_mark and context.equity <= threshold:
+                self.lifetime_lock_triggered = True
+            if self.lifetime_lock_triggered:
+                if position is None:
+                    if baseline_signal.action == "open":
+                        self.entry_pauses += 1
+                    return BacktestSignal("hold")
+                if baseline_signal.action == "hold" and valid_mark:
+                    self.stop_triggers += 1
+                    return BacktestSignal("close", reason="quarter_guard_lifetime_drawdown_lock")
         if not self.quarter_config.guard_enabled:
             return baseline_signal
 
@@ -237,6 +256,7 @@ def run_quarter_risk_directory(
             strategy.max_daily_spend_fraction, strategy.filled_entry_count,
             strategy.locked_profit, strategy.skipped_for_affordability,
             strategy.entry_pauses, strategy.stop_triggers,
+            strategy.lifetime_lock_triggered,
             strategy.missing_position_quote_frames, strategy.held_position_frames,
         ))
     return tuple(results)
