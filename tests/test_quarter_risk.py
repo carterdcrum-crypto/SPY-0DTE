@@ -160,3 +160,47 @@ def test_invalid_loss_guard_parameters():
     for name in ("stop_loss_of_paid_premium","daily_loss_pause_fraction","weekly_loss_pause_fraction"):
         with pytest.raises(ValueError):
             QuarterRiskConfig(**{name:0})
+
+
+def test_lifetime_drawdown_breaker_blocks_reentry_even_next_week(monkeypatch):
+    from engine.backtest import BacktestSignal
+    import engine.adaptive_vault as av
+    s=QuarterRiskStrategy(
+        starting_cash=1000,
+        quarter_config=QuarterRiskConfig(
+            guard_enabled=True, lifetime_drawdown_lock_enabled=True,
+            lifetime_drawdown_trigger_fraction=.15,
+        ),
+    )
+    s.decide(_frame(minute=0),_context(1000))
+    s.decide(_frame(minute=1),_context(840))
+    assert s.lifetime_lock_triggered is True
+    original=av.RocketVaultEventAlphaStrategy.decide
+    monkeypatch.setattr(av.RocketVaultEventAlphaStrategy,"decide",lambda *_: BacktestSignal("open","P",1,max_total_cost=200))
+    try:
+        assert s.decide(_frame(minute=2),_context(1100)).action=="hold"
+        assert s.decide(_frame(day=15),_context(1100)).action=="hold"
+        assert s.entry_pauses==2
+    finally:
+        monkeypatch.setattr(av.RocketVaultEventAlphaStrategy,"decide",original)
+
+
+def test_lifetime_breaker_tries_next_quote_exit_on_drawdown_while_held():
+    s=QuarterRiskStrategy(
+        starting_cash=1000,
+        quarter_config=QuarterRiskConfig(guard_enabled=True,lifetime_drawdown_lock_enabled=True),
+    )
+    s.decide(_frame(),_context(1000))
+    pos=PositionView("P",2,1.25,250,_frame(minute=1).timestamp)
+    signal=s.decide(
+        _frame(minute=1,options=(_option(bid=.85,ask=.92),)),
+        _context(840,settled=750,position=pos),
+    )
+    assert s.lifetime_lock_triggered
+    assert signal.action=="close"
+    assert signal.reason=="quarter_guard_lifetime_drawdown_lock"
+
+
+def test_invalid_lifetime_breaker_fraction():
+    with pytest.raises(ValueError):
+        QuarterRiskConfig(lifetime_drawdown_trigger_fraction=0)
