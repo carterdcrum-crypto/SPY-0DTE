@@ -167,3 +167,56 @@ def test_tape_aware_strategy_routes_direction_to_real_call_or_put_and_keeps_quar
 def test_missing_tape_data_explicitly_fails_backtest_no_fabricated_performance(tmp_path):
     with pytest.raises(RuntimeError,match="NO_TAPE_DATA"):
         run_tape_research_directory(tmp_path,starting_cash=1000)
+
+
+@pytest.mark.parametrize("side",["buy","sell"])
+def test_real_tape_can_trigger_direct_bullish_or_bearish_structure_break(side):
+    """Structural signal covers SELL pressure / breakdown even without Event Alpha bullish event."""
+    s=TapeAwareQuarterStrategy(starting_cash=1000,tape_events=prints(direction=side))
+    s._spot_history_session=T.date()
+    if side=="sell":
+        s._spot_history.extend([701.0-i*.10 for i in range(8)])
+    else:
+        s._spot_history.extend([699.0+i*.10 for i in range(8)])
+    signal=s.decide(frame(),account())
+    assert signal.action=="open"
+    assert signal.option_symbol==("SPY_P" if side=="sell" else "SPY_C")
+    assert signal.max_total_cost <= 250
+    assert "TAPE_CONFIRMED_STRUCTURE" in signal.reason
+    assert s.structure_entries==1
+    assert s.accepted_signals==1
+
+
+def test_structure_cannot_trigger_from_missing_tape_even_when_spy_breaks_out():
+    s=TapeAwareQuarterStrategy(starting_cash=1000,tape_events=())
+    s._spot_history_session=T.date()
+    s._spot_history.extend([699.0+i*.10 for i in range(8)])
+    assert s.decide(frame(),account()).action=="hold"
+    assert s.structure_entries==0
+
+
+def test_tape_signal_does_not_bypass_trade_date_warmup():
+    from datetime import date
+    s=TapeAwareQuarterStrategy(
+        starting_cash=1000,tape_events=prints(direction="sell"),
+        trade_start_date=date(2026,10,9),
+    )
+    s._spot_history_session=T.date()
+    s._spot_history.extend([701-i*.10 for i in range(8)])
+    assert s.decide(frame(),account()).action=="hold"
+    assert s.structure_entries==0
+
+
+def test_single_delayed_trade_invalidates_entire_tape_window():
+    base=prints()
+    delayed=base.copy()
+    t=delayed[4]
+    delayed[4]=TapePrint(
+        event_time=t.event_time-timedelta(seconds=6),
+        observed_at=t.observed_at,price=t.price,shares=t.shares,
+        aggressor=t.aggressor,bid=t.bid,ask=t.ask,
+    )
+    r=TapeReader()
+    for item in delayed:
+        r.ingest(item)
+    assert r.snapshot(T).reason=="late_feed"
