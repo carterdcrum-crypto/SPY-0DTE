@@ -244,17 +244,21 @@ class TapeAwareQuarterStrategy(QuarterRiskStrategy):
         signal=super().decide(frame,context)
         # The parent advances its full causal market-momentum stream first.
         if signal.action=="open":
-            self.eligible_signals+=1
-            if self._signal_direction is None:
-                self.rejected_signals+=1
-                return BacktestSignal("hold")
+            # Genuine quarter-risk budget and option pricing remain enforced.
             self.accepted_signals+=1
         return signal
 
     def _select_entry_option(self,frame:HistoricalFrame,budget:float):
+        # This hook is called only after the historical price-based event fires;
+        # count the candidate even if tape then vetoes entry.
+        self.eligible_signals += 1
         if self._signal_direction is None:
+            self.rejected_signals += 1
             return None
-        return super()._select_entry_option(frame,budget)
+        option = super()._select_entry_option(frame,budget)
+        if option is None:
+            self.rejected_signals += 1
+        return option
 
 
 @dataclass(frozen=True)
