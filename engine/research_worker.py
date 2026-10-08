@@ -382,8 +382,10 @@ def run_event_alpha_validation() -> None:
 
     raw_start = os.getenv("RESEARCH_EVENT_ALPHA_START", "").strip()
     raw_end = os.getenv("RESEARCH_EVENT_ALPHA_END", "").strip()
+    raw_trade_start = os.getenv("RESEARCH_EVENT_ALPHA_TRADE_START", "").strip()
     start_date = date.fromisoformat(raw_start) if raw_start else None
     end_date = date.fromisoformat(raw_end) if raw_end else None
+    trade_start_date = date.fromisoformat(raw_trade_start) if raw_trade_start else None
     balances = [
         float(value.strip())
         for value in os.getenv("RESEARCH_EVENT_ALPHA_BALANCES", "500,1000,10000").split(",")
@@ -408,6 +410,7 @@ def run_event_alpha_validation() -> None:
                 adverse_ticks=(0, 1, 2),
                 start_date=start_date,
                 end_date=end_date,
+                trade_start_date=trade_start_date,
             )
             for stress in results:
                 metrics = stress.result.metrics
