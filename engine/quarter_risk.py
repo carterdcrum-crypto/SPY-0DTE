@@ -54,6 +54,8 @@ class QuarterRiskStressResult:
     filled_entry_count: int
     locked_profit: float
     skipped_for_affordability: int
+    missing_position_quote_frames: int
+    held_position_frames: int
 
 
 class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
@@ -85,6 +87,8 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
         self.total_entry_premium = 0.0
         self.filled_entry_count = 0
         self.skipped_for_affordability = 0
+        self.missing_position_quote_frames = 0
+        self.held_position_frames = 0
 
     def _select_entry_option(self, frame: HistoricalFrame, budget: float) -> OptionQuote | None:
         eligible = [
@@ -136,6 +140,10 @@ class QuarterRiskStrategy(AdaptiveVaultEventAlphaStrategy):
             self._session_start_equity = context.equity
             self._daily_premiums_spent = 0.0
         position = context.position
+        if position is not None:
+            self.held_position_frames += 1
+            if frame.option(position.option_symbol) is None:
+                self.missing_position_quote_frames += 1
         if position is not None and position.entry_timestamp != self._seen_position_entry:
             self._seen_position_entry = position.entry_timestamp
             self._daily_premiums_spent += position.entry_cost
@@ -187,6 +195,7 @@ def run_quarter_risk_directory(
             ticks, quarter_config.side, result, strategy.total_entry_premium,
             strategy.max_daily_spend_fraction, strategy.filled_entry_count,
             strategy.locked_profit, strategy.skipped_for_affordability,
+            strategy.missing_position_quote_frames, strategy.held_position_frames,
         ))
     return tuple(results)
 
