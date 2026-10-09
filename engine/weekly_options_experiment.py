@@ -22,6 +22,7 @@ StrategyName = Literal["orb_simple", "orb_filtered", "vwap_reclaim"]
 class ExperimentConfig:
     strategy: StrategyName = "orb_simple"
     risk_fraction: float = 0.01
+    daily_gross_debit_fraction: float = 1.0  # includes previous entries, not just current open position
     daily_loss_fraction: float = .05
     profit_take_fraction: float = .65
     stop_premium_fraction: float = .35
@@ -46,6 +47,8 @@ class ExperimentConfig:
             raise ValueError("unsupported strategy")
         if not 0 < self.risk_fraction <= 1:
             raise ValueError("premium exposure must be in (0,1]")
+        if not 0 < self.daily_gross_debit_fraction <= 1:
+            raise ValueError("daily gross debit cap must be in (0,1]")
         if not 0 < self.daily_loss_fraction < 1:
             raise ValueError("daily loss trigger must be in (0,1)")
         if not 0 < self.stop_premium_fraction < 1 or self.profit_take_fraction <= 0:
@@ -335,6 +338,7 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
         outstanding=[(d,v) for d,v in outstanding if d>day]
         assert position is None and pending is None
         day_open_equity=cash_equity()
+        daily_gross_debit=0.0
         latest:dict[str,Quote]={}
         seen_bars:list[Bar]=[]
         prev_vwap=math.nan
@@ -370,6 +374,9 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
                             debit<=pending.max_debit+1e-9 and debit<=settled+1e-9 and
                             q.ask_size>=pending.contracts):
                             settled-=debit
+                            daily_gross_debit+=debit
+                            if daily_gross_debit>day_open_equity*cfg.daily_gross_debit_fraction+1e-6:
+                                raise AssertionError("100% daily gross premium ceiling exceeded")
                             fees+=cfg.fee_per_contract_side*pending.contracts
                             position=_Position(q,pending.contracts,price,debit,now,
                                                pending.signal,q.bid,now)
@@ -411,7 +418,10 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
                             side,reason=signal
                             chosen=_select_quote(latest,now,side,cfg,b.close)
                             if chosen:
-                                max_debit=min(cfg.risk_fraction*cash_equity(),settled)
+                                max_debit=min(
+                                    cfg.risk_fraction*cash_equity(),settled,
+                                    max(0.0,day_open_equity*cfg.daily_gross_debit_fraction-daily_gross_debit),
+                                )
                                 expected_cost=(chosen.ask+cfg.adverse_option_ticks*cfg.option_tick_size)*100+cfg.fee_per_contract_side
                                 count=int(max_debit//expected_cost)
                                 count=min(count,chosen.ask_size)
