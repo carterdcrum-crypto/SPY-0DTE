@@ -113,3 +113,68 @@ Outputs saved to the existing persistent research volume:
 No new vendor/API purchase, no Webull order or live change. A claim of
 +100% account return a week still requires **future unseen**, realistic
 historical option chain execution replay and extended paper trading.
+
+
+## Actual Railway execution — October 8, 2026
+
+Research-only Railway deployment `386f8331-0192-4284-a754-c1f564a64fe1`
+ran successfully against **128 sessions / 49,792 archived SPY
+one-minute snapshots**. It evaluated **2,473 nonoverlapping original
+breakout opportunities**, created the JSON and CSV reports under
+`/data/research/causal_breakout_router/`, and made **zero new
+market-data purchases or broker orders**. The Python test workflow
+passed.
+
+### Results: identical 3-minute-delayed entry clock, next-bar spot proxy
+
+Below each accepted forecast is scored as the signed **SPY
+underlying** basis-point change over the ten minute proxy horizon,
+**minus a hypothetical flat 2-bp hurdle**; NOT option premium P&L,
+account returns or real execution costs. An abstention earns zero.
+This is especially important when filtering away a losing strategy.
+
+| Period | Fixed strategy | Accepted | Direction correct | Mean *after 2bp* per event | Mean *after 2bp* per session incl. abstentions |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Apr–Jul development, 82 days | Delayed all-breakouts baseline | 1,582 | 51.1% | −1.9617 bps | −37.8467 bps |
+| Development | Confirmed continuation | 31 | 61.3% | −0.9534 | −0.3604 |
+| Development | Observed failed-break fade | 158 | 48.1% | −1.5666 | −3.0186 |
+| Development | Conditional router | 189 | 50.3% | −1.4660 | −3.3791 |
+| Aug–Sep validation, 25 days | Delayed baseline | 497 | 53.9% | −1.7298 | −34.3881 |
+| Validation | **Confirmed continuation** | **13** | **76.9%** | **+1.0317** | **+0.5365** |
+| Validation | Observed failed-break fade | 39 | 46.2% | −1.4146 | −2.2068 |
+| Validation | Conditional router | 52 | 53.8% | −0.8030 | −1.6703 |
+| Sep–Oct previously studied diagnostic, 21 days | Delayed baseline | 394 | 47.2% | −2.1314 | −39.9898 |
+| Previously studied | Confirmed continuation | **7** | **42.9%** | **−3.8674** | **−1.2891** |
+| Previously studied | Observed failed-break fade | 47 | 55.3% | −0.5629 | −1.2598 |
+| Previously studied | Conditional router | 54 | 53.7% | −0.9912 | −2.5489 |
+
+### Falsifiable readout
+
+**Confirmed continuation** looked promising in Aug–Sep, with
+**10 correct directions out of 13**, but was **3 out of 7** later.
+That is far too few events and a clear cross-period reversal; it
+**does not survive the later regime**.
+
+Its paired five-session block 95% interval for **daily bps after
+the hypothetical 2bp hurdle** was
+**−0.5287 to +1.6641** in validation (includes zero), then
+**−2.7453 to −0.1319** in the later diagnostic (entirely negative).
+
+**Failed-break fade** was negative during development, validation,
+and the later diagnostic, despite its confirmation using only events
+observable **before** delayed entry.
+
+**Conditional router** was negative in all three periods. No combined
+ruleset reliably turns these 15-prior-close-breakout forecasts into
+positive signed SPY bps after the hypothetical hurdle.
+
+The paired improvement over the delayed all-breakouts baseline is
+large and positive in each period, but that baseline was deeply
+negative; **taking fewer costly signals often improves results without
+generating any absolute edge**.
+
+**Decision: none of these four is eligible for live 0DTE trading.**
+Do not tune dozens of thresholds after seeing the above metrics
+and call the same days untouched validation. An independent future
+SPY **and timestamped option event-quote** study is needed to
+measure plausible profit/drawdown or the 100%-weekly hypothesis.
