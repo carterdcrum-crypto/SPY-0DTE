@@ -376,7 +376,18 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "jointprobability":
+    if mode == "macdrsisma":
+        from .macd_rsi_sma_tape_experiment import main as indicator_main
+        args=[
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_INDICATOR_OUTPUT",
+                str(_data_dir()/"indicator_tape_fusion")),
+        ]
+        existing_tape=os.getenv("RESEARCH_VERIFIED_SPY_TAPE_CSV","").strip()
+        if existing_tape:
+            args.extend(["--verified-spy-tape-csv",existing_tape])
+        raise SystemExit(indicator_main(args))
+    elif mode == "jointprobability":
         from .joint_probability_audit import main as joint_main
         raise SystemExit(joint_main([
             "--data-dir",str(_data_dir()),
