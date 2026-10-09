@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "continuationregimegate":
+    if mode == "magnitudeedge":
+        from .magnitude_edge_study import main as magnitude_main
+        raise SystemExit(magnitude_main([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_MAGNITUDE_OUTPUT",
+                str(_data_dir()/"magnitude_edge")),
+        ]))
+    elif mode == "continuationregimegate":
         from .continuation_regime_gate import main as run_regime
         raise SystemExit(run_regime([
             "--data-dir",str(_data_dir()),
