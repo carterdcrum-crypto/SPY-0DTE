@@ -107,3 +107,78 @@ volume persists:
 
 No data purchases, no Webull API or broker order, no Auto Trade toggle
 change; research hosting still consumes existing Railway resources.
+
+
+## Completed archived research results — October 9, 2026
+
+Railway deployment `7d33bc20-2165-4b67-b8a3-5857af34cb13`
+executed successfully using **128 previously licensed SPY sessions,
+49,792 observed historical 1-minute snapshots**, and produced
+**1,704 strictly past-trained forecast rows**. The first 40 sessions
+and periods with insufficient prior events were warmup, not fake
+predictions. No new historical data was purchased; no Webull orders
+or other broker-side calls were made. The adaptive signal filter
+remains OFF.
+
+### Main preregistered comparison: conditional minus unconditional Brier
+
+Both probabilities were trained exclusively on up to 60 earlier
+completed SPY trading sessions and scored on the **same
+next-completed-bar 10-minute SPY directional price proxy outcomes**.
+Lower Brier is better; **negative delta means the two-feature
+joint signal was more accurate as a probability forecast**.
+Numbers are **not account P&L and not probabilities of profitable
+options contracts**.
+
+| Chronological period | Target signed SPY price move | Forecasted events | Lagged baseline Brier | Two-feature conditional Brier | Conditional − baseline | 95% paired 5-day bootstrap difference interval |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Development Apr–Jul | **>2bps** | 813 | 0.237851 | **0.236248** | −0.001602 | [−0.001504, −0.000170] |
+| Validation Aug–Sep | >2bps | 497 | **0.231751** | 0.232647 | **+0.000896** | [−0.001695, +0.003586] |
+| Already-studied Sep–Oct | >2bps | 394 | 0.227438 | **0.225698** | −0.001740 | [−0.003808, +0.000119] |
+| Development Apr–Jul | **>5bps** | 813 | 0.194506 | **0.189733** | −0.004773 | [−0.003947, −0.000975] |
+| Validation Aug–Sep | **>5bps** | 497 | 0.147189 | **0.142492** | **−0.004697** | **[−0.007713, −0.001075]** |
+| Already-studied Sep–Oct | **>5bps** | 394 | 0.139905 | **0.135328** | **−0.004577** | **[−0.008829, −0.001140]** |
+| Validation Aug–Sep | **<−5bps** adverse | 497 | 0.127603 | **0.115651** | **−0.011952** | **[−0.019141, −0.004382]** |
+| Already-studied Sep–Oct | **<−5bps** adverse | 394 | 0.145367 | **0.141105** | **−0.004262** | **[−0.008632, −0.000221]** |
+
+For completeness: predicting merely the *correct direction*
+(>0bps) showed **no robust gain**. Conditional-minus-base Brier
+for >0bps was +0.000276 in development, −0.000419 validation
+and +0.000349 later. Both validation and later confidence intervals
+included zero. The conditional model also failed to improve
+the **>2bps** goal consistently in the final two periods.
+
+### What the research supports — and what it does not
+
+**Measurable, narrow progress:** adding the as-of-confirmation
+continuation flag and expected movement category helped forecast
+the frequency of **fairly large (>|5|bps), signed SPY-price
+moves** beyond a lagged unconditional base rate on *previously
+inspected* historical sessions. For >5bps correct-direction moves,
+the mean Brier decreased approximately 3.2% in Aug–Sep and
+3.3% in Sep–Oct versus the lagged base rate. Adverse move
+calibration also improved in both periods.
+
+**Still not a winning strategy:** these are probabilistic forecast
+scoring improvements, not realized trading returns, not actual
+SPY 0DTE premiums, and not evidence of sustainable 100% weekly
+account gains. The original confirmed continuation trades remained
+negative in the later historical period, and the relevant
+>2bps probability showed no consistent validated gain. **We
+have NOT used these forecast probabilities to trigger orders or
+relaxed any financial risk guardrails.**
+
+**Multiple-testing and past inspection caveat:** the same archived
+dates have been viewed in prior rounds. The 5-day block intervals
+are descriptive and do not make any date an untouched holdout.
+This two-feature combination and its priors are deliberately fixed
+for any subsequent untouched evaluation. Avoid choosing a new
+feature or threshold on these same outcomes then calling it
+prospective evidence.
+
+**Next evidence gate:** keep the source frozen, gather future
+untouched underlying signals and event-time observed SPY 0DTE
+option quote prices/size. Analyze actual call/put entry-ask,
+exit-bid, fees, slippage, expiry, cash-settlement and account
+drawdown **before** using any probabilistic model for live orders.
+Any purchased market data must have explicit authorization.
