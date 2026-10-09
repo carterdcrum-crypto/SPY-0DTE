@@ -130,3 +130,73 @@ This cannot establish +100% weekly option returns or a safe maximum
 drawdown. Any finding is a price-prediction screening experiment
 until real options quote/fill paths, fees and fresh unseen sessions
 are available.
+
+
+## Completed Railway experiment — October 9, 2026
+
+The research-only Railway service completed the **128 historical trading
+sessions / 49,792 observed archived minute snapshots**. **2,138**
+initial breakout events remained after the preregistered continuous
+75-completed-minute indicator warmup. The results were written to
+`/data/research/indicator_tape_fusion/report.json` and the
+complete event ledger on the existing research volume. No new data
+purchase or live broker order occurred. Python CI was green.
+
+### Combined technical indicators versus the same-clock baseline
+
+All price results below are the **mean signed ten-minute underlying
+SPY CLOSE-price basis points per admitted opportunity after subtracting
+a hypothetical 2bps price hurdle**. They are **NOT actual stock fills,
+options P&L, premiums, fees or account drawdown**.
+
+| Rule (predefined) | Development accepted / mean net bps | Aug–Sep validation accepted / mean net bps | Sep–Oct previously viewed accepted / mean net bps |
+| --- | ---: | ---: | ---: |
+| Same delayed-close baseline | 1,371 / **−1.9420** | 426 / **−1.7953** | 341 / **−2.0239** |
+| MACD crossover + RSI + SMA | 233 / **−2.3731** | 68 / **−2.5893** | 53 / **−1.9582** |
+| All indicators + 3-minute CLOSE-price action | 119 / **−1.4860** | 27 / **−1.4751** | 21 / **−3.7280** |
+| Indicators + close action + minute **volume proxy** | 36 / **−1.5254** | **8 / +1.0255** | **6 / −6.0783** |
+| Indicators + close action + verified tick trade tape | **UNAVAILABLE** | **UNAVAILABLE** | **UNAVAILABLE** |
+| All above + volume ratio + verified tick trade tape | **UNAVAILABLE** | **UNAVAILABLE** | **UNAVAILABLE** |
+
+**The best-looking validation configuration is misleading if treated
+as proven edge.** Eight combined indicator+close-action+volume-proxy
+signals predicted the correct SPY direction **6/8 times**. Four of
+those eight exceeded the hypothetical 2bps *SPY spot* hurdle, and
+three exceeded 5bps. The model averaged **+1.0255 spot bps/event
+after subtracting 2bps** during Aug–Sep (25 sessions).
+
+On the **next, previously inspected Sep–Oct 21-session interval**, the
+**same exact frozen rule** took six opportunities, correctly predicted
+just **2/6 directions**, and averaged **−6.0783 spot bps/event
+after the hypothetical 2bps**. Positive-validation apparent
+performance **did not generalize**. The small 8- and 6-event
+samples cannot establish a repeatable trading advantage.
+
+For the eight-signal validation subset, the seeded 5-session-block
+descriptive 95% confidence interval for average signed spot bps
+**per day including no-trade sessions** was
+**−0.9323 to +1.8126**, including zero. The subsequent six-signal
+diagnostic interval was **−3.9015 to +0.5241**, also including
+zero. Neither interval establishes reliable positive forecasting
+returns, never mind options returns. Reducing the number of signals
+mainly decreases exposure to the negative baseline.
+
+### Tape status and proper limits
+
+**Genuine SPY tick tape was NOT present** in any of the 128 existing
+minute-summary archives. Both source-dependent tape policies
+therefore intentionally report **UNAVAILABLE_VERIFIED_SPY_TAPE**,
+rather than inventing aggressor-side volume or pretending the
+minute volume ratio is order flow. The standalone tick parser and
+as-of timestamp tests are implemented and CI verified for future
+already-licensed tape input if ever supplied.
+
+**Conclusion:** MACD/RSI/SMA, completed-close price action, and
+volume-ratio confirmation were combined and tested, but **no
+repeatable positive SPY underlying price-proxy result survived the
+historical period change**. The previously inspected dates are NOT
+sealed holdouts. Do not activate the adaptive selector, enable live
+trading, increase size or pay for data based on the temporary +8-signal
+result. Actual 0DTE expected value still requires correctly timestamped
+option bid/ask size, liquidity, adverse fill assumptions, fees,
+cash settlement and future untouched observations.
