@@ -125,3 +125,91 @@ session**, including no-trade days, and the 5-session-block CI
 vs the unfiltered baseline matter more than event hit rate.
 No new dataset expense is authorized, so this diagnostic can at most
 decide which failure mechanisms deserve further data collection.
+
+
+## Completed zero-cost Railway audit (October 8, 2026)
+
+The audit **ran** on the 128 archived SPY sessions (49,792
+historical minute frames), wrote its full baseline opportunity ledger,
+fixed-filter comparison CSV, detailed failure-strata CSV and JSON
+summary to the existing Railway research volume. GitHub Actions passed.
+No paid data requests or broker order calls.
+
+### Fixed-filter results — August 3–September 4 validation (25 days)
+
+All returns below are **signed SPY underlying basis points after a
+hypothetical 2-bp hurdle per accepted signal**, not option returns or
+account growth. The "decline" is *cumulative additive bps*, **not
+financial max drawdown**. The candidate timing is the identical
+unfiltered baseline's nonoverlapping signal timestamps.
+
+| Filter | Accepted of 497 | Mean bps/event after 2bp | Mean bps/session incl. no-trade | Largest additive-bps decline |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline, all signals | 497 | **−1.7005** | −33.8059 | 845.15 |
+| Volume + 5m trend | 89 | **−1.9557** | −6.9623 | 184.58 |
+| 30m trend + efficiency | 103 | **−0.9367** | −3.8590 | 124.88 |
+| <=8bp extension + volume | 147 | **−1.8180** | −10.6898 | 271.86 |
+| All filters combined | **26** | **−0.6523** | −0.6784 | **43.12** |
+
+All five validation variants are **negative** after the simple 2-bp
+proxy hurdle. 30-minute trend alignment plus close-path efficiency is
+the best less-restrictive *diagnostic* for removing false breakouts in
+validation, not an established economic strategy.
+
+### Previously studied September 8–October 6 diagnostic (21 days)
+
+This period **IS NOT untouched out-of-sample**, because the broader
+project already analyzed it. It is disclosed for cross-regime
+diagnostics, not for model selection or promotion to live trading.
+
+| Filter | Accepted of 394 | Mean bps/event after 2bp | Mean bps/session incl. no-trade | Largest additive-bps decline |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline, all signals | 394 | −2.6101 | −48.9707 | 1,028.38 |
+| Volume + 5m trend | 85 | −1.8973 | −7.6795 | 161.27 |
+| 30m trend + efficiency | 67 | −2.3025 | −7.3460 | 154.27 |
+| <=8bp extension + volume | 128 | −1.5438 | −9.4101 | 197.61 |
+| All filters combined | **15** | **+0.9021** | **+0.6444** | **19.69** |
+
+The single apparent positive (+0.9021 bps per event after the 2-bp
+hurdle) is based on just **15 events** and **did not survive the
+preceding validation period** (−0.6523). It cannot support a claim of
+repeatability, actual executable options profit or 100% weekly account
+growth.
+
+### Why the original breakouts fail (observable failure mechanisms)
+
+1. **Snap-back into the prior 15-close range is common.** In the
+   Sep–Oct diagnostic, approximately 50% of the 394 baseline breakout
+   events had at least one close back inside that boundary during the
+   first three minutes **after the proxy entry**. This is an *outcome*
+   diagnostic, **not** a predictor available when the order would be
+   placed.
+2. **Chop and missing trend alignment are associated with worse late
+   results.** In Sep–Oct, efficient 15-close trajectories averaged
+   −0.2549 raw bps vs choppy trajectories −0.7375; 30-minute
+   trend-aligned events averaged −0.1573 vs nonaligned −0.8408.
+   Both trend groups remain negative after a 2bp hurdle.
+3. **Midday breaks are comparatively weaker.** Midday baseline events
+   averaged −0.5096 raw bps in Apr–Jul, −0.1297 in Aug–Sep,
+   and −0.7671 in Sep–Oct. This is correlational, not
+   evidence that time-of-day alone is a reliable trading filter.
+4. **Volume does not reliably save the breakouts.** High recorded
+   volume ratio did better in Sep–Oct (+0.2715 vs −1.0493 raw bps
+   below the cutoff), but did worse in development (−0.1600 vs
+   +0.0568) and validation (+0.1820 vs +0.3488).
+   A fixed high-volume condition is therefore **not a stable
+   cross-regime winner**.
+
+The five-session **paired bootstrap improvement** interval is positive
+for each abstention filter vs the original full-trade baseline.
+**Do not misinterpret that as profitability:** when the baseline is
+negative after a hypothetical cost hurdle, *taking fewer trades* usually
+improves the signed-bps sum. All variants except the tiny last-period
+combined filter were still negative relative to simply not trading.
+
+**Decision: No viable repeatable signal edge identified.**
+All five candidates remain **research-only**; cash and live trading are
+unchanged. Next independent validation should use **future untouched
+sessions**, while executable SPY 0DTE option profitability needs true
+quote observation times, bid/ask size, fees, spreads and option
+chain coverage. No market-data purchase has been authorized.
