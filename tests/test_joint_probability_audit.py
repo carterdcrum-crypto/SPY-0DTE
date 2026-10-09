@@ -147,10 +147,22 @@ def test_brier_proper_scoring_and_no_account_pnl():
     assert summary["gt2"]["day_block_delta_ci"]["days_with_predictions"]==1
 
 
-def test_full_replay_requires_warmup_and_does_not_trade():
-    # Each fixture day has roughly one breakout event: exceed the STRICT
-    # 100-observation training warmup instead of assuming 40 days suffice.
-    days=[date(2026,4,1)+timedelta(days=i) for i in range(116)]
+def test_full_replay_requires_warmup_and_does_not_trade(monkeypatch):
+    import engine.joint_probability_audit as study
+
+    # The synthetic underlying fixture creates ~1 event/day, insufficient
+    # for the strict 100 events *within trailing 60 complete sessions*.
+    # Stub only the upstream event generator with three safe archival
+    # observations/session; exercise the real causal rolling scorer.
+    def three_synthetic_signals(day_frames):
+        day=day_frames[0].timestamp.astimezone(ET).date()
+        return [
+            synthetic_event(day,signed=8. if i%2==0 else -9.,
+                            continuation=(i==0),high=(i!=1))
+            for i in range(3)
+        ]
+    monkeypatch.setattr(study,"build_session_observations",three_synthetic_signals)
+    days=[date(2026,4,1)+timedelta(days=i) for i in range(45)]
     frames=[]
     for i,day in enumerate(days):
         frames.extend(fake_spy_day(day,negative=(i%4==0)))
