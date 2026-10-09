@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "macdrsisma":
+    if mode == "weighteddaily":
+        from .weighted_daily_coverage import main as run_weighted
+        raise SystemExit(run_weighted([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_WEIGHTED_DAILY_OUTPUT",
+                str(_data_dir()/"weighted_daily_coverage")),
+        ]))
+    elif mode == "macdrsisma":
         from .macd_rsi_sma_tape_experiment import main as indicator_main
         args=[
             "--data-dir",str(_data_dir()),
