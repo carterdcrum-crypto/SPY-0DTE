@@ -331,7 +331,8 @@ def run_weekly_narrow_cost_estimate() -> None:
     import databento as db
     day=date.fromisoformat(os.getenv("RESEARCH_COST_DAY","2026-10-06"))
     frame=None
-    for item in iter_research_directory(_data_dir(),start_date=day,end_date=day):
+    from .data import load_canonical_path
+    for item in load_canonical_path(_output_path(day)):
         local=item.timestamp.astimezone(ZoneInfo("America/New_York"))
         if local.hour>9 or (local.hour==9 and local.minute>=45):
             frame=item
