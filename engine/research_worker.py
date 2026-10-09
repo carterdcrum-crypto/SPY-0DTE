@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weighteddaily":
+    if mode == "spyexpiry01":
+        from .spy_expiry_pair_study import main as run_expiries
+        raise SystemExit(run_expiries([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_SPY_EXPIRY_OUTPUT",
+                str(_data_dir()/"spy_0_vs_1dte")),
+        ]))
+    elif mode == "weighteddaily":
         from .weighted_daily_coverage import main as run_weighted
         raise SystemExit(run_weighted([
             "--data-dir",str(_data_dir()),
