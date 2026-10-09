@@ -234,8 +234,8 @@ def _roundtrip(op:Opportunity,entry:Quote,exit_quote:Quote,
 
 
 def _blank_account(cash:float)->dict:
-    return {"settled":cash,"receivables":[],"pnl":0.,"peak":cash,
-            "drawdown":0.,"trades":[]}
+    return {"settled":cash,"receivables":[],"pnl":0.,"starting_cash":cash,
+            "peak":cash,"drawdown":0.,"trades":[]}
 
 
 def _settle(account:dict,session_day:date)->None:
@@ -256,7 +256,9 @@ def _apply_pair_trade(account:dict,trade:QuoteRoundTrip,day:date)->None:
         (next_trading_session(day),trade.exit_cash_receivable_usd))
     account["pnl"]+=trade.realized_quote_pnl_usd
     account["trades"].append(trade)
-    equity=account["pnl"]  # compare closed-trade PnL path, not cash settlement
+    # Equity = original capital + realized P&L, NOT temporary unsettled
+    # cash accounting. This is CLOSED-TRADE equity; no intratrade marks.
+    equity=account["starting_cash"]+account["pnl"]
     account["peak"]=max(account["peak"],equity)
     account["drawdown"]=max(account["drawdown"],account["peak"]-equity)
 
