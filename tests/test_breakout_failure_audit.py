@@ -26,7 +26,7 @@ def frames(day=date(2026,8,12),*,bad_future=False,missing_prior_bar=False):
         elif i==32:
             spot=700.50
         elif i>32:
-            spot=700.10 if bad_future else 700.5+(i-32)*.006
+            spot=700.10 if bad_future and i>33 else 700.5+(i-32)*.006
         else:
             spot=700.145
         now=start+timedelta(minutes=i+(1 if missing_prior_bar and i>=11 else 0))
