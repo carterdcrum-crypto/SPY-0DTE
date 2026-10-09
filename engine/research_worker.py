@@ -225,9 +225,43 @@ def run_burst_validation() -> None:
             )
 
 
+
+def run_weekly_cost_estimate() -> None:
+    """Metadata-only quote / OHLCV price estimate. NEVER download billable data."""
+    from datetime import datetime, time
+    from zoneinfo import ZoneInfo
+    try:
+        import databento as db
+    except ImportError:
+        print("WEEKLY COST: DATABENTO_SDK_UNAVAILABLE", flush=True)
+        return
+    day = date.fromisoformat(os.getenv("RESEARCH_COST_DAY", "2026-10-06"))
+    start = datetime.combine(day,time(9,30),ZoneInfo("America/New_York")).isoformat()
+    end = datetime.combine(day,time(16,0),ZoneInfo("America/New_York")).isoformat()
+    client=db.Historical()
+    for dataset,schema,symbols,stype in (
+        ("EQUS.MINI","ohlcv-1m",["SPY"],None),
+        ("OPRA.PILLAR","cmbp-1","SPY.OPT","parent"),
+        ("OPRA.PILLAR","tcbbo","SPY.OPT","parent"),
+    ):
+        label=f"{dataset} {schema}"
+        try:
+            arguments={"dataset":dataset,"schema":schema,
+                       "symbols":symbols,"start":start,"end":end}
+            if stype is not None:
+                arguments["stype_in"]=stype
+            usd=float(client.metadata.get_cost(**arguments))
+            print(f"WEEKLY COST: date={day} dataset={dataset} schema={schema} estimated_usd={usd:.4f} metadata_only=true",flush=True)
+        except Exception as exc:
+            # Avoid logging request parameters or credentials.
+            print(f"WEEKLY COST: date={day} label={label} unavailable error_type={type(exc).__name__} metadata_only=true",flush=True)
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weeklyoptionsaudit":
+    if mode == "weeklycost":
+        run_weekly_cost_estimate()
+    elif mode == "weeklyoptionsaudit":
         import json
         from .weekly_options_data import audit
         print("WEEKLY OPTIONS DATA AUDIT: " + json.dumps(audit(_data_dir()),sort_keys=True),flush=True)
