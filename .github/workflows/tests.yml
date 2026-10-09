@@ -2,7 +2,7 @@ name: engine-tests
 
 on:
   push:
-    branches: [main, research/weekly-options-walkforward, research/free-signal-screen]
+    branches: [main, research/weekly-options-walkforward, research/free-signal-screen, research/breakout-failure-audit]
   pull_request:
     branches: [main]
 
