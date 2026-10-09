@@ -93,6 +93,19 @@ class DailyEquity:
 
 
 @dataclass(frozen=True)
+class EquityMark:
+    at: str
+    equity: float
+    settled_cash: float
+    unsettled_cash: float
+    realized_pnl: float
+    unrealized_pnl: float
+    fees_paid: float
+    stale_option_mark: bool
+    reconciles: bool
+
+
+@dataclass(frozen=True)
 class BacktestReport:
     configuration: ExperimentConfig
     starting_cash: float
@@ -111,6 +124,8 @@ class BacktestReport:
     exposure_fraction: float
     trade_ledger: tuple[LedgerTrade,...]
     daily_equity: tuple[DailyEquity,...]
+    intraday_marks: tuple[EquityMark,...]
+    intraday_max_drawdown: float
 
 
 @dataclass
@@ -223,11 +238,11 @@ def _eligible_quote(q:Quote,as_of:datetime,side:str,cfg:ExperimentConfig)->bool:
     return (q.ask-q.bid)/((q.ask+q.bid)/2)<=cfg.max_spread_fraction
 
 
-def _select_quote(last:dict[str,Quote],as_of:datetime,side:str,cfg:ExperimentConfig)->Quote|None:
+def _select_quote(last:dict[str,Quote],as_of:datetime,side:str,cfg:ExperimentConfig,spot:float)->Quote|None:
     eligible=[q for q in last.values() if _eligible_quote(q,as_of,side,cfg)]
     return min(eligible,key=lambda q:(
         abs(abs(q.delta)-.50),(q.ask-q.bid)/q.ask,
-        abs(q.strike-700),q.symbol,
+        abs(q.strike-spot),q.symbol,
     )) if eligible else None
 
 
@@ -245,6 +260,7 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
     pending:_Order|None=None
     ledger:list[LedgerTrade]=[]
     daily:list[DailyEquity]=[]
+    marks:list[EquityMark]=[]
     orders=fills=cancels=missing=stale=worthless=0
     observed_open_minutes=0
     possible_open_minutes=0
@@ -256,6 +272,30 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
 
     def cash_equity() -> float:
         return settled+sum(value for _,value in outstanding)
+
+    def mark_at(now:datetime) -> None:
+        nonlocal stale
+        underlying=cash_equity()
+        value=0.0
+        unrealized=0.0
+        ambiguous=False
+        if position is not None:
+            if (now-position.last_quote_at).total_seconds()>cfg.max_quote_age_seconds:
+                stale+=1
+                ambiguous=True
+            else:
+                # Executable bid-based liquidation mark; no look-ahead.
+                possible_price=max(0.0,position.last_bid-cfg.adverse_option_ticks*cfg.option_tick_size)
+                value=max(0.0,possible_price*position.contracts*100-
+                          cfg.fee_per_contract_side*position.contracts)
+            unrealized=value-position.debit
+        equity=underlying+value
+        good=abs(equity-(starting_cash+realized+unrealized))<1e-5
+        if not good:
+            raise AssertionError("mark-to-market account equity does not reconcile")
+        marks.append(EquityMark(now.isoformat(),equity,settled,
+                                sum(v for _,v in outstanding),realized,
+                                unrealized,fees,ambiguous,True))
 
     def close_position(at:datetime,fill:float,reason:str,quote_at:datetime|None):
         nonlocal position,realized,fees,settled,worthless
@@ -364,7 +404,7 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
                             {k:list(v) for k,v in volume_history.items()},cfg.min_rvol)
                         if signal:
                             side,reason=signal
-                            chosen=_select_quote(latest,now,side,cfg)
+                            chosen=_select_quote(latest,now,side,cfg,b.close)
                             if chosen:
                                 max_debit=min(cfg.risk_fraction*cash_equity(),settled)
                                 expected_cost=(chosen.ask+cfg.adverse_option_ticks*cfg.option_tick_size)*100+cfg.fee_per_contract_side
@@ -379,6 +419,7 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
                                     )
                                     orders+=1
             # Equity marks never use future quotes.
+            mark_at(now)
         if pending is not None:
             pending=None
             cancels+=1
@@ -386,7 +427,9 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
         # emergency exit cannot be proven. Treat the 0DTE premium as lost.
         # This is deliberately conservative, not a fabricated bid execution.
         if position is not None:
+            missing+=1
             close_position(cutoff,0.0,"no_executable_close_quote_zero_recovery",None)
+        mark_at(cutoff)
         equity=cash_equity()
         # No position is carried beyond each session.
         expected=starting_cash+realized
@@ -409,6 +452,11 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
     for v in daily:
         peak=max(peak,v.equity)
         dd=max(dd,1-v.equity/peak)
+    peak_intraday=starting_cash
+    intraday_dd=0.0
+    for v in marks:
+        peak_intraday=max(peak_intraday,v.equity)
+        intraday_dd=max(intraday_dd,1-v.equity/peak_intraday)
     gains=sum(t.realized_pnl for t in ledger if t.realized_pnl>0)
     losses=-sum(t.realized_pnl for t in ledger if t.realized_pnl<0)
     pf=gains/losses if losses>0 else (math.inf if gains else 0.0)
@@ -417,5 +465,5 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
         len(ledger),cancels,missing,stale,worthless,fees,
         pf,(sum((datetime.fromisoformat(t.exit_at)-datetime.fromisoformat(t.entry_at)).total_seconds()
                 for t in ledger)/(len(sessions)*6.5*3600)) if sessions else 0.0,
-        tuple(ledger),tuple(daily),
+        tuple(ledger),tuple(daily),tuple(marks),intraday_dd,
     )
