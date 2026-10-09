@@ -280,6 +280,8 @@ def run_development(root:Path,output:Path,days:Sequence[date],args)->dict:
         "unseen_holdout_last_date":str(holdout[-1]),
         "holdout_sessions":len(holdout),
         "starting_cash":args.cash,"winner_selected_only_from_validation":winner,
+        "preregistered_first_date":str(args.first_date),
+        "preregistered_last_date":str(args.last_date),
         "selection_criterion":"mean validation geometric weekly return minus 2x intraday max drawdown; minimum 3 closed trades; no selection on fold tests or holdout",
         "configuration_grid":"three named strategies x 0.5/1/2 pct, fixed parameters; no other parameters searched",
         "holdout_peeking_not_allowed":True,
@@ -316,8 +318,10 @@ def run_holdout(root:Path,output:Path,days:Sequence[date],args)->dict:
     seal=json.loads(path.read_text())
     if seal["code_sha256"]!=code_hash() or seal["experiment_version"]!=RESEARCH_VERSION:
         raise ValueError("code changed after freeze; holdout cannot be accessed")
-    if seal["starting_cash"]!=args.cash or str(root)!=seal["data_origin"]:
-        raise ValueError("account or data root altered after freeze")
+    if (seal["starting_cash"]!=args.cash or str(root)!=seal["data_origin"]
+        or seal["preregistered_first_date"]!=str(args.first_date)
+        or seal["preregistered_last_date"]!=str(args.last_date)):
+        raise ValueError("account, dates or data root altered after freeze")
     last=[d for d in days if seal["unseen_holdout_first_date"]<=str(d)<=seal["unseen_holdout_last_date"]]
     if not last or len(last)!=seal["holdout_sessions"] or str(last[0])!=seal["unseen_holdout_first_date"] or str(last[-1])!=seal["unseen_holdout_last_date"]:
         raise ValueError("holdout calendar changed after freeze")
@@ -404,6 +408,10 @@ def main(argv:Sequence[str]|None=None)->int:
     parser.add_argument("--data-dir",type=Path,required=True)
     parser.add_argument("--output-dir",type=Path,default=Path("research_results/weekly_options"))
     parser.add_argument("--cash",type=float,default=10000.0)
+    parser.add_argument("--first-date",type=date.fromisoformat,
+                        help="Required preregistered first included exchange session YYYY-MM-DD")
+    parser.add_argument("--last-date",type=date.fromisoformat,
+                        help="Required preregistered last included exchange session YYYY-MM-DD")
     parser.add_argument("--train-sessions",type=int,default=40)
     parser.add_argument("--validation-sessions",type=int,default=10)
     parser.add_argument("--test-sessions",type=int,default=10)
@@ -417,7 +425,17 @@ def main(argv:Sequence[str]|None=None)->int:
     if not info["usable_for_this_experiment"]:
         print(json.dumps({"status":"DATA_BLOCKED",**info},indent=2))
         return 2
-    days=available_sessions(args.data_dir)
+    if args.first_date is None or args.last_date is None:
+        parser.error("--first-date and --last-date are required before development or holdout")
+    if args.first_date>args.last_date or session_close(args.first_date) is None or session_close(args.last_date) is None:
+        parser.error("first and last dates must be ordered and open verified trading sessions")
+    all_source_days=available_sessions(args.data_dir)
+    # Do not silently drop any one-sided or unpaired input day:
+    # user must audit/repair the full predeclared calendar.
+    days=tuple(d for d in all_source_days
+               if args.first_date<=d<=args.last_date)
+    if not days or days[0]!=args.first_date or days[-1]!=args.last_date:
+        raise ValueError("preregistered date boundaries missing from paired real input data")
     full_session_calendar(days)
     result=(run_development(args.data_dir,args.output_dir,days,args)
             if args.mode=="development" else
