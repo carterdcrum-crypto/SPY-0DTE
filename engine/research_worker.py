@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weighteddaily":
+    if mode == "highbetastocks":
+        from .high_beta_options_compare import main as run_stock_compare
+        raise SystemExit(run_stock_compare([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_HIGH_BETA_OUTPUT",
+                str(_data_dir()/"high_beta_stock_mode")),
+        ]))
+    elif mode == "weighteddaily":
         from .weighted_daily_coverage import main as run_weighted
         raise SystemExit(run_weighted([
             "--data-dir",str(_data_dir()),
