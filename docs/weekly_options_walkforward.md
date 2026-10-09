@@ -277,3 +277,42 @@ Replicating a single day's estimate across dozens of other days would
 not establish total dataset cost, strike coverage or a valid backtest.
 Historical definition and prior-published OI data add further cost/quality
 considerations. **No new ORB/VWAP performance metrics exist at this time.**
+
+
+## Actual 128-session contract-affordability diagnostic
+
+The research service **executed** one pass through all 128 available
+legacy sampled-quote sessions (45,440 quote snapshots). At each frame
+between 9:45 and 15:40 ET, it checked for any SPY same-day contract
+with 0.40–0.60 absolute delta, positive bid, and <=15% NBBO spread.
+The price-only test required enough capital for one whole contract
+at ask + one adverse tick + $0.68 entry fee.
+
+| Hypothetical cash | Per-trade premium cap | Price-affordable snapshots / 45,440 | Days with any price-affordable snapshot / 128 |
+| ---: | ---: | ---: | ---: |
+| $300 | 0.5% | 0 | 0 |
+| $300 | 1% | 0 | 0 |
+| $300 | 2% | **0** | **0** |
+| $300 | 25% (old control) | 14,980 | 122 |
+| $1,000 | 0.5% | 0 | 0 |
+| $1,000 | 1% | 0 | 0 |
+| $1,000 | 2% | **3** | **3** |
+| $1,000 | 25% (old control) | 42,917 | 128 |
+| $10,000 | 0.5% | 4,089 | 109 |
+| $10,000 | 1% | 27,844 | 127 |
+| $10,000 | 2% | 42,404 | 128 |
+
+**This is not an options backtest and has zero P&L observations.**
+It is a *price affordability census* on bucketed one-minute NBBO, not
+a fill test. The legacy archive does not guarantee timely actual
+quote sizes, transaction volume or prior-published open interest;
+these quality fields were deliberately **not inferred**. Thus the
+counts can overstate actually executable trades, and genuine candidate
+signals would only reduce trading opportunities.
+
+**Implication:** the proposed 0.5%/1%/2% premium per-trade rules are
+practically inoperative for a $300 cash account at those sampled
+0DTE near-half-delta contract premiums, and scarcely usable at $1,000.
+The $10,000 *hypothetical simulation* balance is needed to test those
+sizing rules with realistic whole contracts. Do not extrapolate
+performance or profitability from the 25%-premium affordability counts.
