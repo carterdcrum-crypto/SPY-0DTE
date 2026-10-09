@@ -376,7 +376,15 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "freesignals":
+    if mode == "breakoutfailures":
+        from .breakout_failure_audit import main as run_breakout
+        raise SystemExit(run_breakout([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv(
+                "RESEARCH_BREAKOUT_AUDIT_OUTPUT",
+                str(_data_dir()/"breakout_failure_audit")),
+        ]))
+    elif mode == "freesignals":
         from .free_signal_screen import main as run_free
         raise SystemExit(run_free(["--data-dir",str(_data_dir()),
             "--output-dir",os.getenv("RESEARCH_FREE_SIGNAL_OUTPUT",str(_data_dir()/"free_signal_screen"))]))
