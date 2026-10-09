@@ -292,7 +292,9 @@ def run_weekly_feasibility() -> None:
             q for q in frame.options
             if .4<=abs(q.delta)<=.6 and q.ask>q.bid>0
             and (q.ask-q.bid)/((q.ask+q.bid)/2)<=.15
-            and q.volume>0 and q.open_interest>0
+            # Legacy CBBO sampled records often omit actionable quote size,
+            # time-causal OI and traded volume. This is a PRICE affordability
+            # study ONLY; do not assert executable liquidity from this count.
         ]
         quote_counts+=len(allowed)
         for cash in account_sizes:
@@ -306,7 +308,7 @@ def run_weekly_feasibility() -> None:
     print(f"WEEKLY AFFORDABILITY: sampled_sessions={len(observed_days)} "
           f"observed_option_quote_frames={total_snapshots} "
           f"half_delta_liquid_quote_occurrences={quote_counts} "
-          f"no_profit_returns_computed=true",flush=True)
+          f"no_profit_returns_computed=true quote_size_and_oi_not_verified=true",flush=True)
     for cash in account_sizes:
         for fraction in rates:
             n=counts[(cash,fraction)]
