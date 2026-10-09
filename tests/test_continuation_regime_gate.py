@@ -111,6 +111,8 @@ def test_report_all_events_not_just_winners_and_no_account_returns():
     a=_group_details(e,"test")
     assert a["accepted_events"]==3
     assert a["correct_spy_direction"]==2
+    assert a["positive_after_hypothetical_2bp_underlying_hurdle"]==2
+    assert a["positive_after_hypothetical_5bp_underlying_hurdle"]==1
     assert a["wrong_or_flat_spy_direction"]==1
     assert a["mean_after_5bp_underlying_friction_proxy"] is not None
     assert a["one_deleted_net_average_min"] is not None
