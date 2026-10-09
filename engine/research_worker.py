@@ -227,7 +227,11 @@ def run_burst_validation() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "burst":
+    if mode == "weeklyoptionsaudit":
+        import json
+        from .weekly_options_data import audit
+        print("WEEKLY OPTIONS DATA AUDIT: " + json.dumps(audit(_data_dir()),sort_keys=True),flush=True)
+    elif mode == "burst":
         run_burst_validation()
     elif mode == "backfill":
         if os.getenv("RESEARCH_RANGE_START", "").strip():
