@@ -5,6 +5,32 @@ profit backtest**. All signals are the prior close-based breakout (not
 OHLC ORB) evaluated with a three-minute causal confirmation, and the
 exact same delayed next-bar entry and 10-minute exit observation clock.
 
+## Current experimental setting — adaptive signal gate OFF (October 9, 2026)
+
+The **two retrospective 40-prior-session expected-return signal gates**
+are now **disabled by default**. They previously admitted **0 signals**
+in every historical period. They are not required for the five static
+research comparisons and are not connected to live order execution.
+
+By default the experiment runs **five static, previously specified**
+signals only: all-breakouts baseline, forecast SPY absolute movement
+>=5bps, forecast >=10bps, confirmed continuation, and confirmed
+continuation plus forecast >=5bps. The existing static confirmation
+and magnitude rules are **not** relaxed or retrained.
+
+To explicitly reproduce the prior historical **seven-policy research**
+comparison, add `--include-adaptive-research` to the CLI. This flag
+is **offline analysis only**: it neither connects Webull nor starts
+paper or live orders. Without the flag, there is **no evaluation
+of trailing 40-session adaptive eligibility** and no adaptive
+decisions in the signal ledger.
+
+**This does NOT disable essential live risk controls:** auto-trading
+remains OFF, and broker safety, position/capital limits, settlement
+and any independent live safeguards are untouched. Turning off an
+overly strict unvalidated signal selector is not evidence the
+remaining signals have positive expected 0DTE options returns.
+
 ## Main question
 
 Even when SPY moves in the predicted direction, did it move enough
@@ -41,7 +67,7 @@ Also require current forecast abs move >=5bps. Samples are small and
 model misspecified: this lower bound is an exploratory fail-closed
 research screen, NOT a validated statistical guarantee.
 
-## Seven FIXED alternatives, same delayed clock and same opportunities
+## Seven originally tested alternatives (five static by default; two adaptive opt-in)
 
 1. `same_clock_delayed_baseline`: act on every original 15-prior-close
    breakout in the original direction.
