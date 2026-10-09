@@ -376,7 +376,11 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weeklydiagnostics":
+    if mode == "freesignals":
+        from .free_signal_screen import main as run_free
+        raise SystemExit(run_free(["--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_FREE_SIGNAL_OUTPUT",str(_data_dir()/"free_signal_screen"))]))
+    elif mode == "weeklydiagnostics":
         run_weekly_narrow_cost_estimate()
         run_weekly_feasibility()
     elif mode == "weeklynarrowcost":
