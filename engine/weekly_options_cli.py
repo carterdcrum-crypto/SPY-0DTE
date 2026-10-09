@@ -62,8 +62,41 @@ def _volume_seed(sessions:Sequence[SessionData]) -> dict[int,list[int]]:
     return out
 
 
+def _verify_session_coverage(s:SessionData) -> None:
+    """Reject incomplete days rather than turning missing quotes into no-trade wins."""
+    minutes=int((s.close_at.astimezone(NY)-
+                 __import__("datetime").datetime.combine(
+                     s.day,__import__("datetime").time(9,30),NY)).total_seconds()/60)
+    minute_count=len({b.start for b in s.bars})
+    if minute_count<int(.95*minutes):
+        raise ValueError(
+            f"DATA_INCOMPLETE {s.day}: OHLCV minute coverage {minute_count}/{minutes}"
+        )
+    # Full-market chain coverage at 0DTE across the day is essential.
+    # Require at least one *real event-time* NBBO update in 50% of minutes,
+    # plus presence near both open and session cutoff. Otherwise a missing
+    # chain can look like an artificially safe no-trade period.
+    minutes_with_options={
+        q.observed_at.replace(second=0,microsecond=0) for q in s.quotes
+    }
+    if len(minutes_with_options)<int(.5*minutes):
+        raise ValueError(
+            f"DATA_INCOMPLETE {s.day}: chain quote minute coverage "
+            f"{len(minutes_with_options)}/{minutes}"
+        )
+    first=min(q.observed_at for q in s.quotes)
+    last=max(q.observed_at for q in s.quotes)
+    open_at=__import__("datetime").datetime.combine(
+        s.day,__import__("datetime").time(9,30),NY).astimezone(__import__("datetime").timezone.utc)
+    if first>open_at+__import__("datetime").timedelta(minutes=20) or last<s.close_at-__import__("datetime").timedelta(minutes=30):
+        raise ValueError(f"DATA_INCOMPLETE {s.day}: quote coverage missing opening/closing market")
+
+
 def _load(root:Path,days:Sequence[date])->list[SessionData]:
-    return [load_session(root,d) for d in days]
+    loaded=[load_session(root,d) for d in days]
+    for session in loaded:
+        _verify_session_coverage(session)
+    return loaded
 
 
 def weekly_table(result:BacktestReport) -> list[dict]:
