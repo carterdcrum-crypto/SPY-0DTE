@@ -290,3 +290,37 @@ def test_development_never_reads_holdout_and_holdout_is_one_time(monkeypatch,tmp
     assert holdout.issubset(set(accesses))
     with pytest.raises(FileExistsError):
         cli.run_holdout(tmp_path,tmp_path,days,args)
+
+
+def test_early_close_prohibits_entries_at_expiration_cutoff():
+    day=date(2026,11,27) # verified NYSE 1pm ET early-close Friday
+    original=[bar(day,i) for i in range(15)]
+    # Fresh breakout 12:44-12:45 but the broker safety cutoff is 12:45.
+    opening=at(day,12,44)
+    late_bar=Bar(opening,700.00,700.15,700.00,700.12,1200)
+    qs=[
+        quote(day,at(day,12,44,55)),
+        quote(day,at(day,12,45,5)),
+    ]
+    early=SessionData(
+        day,tuple(original+[late_bar]),tuple(qs),at(day,13,0)
+    )
+    result=run_simulation((early,),starting_cash=10000,
+        cfg=ExperimentConfig(strategy="orb_simple",risk_fraction=.02))
+    assert result.orders_attempted==0
+    assert result.completed_trades==0
+    assert result.ending_equity==10000
+
+
+def test_execution_stress_degrades_the_same_option_fill_if_trade_completes():
+    base=case()
+    first=run_simulation((base,),starting_cash=10000,
+          cfg=ExperimentConfig(strategy="orb_simple",risk_fraction=.02))
+    worse=run_simulation((base,),starting_cash=10000,
+          cfg=ExperimentConfig(strategy="orb_simple",risk_fraction=.02,
+                               adverse_option_ticks=2,
+                               fee_per_contract_side=1.36))
+    assert worse.ending_equity<first.ending_equity
+    assert worse.trade_ledger[0].entry_ask_fill>first.trade_ledger[0].entry_ask_fill
+    assert worse.trade_ledger[0].exit_bid_fill<first.trade_ledger[0].exit_bid_fill
+    assert worse.fees_paid==pytest.approx(first.fees_paid*2)
