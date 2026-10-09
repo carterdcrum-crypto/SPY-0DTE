@@ -172,3 +172,35 @@ All coding/testing can be done at $0 added **market data** expense.
 Existing Railway hosting may still incur its normal charges.
 No Android UI changes, main branch merges, broker order flags or
 production risk-control overrides were made in this research PR.
+
+
+## Executed research-worker readiness (October 9, 2026)
+
+GitHub Actions passed for this branch. The isolated Railway
+`spy-0dte-research` deployment
+`95ba08f8-0729-4aef-acbe-cdb67a54f3f8` **completed successfully**
+and wrote the report `/data/research/high_beta_stock_mode/readiness.json`.
+Its actual status was:
+
+```json
+{
+  "status": "BLOCKED_MISSING_HISTORICAL_REAL_MARKET_INPUTS",
+  "missing": [
+    "stock_minutes_*.csv(.gz) spanning UNFILTERED stock universe AND SPY with point-in-time historical screen metrics",
+    "option_nbbo_*.csv(.gz) observed-event SPY+stock OCC options NBBO and sizes"
+  ],
+  "stock_universe_screened": false,
+  "historical_option_PnL": null,
+  "profitable_strategy": null,
+  "new_data_purchased_usd": 0,
+  "live_order_changes": 0
+}
+```
+
+The **research engine is operational** and **honestly blocked at the
+data layer**. It cannot establish a real-world winner or claim any
+profitable screened ticker yet. Current public optionability tables
+or modern fundamental beta snapshots cannot replace full
+historical point-in-time universe/quotes without survivorship and
+lookahead bias. Do not order paid historical market data without
+specific user authorization.
