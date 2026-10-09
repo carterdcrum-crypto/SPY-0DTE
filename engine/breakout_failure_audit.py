@@ -421,6 +421,16 @@ def main(argv:Sequence[str]|None=None)->int:
     _csv(args.output_dir/"all_close_breakout_opportunities.csv",
          [asdict(row) for row in full])
     _csv(args.output_dir/"breakout_failure_strata.csv",strata)
+    for item in strata:
+        print("BREAKOUT FAILURE STRATUM: "+json.dumps({
+            "period":item["period"],"factor":item["factor"],
+            "bucket":item["bucket"],"n":item["events"],
+            "small_n":item["small_group_fewer_than_20"],
+            "mean_raw_bps":item["mean_signed_spy_bps"],
+            "failure_direction_fraction":item["wrong_direction_fraction"],
+            "snapback_first3_fraction":item["3min_snapback_fraction"],
+            "adverse3bps_first3_fraction":item["3min_adverse_over_3bps_fraction"],
+        },sort_keys=True),flush=True)
     summaries=[]
     for period,policies in results["partitions"].items():
         for name,stats in policies.items():
