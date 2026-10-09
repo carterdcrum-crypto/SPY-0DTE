@@ -245,3 +245,48 @@ def test_holdout_requires_prior_freeze_even_when_files_exist(tmp_path:Path):
     args=SimpleNamespace(cash=10000)
     with pytest.raises(FileNotFoundError,match="development"):
         run_holdout(tmp_path,tmp_path,[],args)
+
+
+def test_real_data_coverage_guard_rejects_truncated_sessions():
+    from engine.weekly_options_cli import _verify_session_coverage
+    with pytest.raises(ValueError,match="DATA_INCOMPLETE"):
+        _verify_session_coverage(case())
+
+
+def test_development_never_reads_holdout_and_holdout_is_one_time(monkeypatch,tmp_path:Path):
+    from types import SimpleNamespace
+    from engine.session_calendar import session_close
+    import engine.weekly_options_cli as cli
+
+    days=[]
+    current=date(2026,9,14)
+    while len(days)<12:
+        if session_close(current) is not None:
+            days.append(current)
+        current+=timedelta(days=1)
+    holdout=set(days[-2:])
+    accesses=[]
+    def fake_loader(root,requested):
+        accesses.extend(requested)
+        return [case(day,breakout=False) for day in requested]
+    monkeypatch.setattr(cli,"_load",fake_loader)
+    args=SimpleNamespace(
+        cash=10000.0,train_sessions=3,validation_sessions=2,
+        test_sessions=1,holdout_sessions=2,purge_sessions=1,
+        first_date=days[0],last_date=days[-1],
+    )
+    report=cli.run_development(tmp_path,tmp_path,days,args)
+    assert report["holdout_examined"] is False
+    assert not holdout.intersection(accesses)
+    assert (tmp_path/"sealed_design.json").exists()
+    assert "winner_selected_only_from_validation" in json.loads(
+        (tmp_path/"sealed_design.json").read_text()
+    )
+    accesses.clear()
+    hold=cli.run_holdout(tmp_path,tmp_path,days,args)
+    assert hold["status"]=="HOLDOUT_EVALUATED_ONCE"
+    assert hold["plus_100pct_weekly_low_drawdown_hypothesis_supported"] is False
+    assert hold["candidate_count"]==9
+    assert holdout.issubset(set(accesses))
+    with pytest.raises(FileExistsError):
+        cli.run_holdout(tmp_path,tmp_path,days,args)
