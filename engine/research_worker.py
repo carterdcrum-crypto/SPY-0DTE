@@ -257,9 +257,70 @@ def run_weekly_cost_estimate() -> None:
             print(f"WEEKLY COST: date={day} label={label} unavailable error_type={type(exc).__name__} metadata_only=true",flush=True)
 
 
+
+def run_weekly_feasibility() -> None:
+    """Non-P&L buying-power feasibility on EXISTING sampled option NBBO.
+
+    This is explicitly NOT an execution backtest, ORB validation, or an
+    option premium return estimate. It just counts market quote snapshots
+    where one near-half-delta 0DTE contract might fit the specified budget.
+    """
+    from collections import Counter
+    from zoneinfo import ZoneInfo
+    from .burst_research import iter_research_directory
+    et=ZoneInfo("America/New_York")
+    account_sizes=(300.,1000.,10000.)
+    rates=(.005,.01,.02,.25)
+    counts=Counter()
+    observed_days=set()
+    days_with_any=Counter()
+    total_snapshots=0
+    quote_counts=0
+    skipped_market=0
+    for frame in iter_research_directory(_data_dir()):
+        local=frame.timestamp.astimezone(et)
+        if not (local.hour*60+local.minute>=9*60+45 and
+                local.hour*60+local.minute<15*60+40):
+            continue
+        # Treat only snapshots of original archived option symbols, whose
+        # expirations were checked during original dataset construction.
+        observed_days.add(local.date())
+        total_snapshots+=1
+        allowed=[
+            q for q in frame.options
+            if .4<=abs(q.delta)<=.6 and q.ask>q.bid>0
+            and (q.ask-q.bid)/((q.ask+q.bid)/2)<=.15
+            and q.volume>0 and q.open_interest>0
+        ]
+        quote_counts+=len(allowed)
+        for cash in account_sizes:
+            for fraction in rates:
+                key=(cash,fraction)
+                # Conservative one adverse cent, $.68 per executed entry.
+                budget=cash*fraction
+                if any(q.ask*100+1+.68<=budget+1e-9 for q in allowed):
+                    counts[key]+=1
+                    days_with_any[(cash,fraction,local.date())]+=1
+    print(f"WEEKLY AFFORDABILITY: sampled_sessions={len(observed_days)} "
+          f"observed_option_quote_frames={total_snapshots} "
+          f"half_delta_liquid_quote_occurrences={quote_counts} "
+          f"no_profit_returns_computed=true",flush=True)
+    for cash in account_sizes:
+        for fraction in rates:
+            n=counts[(cash,fraction)]
+            days=sum(days_with_any[(cash,fraction,d)]>0 for d in observed_days)
+            print("WEEKLY AFFORDABILITY: "
+                  f"cash={cash:.2f} risk_fraction={fraction:.4f} "
+                  f"eligible_snapshots={n} of={total_snapshots} "
+                  f"eligible_sessions={days} of={len(observed_days)} "
+                  f"uses_sampled_1m_quotes_not_executable=true",flush=True)
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weeklycost":
+    if mode == "weeklyfeasibility":
+        run_weekly_feasibility()
+    elif mode == "weeklycost":
         run_weekly_cost_estimate()
     elif mode == "weeklyoptionsaudit":
         import json
