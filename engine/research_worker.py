@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "breakoutfailures":
+    if mode == "causalrouter":
+        from .causal_breakout_router import main as router_main
+        raise SystemExit(router_main([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_CAUSAL_ROUTER_OUTPUT",
+                str(_data_dir()/"causal_breakout_router")),
+        ]))
+    elif mode == "breakoutfailures":
         from .breakout_failure_audit import main as run_breakout
         raise SystemExit(run_breakout([
             "--data-dir",str(_data_dir()),
