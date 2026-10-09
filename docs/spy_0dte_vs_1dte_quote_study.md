@@ -129,3 +129,35 @@ This worker does not make live broker or paid market data calls.
 The previously viewed dates are **NOT an untouched holdout**.
 Live 0DTE code, Android UI, Webull connection, and account risk
 controls remain unchanged. No auto-trading enabled.
+
+
+## Actual research-worker input audit — October 9, 2026
+
+Full Python GitHub Actions CI passed, including the new synthetic
+unit tests for Friday-to-Monday/holiday 1DTE, timestamp order,
+actual quote bid/ask, matched contract comparison, hypothetical
+option-premium percentages, cash-account affordability, and no
+fabricated P&L.
+
+The isolated Railway research deployment
+`4cde444f-3eb8-44c7-ba84-36c35398ad47` **completed SUCCESS**
+and wrote `/data/research/spy_0_vs_1dte/readiness.json` to the
+existing research volume. Real observed input audit:
+
+| Existing dataset kind | Count |
+| --- | ---: |
+| Previously archived SPY 0DTE snapshot files (not event NBBO) | **128** |
+| True SPY 1-minute OHLCV session files | **0** |
+| Independent event-observed SPY option NBBO files | **0** |
+| Matched 0DTE/1DTE historical session pairs | **0** |
+
+Status: `ready_to_score=false`; both expiry-specific quote
+coverage fields `MISSING`. Therefore **there are NO genuine
+0DTE versus 1DTE historical option profit percentages, account
+drawdown figures, or winning expiration to report**. Existing
+snapshot-derived signed SPY bps are not real options profits.
+
+New market data purchases: **$0**. No production change or
+live execution; adaptive research gate OFF. The research comparison
+code itself is now ready to accept an already-licensed source
+satisfying the stated data contract if it becomes available.
