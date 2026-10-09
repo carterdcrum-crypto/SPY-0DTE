@@ -17,7 +17,7 @@ The **existing canonical output does not preserve each full SPY
 open/high/low/volume or option quote event-observation timestamps, sizes**.
 Consequently, none of those files passes the strict adapter for a
 genuine first-15-minute OHLC range and **event-time executable option fills**.
-The CLI prints an explicit `DATA_BLOCKED` status. Synthetic unit
+The CLI prints an explicit `DATA_BLOCKED` status. The Railway research-only audit on October 8 returned **128 legacy files, 0 genuine OHLCV input files, 0 event-time option-chain files, and 0 matched usable sessions**. Synthetic unit
 test fills **must not** be misreported as historical performance.
 
 We have **not** downloaded new licensed historical market data, incurred
@@ -228,3 +228,28 @@ correct result**, not fractional options or synthetic fills.
 
 This report is updated once a complete, licensed dataset is
 available and the **single** untouched holdout is evaluated.
+
+### Input completeness and holdout caveats
+
+A candidate training/validation/test/holdout session needs >=95% of
+exchange-session OHLCV minute bars, event-time NBBO updates spanning
+>=50% of session minutes, and opening/near-closing quote coverage. The
+predeclared first/last exchange trading dates must be supplied on both
+development and holdout commands. All verified open exchange sessions
+within that interval must have both full input files; missing data
+cannot be quietly dropped. Incomplete inputs **fail**, not count as
+no-trade wins.
+
+**Historical contamination caveat:** Earlier versions of this project
+have already studied portions of April–October 2026. Any final interval
+drawn from that known archive is *sealed for this particular new study*
+but **not historically untouched by the broader project**. True
+independent confirmation will require additional, later market data
+collected after the entry rules and parameters are frozen. The CLI's
+access-once guard is a reproducibility safeguard, not a guarantee that
+another human or project never viewed the dates.
+
+If genuine raw quotes are unavailable, no amount of parameter tuning
+or synthetic SPY price conversion resolves this blocker. Performance
+should remain **NOT EVALUABLE**, not zero return, until input fidelity
+and coverage requirements are met.
