@@ -301,19 +301,24 @@ def run_simulation(sessions:Sequence[SessionData],*,starting_cash:float,cfg:Expe
         nonlocal position,realized,fees,settled,worthless
         assert position is not None
         q=position
-        proceeds=round(fill*100*q.contracts-cfg.fee_per_contract_side*q.contracts,8)
-        proceeds=max(0.0,proceeds)
-        fees += cfg.fee_per_contract_side*q.contracts
+        # A real sale is credited gross, while the exit fee is separately
+        # debited from settled cash. On an unfilled expiry/zero-recovery path
+        # there was no sale and there is no fictional exit commission.
+        gross_proceeds=round(fill*100*q.contracts,8)
+        exit_fee=cfg.fee_per_contract_side*q.contracts if quote_at is not None else 0.0
+        proceeds=gross_proceeds-exit_fee
+        settled-=exit_fee
+        fees+=exit_fee
         pnl=proceeds-q.debit
         realized+=pnl
-        outstanding.append((_next_settlement(at.astimezone(NY).date()),proceeds))
+        outstanding.append((_next_settlement(at.astimezone(NY).date()),gross_proceeds))
         premium_return=(fill/q.fill-1) if q.fill>0 else -1
         ledger.append(LedgerTrade(
             symbol=q.quote.symbol,side=q.quote.right,contracts=q.contracts,
             entry_at=q.entry_at.isoformat(),exit_at=at.isoformat(),
             entry_ask_fill=q.fill,exit_bid_fill=fill,
             entry_debit=q.debit,exit_credit=proceeds,
-            total_fees=cfg.fee_per_contract_side*q.contracts*2,
+            total_fees=cfg.fee_per_contract_side*q.contracts+exit_fee,
             realized_pnl=pnl,option_premium_return=premium_return,
             entry_signal=q.signal,exit_reason=reason,
             entry_quote_at=q.quote.observed_at.isoformat(),
