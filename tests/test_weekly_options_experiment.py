@@ -185,7 +185,7 @@ def test_date_scoped_io_requires_real_ohlcv_and_explicit_observed_option_quotes(
                  f"{at(DAY,9,31).isoformat()},{occ()},{day},call,700,.95,1,.5,5,7,100,200,cbbo-1m\n")
     with pytest.raises(ValueError,match="CBBO-1m"):
         load_session(tmp_path,DAY)
-    q.write_text(q.read_text().replace("cbbo-1m","cbbo-1s"))
+    q.write_text(q.read_text().replace("cbbo-1m","cmbp-1"))
     s=load_session(tmp_path,DAY)
     assert s.bars[0].available_at==at(DAY,9,31)
     assert s.quotes[0].expiry==DAY
