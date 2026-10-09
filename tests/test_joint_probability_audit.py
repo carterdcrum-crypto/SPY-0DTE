@@ -148,7 +148,9 @@ def test_brier_proper_scoring_and_no_account_pnl():
 
 
 def test_full_replay_requires_warmup_and_does_not_trade():
-    # Each fixture day has roughly one breakout event: exceed the STRICT\n    # 100-observation training warmup instead of assuming 40 days suffice.\n    days=[date(2026,4,1)+timedelta(days=i) for i in range(116)]
+    # Each fixture day has roughly one breakout event: exceed the STRICT
+    # 100-observation training warmup instead of assuming 40 days suffice.
+    days=[date(2026,4,1)+timedelta(days=i) for i in range(116)]
     frames=[]
     for i,day in enumerate(days):
         frames.extend(fake_spy_day(day,negative=(i%4==0)))
