@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "causalrouter":
+    if mode == "continuationregimegate":
+        from .continuation_regime_gate import main as run_regime
+        raise SystemExit(run_regime([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_REGIME_GATE_OUTPUT",
+                str(_data_dir()/"continuation_regime_gate")),
+        ]))
+    elif mode == "causalrouter":
         from .causal_breakout_router import main as router_main
         raise SystemExit(router_main([
             "--data-dir",str(_data_dir()),
