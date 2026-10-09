@@ -53,6 +53,11 @@ POLICIES = (
     "confirmed_continuation_plus_magnitude",
     "confirmed_continuation_past40_lowerbound",
 )
+ADAPTIVE_POLICIES = (
+    "past40_lowerbound_plus_magnitude",
+    "confirmed_continuation_past40_lowerbound",
+)
+STATIC_POLICIES = tuple(p for p in POLICIES if p not in ADAPTIVE_POLICIES)
 
 
 @dataclass(frozen=True)
@@ -311,8 +316,15 @@ def _calibration(rows:Sequence[MagnitudeObservation],period:str)->list[dict]:
     return out
 
 
-def run_study(frames:Iterable[HistoricalFrame])->dict:
-    """Replay day in ascending order; assess day's decisions BEFORE storing labels."""
+def run_study(
+    frames:Iterable[HistoricalFrame], *, adaptive_enabled:bool=False,
+)->dict:
+    """Replay complete sessions causally; past-40-session adaptive gates OFF by default.
+
+    Disabling those exploratory gates does NOT disable any live broker,
+    cash-settlement or account-risk safety control. No orders occur here.
+    """
+    active_policies=POLICIES if adaptive_enabled else STATIC_POLICIES
     prior:list[list[MagnitudeObservation]]=[]
     last_day=None
     current=[]
@@ -335,11 +347,17 @@ def run_study(frames:Iterable[HistoricalFrame])->dict:
             days[per].append(date_.isoformat())
             rows[per].extend(observed)
         for obs in observed:
-            # Both histories contain only preceding FULL completed sessions.
-            base=prior_evidence(prior,obs,mode="baseline")
-            cont=prior_evidence(prior,obs,mode="continuation")
+            # Experimental retrospective-adaptive scoring is OPT IN only.
+            # With it off, do not even evaluate historical trailing-return
+            # gates; preserve the original static confirmation and magnitude
+            # experiments unchanged. Their outcomes remain research-only.
+            if adaptive_enabled:
+                base=prior_evidence(prior,obs,mode="baseline")
+                cont=prior_evidence(prior,obs,mode="continuation")
+            else:
+                base=cont=PastEvidence(len(prior),0,None,None,None,False)
             if per in {x[0] for x in PERIODS}:
-                for policy in POLICIES:
+                for policy in active_policies:
                     decisions[per][policy].append(
                         ScoredDecision(obs,policy,choose(policy,obs,base,cont),base
                                        if policy=="past40_lowerbound_plus_magnitude"
@@ -354,11 +372,12 @@ def run_study(frames:Iterable[HistoricalFrame])->dict:
                 "actual_spy_absolute_10min_bps_LABEL_ONLY":round(obs.observed_absolute_spy_10min_bps,5),
                 "actual_spy_signed_10min_bps_LABEL_ONLY":round(obs.observed_signed_spy_10min_bps,5),
                 "continuation_at_signal":obs.original.continuation_accepted,
-                "prior_base_n":base.past_matching_events,
+                "adaptive_gate_enabled":adaptive_enabled,
+                "prior_base_n":base.past_matching_events if adaptive_enabled else None,
                 "prior_base_lower_bound_spy_bps":base.lower_bound_past_net_spy_bps,
-                "prior_cont_n":cont.past_matching_events,
+                "prior_cont_n":cont.past_matching_events if adaptive_enabled else None,
                 "prior_cont_lower_bound_spy_bps":cont.lower_bound_past_net_spy_bps,
-                **{policy:choose(policy,obs,base,cont) for policy in POLICIES},
+                **{policy:choose(policy,obs,base,cont) for policy in active_policies},
             })
         prior.append(observed)
         current=[]
@@ -377,7 +396,7 @@ def run_study(frames:Iterable[HistoricalFrame])->dict:
     calib=[]
     for name,_,_ in PERIODS:
         summaries[name]={}
-        for policy in POLICIES:
+        for policy in active_policies:
             # Every same-clock event gets an explicit accept/abstain row;
             # includes no-event sessions when computing net daily bps.
             summaries[name][policy]=_summary(decisions[name][policy],days[name])
@@ -386,7 +405,11 @@ def run_study(frames:Iterable[HistoricalFrame])->dict:
         "experiment":"causal_spy_expected_magnitude_vs_expected_signed_move_v1",
         "days_read":sessions,"minute_frames_read":framecount,
         "forecaster":"rolling 30 prior one-minute close-to-close SPY bps sample stdev; zero-drift Gaussian random walk expected abs10=sigma*sqrt(10)*sqrt(2/pi)",
-        "policies":POLICIES,
+        "policies":active_policies,
+        "adaptive_signal_gate_enabled":adaptive_enabled,
+        "adaptive_signal_gate_off_by_default":True,
+        "adaptive_variants_available_only_by_explicit_cli_opt_in":ADAPTIVE_POLICIES,
+        "live_and_broker_risk_controls_unchanged":True,
         "fixed_hurdles_underlying_bps":[FRICTION_BPS,MIN_FORECAST_MAGNITUDE_BPS,HIGH_FORECAST_MAGNITUDE_BPS],
         "prior_training_sessions":PRIOR_COMPLETE_SESSIONS,
         "past_mean_lower_bound_z":ONE_SIDED_Z,
@@ -415,12 +438,20 @@ def main(argv:Sequence[str]|None=None)->int:
     arg=argparse.ArgumentParser(description=__doc__)
     arg.add_argument("--data-dir",type=Path,default=Path("/data/research"))
     arg.add_argument("--output-dir",type=Path,default=Path("/data/research/magnitude_edge"))
+    arg.add_argument(
+        "--include-adaptive-research",
+        action="store_true",
+        help="OPT-IN offline comparison of two past-40-session adaptive filters; no orders",
+    )
     a=arg.parse_args(argv)
     sources=_research_files(a.data_dir)
     if not sources:
         print("MAGNITUDE STUDY BLOCKED: archive missing",flush=True)
         return 2
-    results=run_study(iter_research_directory(a.data_dir))
+    results=run_study(
+        iter_research_directory(a.data_dir),
+        adaptive_enabled=a.include_adaptive_research,
+    )
     a.output_dir.mkdir(exist_ok=True,parents=True)
     ledger=results.pop("decision_ledger")
     calib=results.pop("calibration")
@@ -434,6 +465,12 @@ def main(argv:Sequence[str]|None=None)->int:
     results["file_fingerprint_sha256"]=fp.hexdigest()
     results["purpose"]="magnitude-vs-direction research; not executable option backtest"
     (a.output_dir/"results.json").write_text(json.dumps(results,indent=2,sort_keys=True))
+    print("MAGNITUDE ADAPTIVE GATE STATUS: "+json.dumps({
+        "adaptive_enabled":results["adaptive_signal_gate_enabled"],
+        "active_static_strategies":list(STATIC_POLICIES),
+        "disabled_by_default":list(ADAPTIVE_POLICIES),
+        "not_a_live_risk_control":True,
+    },sort_keys=True),flush=True)
     print("MAGNITUDE STUDY COMPLETE: "+json.dumps({
         "days":results["days_read"],"frames":results["minute_frames_read"],
         "source_archives":len(sources),"event_count":len(ledger),
