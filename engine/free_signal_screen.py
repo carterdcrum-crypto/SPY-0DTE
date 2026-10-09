@@ -205,6 +205,7 @@ def _metrics(records: Sequence[SignalRecord],days:Sequence[date],cfg:ScreenConfi
     for r in records:
         by_day[r.session].append(r)
     ret=[r.signed_spy_move_bps for r in records]
+    raw_underlying=[_bps(r.exit_spot_proxy,r.entry_spot_proxy) for r in records]
     weekly={}
     for day in days:
         iso=day.isocalendar()
@@ -220,6 +221,10 @@ def _metrics(records: Sequence[SignalRecord],days:Sequence[date],cfg:ScreenConfi
         "puts":sum(r.direction=="put" for r in records),
         "directional_hit_rate":sum(x>0 for x in ret)/len(ret) if ret else None,
         "mean_signed_spy_move_bps":round(statistics.fmean(ret),4) if ret else None,
+        "same_timestamps_always_call_spy_bps":round(statistics.fmean(raw_underlying),4) if ret else None,
+        "same_timestamps_always_put_spy_bps":round(-statistics.fmean(raw_underlying),4) if ret else None,
+        "mean_signed_minus_2bps_hypothetical_spy_proxy":round(statistics.fmean(ret)-2,4) if ret else None,
+        "mean_signed_minus_5bps_hypothetical_spy_proxy":round(statistics.fmean(ret)-5,4) if ret else None,
         "median_signed_spy_move_bps":round(statistics.median(ret),4) if ret else None,
         "mean_sum_signed_spy_bps_per_session_including_no_trade":round(
             sum(ret)/len(days),4) if days else None,
@@ -317,6 +322,9 @@ def main(argv:Sequence[str]|None=None)->int:
                 "calls":m["calls"],"puts":m["puts"],
                 "hit_rate":m["directional_hit_rate"],
                 "mean_signed_spy_bps":m["mean_signed_spy_move_bps"],
+                "matched_always_call_spy_bps":m["same_timestamps_always_call_spy_bps"],
+                "mean_after_2bp_proxy_friction":m["mean_signed_minus_2bps_hypothetical_spy_proxy"],
+                "mean_after_5bp_proxy_friction":m["mean_signed_minus_5bps_hypothetical_spy_proxy"],
                 "mean_signed_spy_bps_per_session":m["mean_sum_signed_spy_bps_per_session_including_no_trade"],
                 "bootstrap_95pct_day_bps":m["bootstrap"]["per_day_signed_bps_95pct_ci"],
                 "positive_signal_weeks_fraction":m["positive_signal_weeks_fraction"],
