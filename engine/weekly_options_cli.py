@@ -348,6 +348,31 @@ def run_holdout(root:Path,output:Path,days:Sequence[date],args)->dict:
     # Pre-register bar ranges as descriptive regime labels, never as
     # post-hoc strategy selection features.
     regime_counts={}
+    regime_by_day={s.day.isoformat():_regime(s) for s in datasets}
+    # Per-regime account-day P&L, measured against the previous day's
+    # (or initially the starting account's) equity. This is descriptive
+    # out-of-sample stratification, not a new signal/selection feature.
+    regime_rows=[]
+    for original in CANDIDATES:
+        key=_candidate_key(original)
+        trial=run_simulation(datasets,starting_cash=args.cash,cfg=original,
+                             prior_volume=volume_seed)
+        grouped:dict[str,list[float]]={}
+        previous=trial.starting_cash
+        for day in trial.daily_equity:
+            label=regime_by_day[day.day]
+            grouped.setdefault(label,[]).append(day.equity/previous-1 if previous>0 else -1)
+            previous=day.equity
+        for label,rets in sorted(grouped.items()):
+            regime_rows.append({
+                "configuration":key,"regime":label,"sessions":len(rets),
+                "mean_account_day_return":statistics.mean(rets),
+                "median_account_day_return":statistics.median(rets),
+                "positive_session_fraction":sum(r>0 for r in rets)/len(rets),
+                "compounded_account_return_within_regime":
+                    math.prod(max(0.0,1+r) for r in rets)-1,
+            })
+    _write_csv(output/"holdout_regimes.csv",regime_rows)
     for item in datasets:
         regime=_regime(item)
         regime_counts[regime]=regime_counts.get(regime,0)+1
@@ -366,6 +391,7 @@ def run_holdout(root:Path,output:Path,days:Sequence[date],args)->dict:
         "decision":"NOT_SUPPORTED" if not verified else "PRELIMINARY_EVIDENCE_ONLY_NOT_PREDICTIVE",
         "scenarios":list(STRESS),"summary_csv":str(output/"holdout_all_candidates_and_stress.csv"),
         "bootstrap_file":str(output/"holdout_bootstrap.json"),
+        "regime_file":str(output/"holdout_regimes.csv"),
         "limits":"Historical bars give a volume-weighted typical-price VWAP proxy, not true trade VWAP. No holdout reuse allowed. Equity options are cash-account T+1, full-spread fills with 1-2 ticks adverse. No fills inferred from SPY candle returns.",
     }
     (output/"holdout_report.json").write_text(json.dumps(report,indent=2,sort_keys=True))
