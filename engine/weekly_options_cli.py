@@ -14,7 +14,7 @@ import math
 import random
 import statistics
 from dataclasses import asdict, replace
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Sequence
 
@@ -65,8 +65,8 @@ def _volume_seed(sessions:Sequence[SessionData]) -> dict[int,list[int]]:
 def _verify_session_coverage(s:SessionData) -> None:
     """Reject incomplete days rather than turning missing quotes into no-trade wins."""
     minutes=int((s.close_at.astimezone(NY)-
-                 __import__("datetime").datetime.combine(
-                     s.day,__import__("datetime").time(9,30),NY)).total_seconds()/60)
+                 datetime.combine(
+                     s.day,time(9,30),NY)).total_seconds()/60)
     minute_count=len({b.start for b in s.bars})
     if minute_count<int(.95*minutes):
         raise ValueError(
@@ -86,9 +86,9 @@ def _verify_session_coverage(s:SessionData) -> None:
         )
     first=min(q.observed_at for q in s.quotes)
     last=max(q.observed_at for q in s.quotes)
-    open_at=__import__("datetime").datetime.combine(
-        s.day,__import__("datetime").time(9,30),NY).astimezone(__import__("datetime").timezone.utc)
-    if first>open_at+__import__("datetime").timedelta(minutes=20) or last<s.close_at-__import__("datetime").timedelta(minutes=30):
+    open_at=datetime.combine(
+        s.day,time(9,30),NY).astimezone(timezone.utc)
+    if first>open_at+timedelta(minutes=20) or last<s.close_at-timedelta(minutes=30):
         raise ValueError(f"DATA_INCOMPLETE {s.day}: quote coverage missing opening/closing market")
 
 
