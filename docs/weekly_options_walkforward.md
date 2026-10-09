@@ -253,3 +253,27 @@ If genuine raw quotes are unavailable, no amount of parameter tuning
 or synthetic SPY price conversion resolves this blocker. Performance
 should remain **NOT EVALUABLE**, not zero return, until input fidelity
 and coverage requirements are met.
+
+
+## Verified Databento metadata-only price check — 2026-10-08
+
+The user-connected research service has an existing Databento API credential,
+but **no billable historical fetch was submitted** in this cost check. On
+2026-10-06 the authorized Databento `metadata.get_cost` endpoint returned:
+
+| Dataset / schema | One session, October 6 | Scope |
+| --- | ---: | --- |
+| EQUS.MINI / SPY OHLCV-1m | $0.0002 | SPY stock bars |
+| OPRA.PILLAR / CMBP-1 | $10.5116 | Parent symbol SPY.OPT (all available SPY contracts) |
+| OPRA.PILLAR / TCBBO | $24.7546 | Parent symbol SPY.OPT |
+| OPRA.PILLAR / CBBO-1s | $21.3058 | Parent symbol SPY.OPT |
+| OPRA.PILLAR / CMBP-1 (11 historically listed 0DTE symbols) | **$0.1391** | Restricted universe derived from existing 9:45 ET option symbols |
+
+These are per-day **estimates, not invoices or permission to spend**.
+The restricted 11-contract estimate only illustrates potential data-cost
+reduction; that list may miss a good .40-.60 delta contract later in the
+session, and static contract selection must be defined causally at 9:45.
+Replicating a single day's estimate across dozens of other days would
+not establish total dataset cost, strike coverage or a valid backtest.
+Historical definition and prior-published OI data add further cost/quality
+considerations. **No new ORB/VWAP performance metrics exist at this time.**
