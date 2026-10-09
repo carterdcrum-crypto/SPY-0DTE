@@ -318,9 +318,64 @@ def run_weekly_feasibility() -> None:
                   f"uses_sampled_1m_quotes_not_executable=true",flush=True)
 
 
+
+def run_weekly_narrow_cost_estimate() -> None:
+    """No-charge metadata estimate of true OPRA event quotes for small strike universes.
+
+    Build the list from already-stored prior quote symbols; only use Databento
+    metadata.get_cost. Never request actual historical data or purchase credits.
+    """
+    from datetime import datetime, time
+    from zoneinfo import ZoneInfo
+    from .burst_research import iter_research_directory
+    import databento as db
+    day=date.fromisoformat(os.getenv("RESEARCH_COST_DAY","2026-10-06"))
+    frame=None
+    for item in iter_research_directory(_data_dir(),start_date=day,end_date=day):
+        local=item.timestamp.astimezone(ZoneInfo("America/New_York"))
+        if local.hour>9 or (local.hour==9 and local.minute>=45):
+            frame=item
+            break
+    if frame is None:
+        print(f"WEEKLY NARROW: date={day} blocker=no existing quote symbols",flush=True)
+        return
+    reference=frame.market.spot
+    # Existing symbols provide historically listed OCC contracts. This is a
+    # universe COST ESTIMATE, not a trade-date filtered selection algorithm.
+    options=[q for q in frame.options if abs(abs(q.delta)-.5)<=.30
+             and q.right in ("call","put") and abs(q.strike-reference)<=15]
+    options=sorted(options,key=lambda q:(abs(q.strike-reference),q.right,q.symbol))
+    start=datetime.combine(day,time(9,30),ZoneInfo("America/New_York")).isoformat()
+    end=datetime.combine(day,time(16),ZoneInfo("America/New_York")).isoformat()
+    client=db.Historical()
+    for limit in (12,24,48):
+        selected=options[:limit]
+        symbols=[]
+        for q in selected:
+            sym=q.symbol.replace(" ","")
+            if sym.startswith("SPY") and len(sym)>3:
+                # OPRA uses 6-character padded OCC root.
+                sym="SPY".ljust(6)+sym[3:]
+            symbols.append(sym)
+        if not symbols:
+            continue
+        try:
+            cost=float(client.metadata.get_cost(
+                dataset="OPRA.PILLAR",symbols=symbols,stype_in="raw_symbol",
+                schema="cmbp-1",start=start,end=end))
+            print(f"WEEKLY NARROW: date={day} first_quote_spot={reference:.2f} "
+                  f"listed_symbols={len(symbols)} max_universe={limit} "
+                  f"cmbp1_usd={cost:.4f} metadata_only=true",flush=True)
+        except Exception as exc:
+            print(f"WEEKLY NARROW: date={day} listed_symbols={len(symbols)} "
+                  f"cost_unavailable_type={type(exc).__name__}",flush=True)
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weeklyfeasibility":
+    if mode == "weeklynarrowcost":
+        run_weekly_narrow_cost_estimate()
+    elif mode == "weeklyfeasibility":
         run_weekly_feasibility()
     elif mode == "weeklycost":
         run_weekly_cost_estimate()
