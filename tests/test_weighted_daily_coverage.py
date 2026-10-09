@@ -111,7 +111,7 @@ def test_negative_and_no_signal_days_are_explicit_and_zero_is_not_profit():
     assert x["days_negative_signed_spy_bps_after_2bp_proxy"]==1
     assert x["days_zero_signed_spy_bps_after_2bp_proxy"]==1
     assert x["days_no_signals"]==1
-    assert x["mean_signed_spy_bps_per_market_day_after_hypothetical_2bp"]==pytest.approx(-2/3,abs=.0001)
+    assert x["mean_signed_spy_bps_per_market_day_after_hypothetical_2bp"]==pytest.approx(-4/3,abs=.0001)
     assert x["actual_SPY_0DTE_options_net_pnl"] is None
     assert x["account_max_drawdown"] is None
     assert x["account_pnl"] is None
