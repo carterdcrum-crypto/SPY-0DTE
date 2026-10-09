@@ -264,8 +264,12 @@ def run_development(root:Path,output:Path,days:Sequence[date],args)->dict:
     all_ranked=sorted(validation_scores,key=lambda name:(
         -statistics.mean(validation_scores[name]),name
     ))
-    winner=all_ranked[0] if validation_scores[all_ranked[0]] and
-        statistics.mean(validation_scores[all_ranked[0]])>-1e7 else None
+    winner = (
+        all_ranked[0]
+        if validation_scores[all_ranked[0]]
+        and statistics.mean(validation_scores[all_ranked[0]]) > -1e7
+        else None
+    )
     seal={
         "experiment_version":RESEARCH_VERSION,"code_sha256":code_hash(),
         "configurations":[asdict(c) for c in CANDIDATES],
@@ -315,13 +319,15 @@ def run_holdout(root:Path,output:Path,days:Sequence[date],args)->dict:
     if seal["starting_cash"]!=args.cash or str(root)!=seal["data_origin"]:
         raise ValueError("account or data root altered after freeze")
     last=[d for d in days if seal["unseen_holdout_first_date"]<=str(d)<=seal["unseen_holdout_last_date"]]
-    if len(last)!=seal["holdout_sessions"] or str(last[0])!=seal["unseen_holdout_first_date"] or str(last[-1])!=seal["unseen_holdout_last_date"]:
+    if not last or len(last)!=seal["holdout_sessions"] or str(last[0])!=seal["unseen_holdout_first_date"] or str(last[-1])!=seal["unseen_holdout_last_date"]:
         raise ValueError("holdout calendar changed after freeze")
     # The marker is created BEFORE reading any holdout file. A second call
     # aborts and does not allow repeated holdout-driven code tuning.
     with (output/"holdout_accessed.once").open("x") as f:
         f.write("Holdout access consumed by experimental protocol.\n")
     datasets=_load(root,last)
+    previous_days=[d for d in days if d<last[0]]
+    volume_seed=_volume_seed(_load(root,previous_days[-5:]))
     # OOS results for ALL nine PREDECLARED strategies, including failures.
     result_rows=[]
     bootstrap={}
@@ -331,7 +337,7 @@ def run_holdout(root:Path,output:Path,days:Sequence[date],args)->dict:
         for scenario in scenarios:
             cfg=_stress(original,scenario)
             run=run_simulation(datasets,starting_cash=args.cash,cfg=cfg,
-                               prior_volume=_volume_seed([]))
+                               prior_volume=volume_seed)
             key=name+"__"+scenario
             _write_run(output,key,run)
             s=summary(run)
