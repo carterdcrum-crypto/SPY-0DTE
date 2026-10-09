@@ -2,7 +2,7 @@ name: engine-tests
 
 on:
   push:
-    branches: [main, research/weekly-options-walkforward, research/free-signal-screen, research/breakout-failure-audit, research/causal-breakout-router, research/continuation-regime-gate, research/magnitude-edge-forecast]
+    branches: [main, research/weekly-options-walkforward, research/free-signal-screen, research/breakout-failure-audit, research/causal-breakout-router, research/continuation-regime-gate, research/magnitude-edge-forecast, research/joint-direction-magnitude-calibration]
   pull_request:
     branches: [main]
 

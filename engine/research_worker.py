@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "magnitudeedge":
+    if mode == "jointprobability":
+        from .joint_probability_audit import main as joint_main
+        raise SystemExit(joint_main([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_JOINT_OUTPUT",
+                str(_data_dir()/"joint_probability")),
+        ]))
+    elif mode == "magnitudeedge":
         from .magnitude_edge_study import main as magnitude_main
         raise SystemExit(magnitude_main([
             "--data-dir",str(_data_dir()),
