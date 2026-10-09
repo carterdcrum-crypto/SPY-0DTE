@@ -373,7 +373,10 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weeklynarrowcost":
+    if mode == "weeklydiagnostics":
+        run_weekly_narrow_cost_estimate()
+        run_weekly_feasibility()
+    elif mode == "weeklynarrowcost":
         run_weekly_narrow_cost_estimate()
     elif mode == "weeklyfeasibility":
         run_weekly_feasibility()
