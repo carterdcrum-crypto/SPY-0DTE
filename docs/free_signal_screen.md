@@ -96,3 +96,66 @@ to the persistent research volume.
 **Zero purchase and no live trading:** live order executor, Android,
 broker authentication, paper balance and production trading
 controls are unchanged. This branch is research-only.
+
+
+## Completed Railway archival research results — October 8, 2026
+
+A fresh research-only Railway deployment executed the frozen four
+signal models on **128 historical SPY sessions / 49,792 market frames**.
+No new purchased feed, no live trading calls. Research worker completed
+and stored its full decision ledger and JSON summary under
+`/data/research/free_signal_screen/`.
+
+### Directional price-forecast results (NOT options, NOT profits)
+
+Each row is **mean signed SPY underlying 10-minute move in BASIS POINTS
+from next completed bar**, with per-event directional hit rate.
+Zero-trade dates were retained in the separate day/week denominators.
+
+| Period | Model | Signal events | Direction correct | Mean signed SPY move |
+| --- | --- | ---: | ---: | ---: |
+| Dev Apr–Jul (82 days) | 15-close breakout baseline | 1,582 | 49.37% | **−0.0065 bps** |
+| Dev Apr–Jul | Breakout + volume | 630 | 47.94% | **−0.0221 bps** |
+| Dev Apr–Jul | Rolling-mean reversal | 931 | 49.84% | +0.1047 bps |
+| Dev Apr–Jul | Trend pullback/reclaim | 920 | 53.91% | +0.6689 bps |
+| Validation Aug 3–Sep 4 (25 days) | 15-close breakout baseline | 497 | 53.32% | +0.2995 bps |
+| Validation | Breakout + volume | 166 | 50.00% | +0.3694 bps |
+| Validation | Rolling-mean reversal | 191 | 42.41% | **−1.2136 bps** |
+| Validation | Trend pullback/reclaim | 228 | 51.32% | +0.1095 bps |
+| Prior-studied diagnostic Sep 8–Oct 6 (21 days) | 15-close breakout baseline | 394 | 44.67% | **−0.6101 bps** |
+| Prior-studied diagnostic | Breakout + volume | 148 | 40.54% | **−0.7360 bps** |
+| Prior-studied diagnostic | Rolling-mean reversal | 172 | 55.81% | +0.6631 bps |
+| Prior-studied diagnostic | Trend pullback/reclaim | 195 | 46.67% | **−0.0802 bps** |
+
+**Uncertainty:** the whole-day 1,000-resample bootstrap 95% interval
+for **signed-bps-per-day including no-signal days** includes zero for
+EVERY strategy in the Aug–Sep validation sample **except reversal,
+whose interval is entirely negative**: −16.9789 to −2.0636 bps/day.
+Example: breakout + volume validation interval −4.245 to +9.3962;
+pullback/reclaim validation interval −7.1152 to +8.8501 bps/day.
+
+**Conservative friction sensitivity:** a hypothetical *underlying*
+2-basis-point round-trip hurdle (NOT options execution costs) already
+takes all **twelve period × strategy mean event returns below zero**.
+Even the top validation row (+0.3694 bps) becomes **−1.6306 bps**.
+Actual 0DTE options spreads, time decay, fills, fees, and gamma
+are a distinct expense; **no executable options P&L is estimated**.
+
+### Falsifiable conclusion
+
+The **volume-confirmed breakout** leads the limited Aug–Sep validation
+sample on raw directional bps, but fails on the Sep–Oct prior-studied
+diagnostic set: +0.3694 to **−0.7360 bps/event**. The
+trend pullback shows a similar deterioration, and mean reversion
+flips from negative validation to positive later diagnostic.
+
+**No stable repeatable entry-direction edge survives the elementary
+2-bps proxy stress or the chronological regime change. There is no
+evidence for +100% account return per week.** These experiments
+also reused historical days inspected in earlier project research,
+so neither sample is a truly untouched options validation.
+
+**Recommended response:** do NOT deploy any of these models as
+autonomous live 0DTE strategy, do NOT search a huge parameter grid
+until a winner appears, preserve money and data-purchase budget,
+and collect additional untouched data in the future.
