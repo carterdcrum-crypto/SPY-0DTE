@@ -28,7 +28,7 @@ from .session_calendar import session_close
 
 NY = ZoneInfo("America/New_York")
 OCC = re.compile(r"^SPY(\d{6})([CP])(\d{8})$")
-ACCEPTED_SCHEMAS = frozenset({"cmbp-1", "tcbbo", "nbbo-event", "test-fixture"})
+ACCEPTED_SCHEMAS = frozenset({"cmbp-1", "tcbbo", "nbbo-event"})
 
 
 def aware(raw: str) -> datetime:
