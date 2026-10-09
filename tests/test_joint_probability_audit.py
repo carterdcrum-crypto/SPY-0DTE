@@ -97,10 +97,8 @@ def test_future_label_changes_cannot_change_current_prediction():
     today=synthetic_event(signed=-20)
     a=forecast_day(prior,[today],date(2026,8,12))
     altered=replace(today,observed_signed_spy_10min_bps=999,
-                    actual_future_UNUSED_LABEL="test") if False else replace(
-                        today,observed_signed_spy_10min_bps=999,
-                        observed_absolute_spy_10min_bps=999,
-                        later_signed_move_gt_2bps=True,later_signed_move_gt_5bps=True)
+                    observed_absolute_spy_10min_bps=999,
+                    later_signed_move_gt_2bps=True,later_signed_move_gt_5bps=True)
     b=forecast_day(prior,[altered],date(2026,8,12))
     assert len(a)==len(b)==1
     assert a[0].past_base_probs==b[0].past_base_probs
