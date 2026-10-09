@@ -163,6 +163,8 @@ def _group_details(events:Sequence[DelayedEvent],name:str)->dict:
         "accepted_events":len(events),
         "days_with_signal":days,
         "correct_spy_direction":win,
+        "positive_after_hypothetical_2bp_underlying_hurdle":sum(x>0 for x in after),
+        "positive_after_hypothetical_5bp_underlying_hurdle":sum(x>5 for x in returns),
         "wrong_or_flat_spy_direction":len(returns)-win,
         "direction_accuracy":win/len(returns) if returns else None,
         "wilson95_spy_direction_hit_interval":(
@@ -401,6 +403,8 @@ def main(argv:Sequence[str]|None=None)->int:
             "period":period,"calendar_sessions":stats["eligible_sessions"],
             "original_confirmed":stats["static_confirmed"]["accepted_events"],
             "static_winners":stats["static_confirmed"]["correct_spy_direction"],
+            "static_2bp_proxy_positive":stats["static_confirmed"]["positive_after_hypothetical_2bp_underlying_hurdle"],
+            "static_5bp_proxy_positive":stats["static_confirmed"]["positive_after_hypothetical_5bp_underlying_hurdle"],
             "static_wilson95":stats["static_confirmed"]["wilson95_spy_direction_hit_interval"],
             "static_mean_net_spy_bps":stats["static_confirmed"]["mean_after_2bp_underlying_friction_proxy"],
             "static_mean_net_5bp_proxy":stats["static_confirmed"]["mean_after_5bp_underlying_friction_proxy"],
