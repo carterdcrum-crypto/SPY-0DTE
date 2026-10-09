@@ -242,7 +242,9 @@ def run_weekly_cost_estimate() -> None:
     for dataset,schema,symbols,stype in (
         ("EQUS.MINI","ohlcv-1m",["SPY"],None),
         ("OPRA.PILLAR","cmbp-1","SPY.OPT","parent"),
+        ("OPRA.PILLAR","cbbo-1s","SPY.OPT","parent"),
         ("OPRA.PILLAR","tcbbo","SPY.OPT","parent"),
+        ("OPRA.PILLAR","statistics","SPY.OPT","parent"),
     ):
         label=f"{dataset} {schema}"
         try:
