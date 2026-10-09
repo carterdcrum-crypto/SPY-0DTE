@@ -107,3 +107,63 @@ On the isolated `spy-0dte-research` Railway service set
 `weighted_daily_coverage/all_weighted_setups_NOT_OPTIONS_PNL.csv`
 to the existing data volume. No data purchase, order placement,
 Android change, account connection, or reactivation of live trading.
+
+
+## Measured results — October 9, 2026: frequency increased; daily edge FAILED
+
+The isolated Railway experiment completed on **128 archived sessions /
+49,792 minute observations**, generating **4,232** candidate setup
+events before a shared portfolio nonoverlap lock. No new market data
+was purchased; GitHub tests passed. The complete candidate ledger
+and per-period JSON report were saved under
+`/data/research/weighted_daily_coverage`.
+
+These results are not option-contract profit or financial drawdown.
+A "positive day" below means **sum of signed SPY ten-minute
+underlying CLOSE-price basis points minus a hypothetical 2bps
+per accepted direction forecast >0**. A dollar account can lose
+even if that proxy is positive due to spreads, IV/time decay, fees,
+and non-executable close quotes. Every archive period is previously
+inspected, not an independent holdout.
+
+| Period | Fixed policy | Signals per session | Positive SPY proxy days | Negative SPY proxy days | Mean net signed SPY bps / day (2bp hypothetical) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Apr–Jul (82 days) | All three setups, common no-overlap clock | **18.09** | 15 | 67 | **−31.97** |
+| Apr–Jul | Weighted score >=4 | 16.35 | 10 | 72 | −34.76 |
+| Apr–Jul | Weighted score >=6 | 10.91 | 14 | 68 | −23.33 |
+| Aug–Sep (25 days) | All three setups | **17.88** | **0** | 25 | **−34.01** |
+| Aug–Sep | Weighted >=4 | 16.40 | 2 | 23 | −30.45 |
+| Aug–Sep | Weighted >=6 | 10.68 | 5 | 20 | −14.34 |
+| Previously inspected Sep–Oct (21 days) | All three setups | **17.10** | 2 | 19 | −31.94 |
+| Sep–Oct | Weighted >=4 | 16.19 | 1 | 20 | −36.42 |
+| Sep–Oct | Weighted >=6 | 10.76 | 2 | 19 | −32.78 |
+
+**0 zero-signal days** across all nine cells: broadening setups
+succeeded at *daily signal coverage* while severely failing the
+user's *daily profit objective*. Every model had **negative mean
+signed SPY basis points per trading day in every historical
+period**, and every fixed variant had substantially more negative
+proxy days than positive days.
+
+In Aug–Sep the supposedly better weighted >=6 model still had
+**20 negative days out of 25**, average **−14.34 SPY bps/day**
+and a 5-session block bootstrap 95% descriptive interval of
+**−18.22 to −10.72 bps/day**. That is materially worse than the
+always-abstain zero-return proxy.
+
+Some apparent positive trade outcomes can coexist with heavy
+daily losses when many weak signals are entered. Thus **more
+opportunities are NOT a repeatable edge, and no one should
+deploy these policies to a live cash account**. Do not add a
+mandatory per-day trade quota, average down, martingale, or
+increase risk to chase profitability. Focus next on prospective,
+unseen timestamped SPY 0DTE contract bid/ask, fees, fill
+uncertainty and genuine *positive option net expected value*;
+until the edge is proved, the correct action on weak days is
+**do nothing**.
+
+**Outcome:** no profitable research candidate identified;
+leave adaptive gates OFF, live trading OFF and existing broker
+risk controls unchanged. No actual option P&L, account
+drawdown, weekly account growth or percentage daily profit
+can be inferred from these SPY price proxies.
