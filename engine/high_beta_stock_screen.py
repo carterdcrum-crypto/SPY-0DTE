@@ -202,8 +202,14 @@ def read_stock_minutes(files:Sequence[Path])->tuple[StockMinute,...]:
 
 
 def signals_by_symbol_day(bars:Sequence[StockMinute],
-                          cfg:ScreenConfig=ScreenConfig())->tuple[StockSignal,...]:
-    """Screen each candidate at *its own signal minute*, not day-end."""
+                          cfg:ScreenConfig=ScreenConfig(), *,
+                          apply_high_beta_screen:bool=True)->tuple[StockSignal,...]:
+    """Screen each candidate at its own signal minute, not day-end.
+
+    SPY 0DTE comparison reuses the exact same indicator strategies
+    but MUST bypass the stock beta>1.5 screen; set the switch only
+    when processing SPY-only underlying minute bars.
+    """
     grouped=defaultdict(list)
     for bar in bars:
         grouped[(bar.symbol,bar.timestamp.astimezone(ET).date())].append(bar)
@@ -227,7 +233,7 @@ def signals_by_symbol_day(bars:Sequence[StockMinute],
         lookup={x.available_at:x for x in ordered}
         for event in session_opportunities(minutes):
             minute=lookup[datetime.fromisoformat(event.signal_at)]
-            if screen(minute,cfg):
+            if not apply_high_beta_screen or screen(minute,cfg):
                 results.append(StockSignal(
                     symbol=symbol,underlying_spot_at_signal=minute.close,
                     observed_rvol_asof=minute.rvol_asof,
