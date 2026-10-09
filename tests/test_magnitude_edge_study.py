@@ -12,7 +12,8 @@ from engine.data import HistoricalFrame
 from engine.market import MarketSnapshot
 from engine.magnitude_edge_study import (
     FRICTION_BPS,MIN_FORECAST_MAGNITUDE_BPS,PRIOR_COMPLETE_SESSIONS,
-    MagnitudeObservation,PastEvidence,POLICIES,build_session_observations,
+    MagnitudeObservation,PastEvidence,POLICIES,STATIC_POLICIES,
+    ADAPTIVE_POLICIES,build_session_observations,
     prior_evidence,choose,run_study,_summary,_bucket,
 )
 from engine.free_signal_screen import _bps
@@ -169,12 +170,49 @@ def test_full_replay_presents_all_periods_calibration_and_no_option_pnl():
     assert len(r["decision_ledger"])>=3
     assert set(r["models"])=={
         "development","validation","previously_studied_diagnostic"}
+    assert r["adaptive_signal_gate_enabled"] is False
+    assert r["adaptive_signal_gate_off_by_default"] is True
+    assert tuple(r["policies"]) == STATIC_POLICIES
+    assert all(row["adaptive_gate_enabled"] is False for row in r["decision_ledger"])
+    assert all(row["prior_cont_n"] is None for row in r["decision_ledger"])
     for period,models in r["models"].items():
-        assert set(models)==set(POLICIES)
+        assert set(models)==set(STATIC_POLICIES)
         assert models["same_clock_delayed_baseline"]["accepted"]>=1
         for policy,model in models.items():
             assert model["account_return"] is None
             assert model["actual_option_profit"] is None
             assert model["accepted"]+model["abstained"]==model["eligible_same_clock_events"]
-        assert models["past40_lowerbound_plus_magnitude"]["accepted"]==0
+        assert all(adaptive not in models for adaptive in ADAPTIVE_POLICIES)
     assert r["calibration"]
+
+
+def test_adaptive_gate_can_be_opted_into_only_for_offline_comparison():
+    rows=[*trading_day(date(2026,4,8)),*trading_day(date(2026,8,12))]
+    static=run_study(rows)
+    optional=run_study(rows,adaptive_enabled=True)
+    assert optional["adaptive_signal_gate_enabled"] is True
+    assert set(optional["policies"])==set(POLICIES)
+    assert static["adaptive_signal_gate_enabled"] is False
+    assert optional["option_PnL"] is None
+    assert optional["options_trades_executed"]==0
+    assert all(row["adaptive_gate_enabled"] is True
+               for row in optional["decision_ledger"])
+    for period,models in static["models"].items():
+        assert set(models)==set(STATIC_POLICIES)
+        for policy in STATIC_POLICIES:
+            # No static signal or realized-price result can change simply
+            # by opting into additional research-only adaptive comparisons.
+            assert models[policy]==optional["models"][period][policy]
+        assert all(optional["models"][period][policy]["accepted"]==0
+                   for policy in ADAPTIVE_POLICIES)
+
+
+def test_static_research_does_not_invoke_historical_adaptive_gate(monkeypatch):
+    import engine.magnitude_edge_study as study
+    def invalid(*args,**kwargs):
+        raise AssertionError("adaptive filter must remain disabled")
+    monkeypatch.setattr(study,"prior_evidence",invalid)
+    rows=[*trading_day(date(2026,4,8))]
+    result=study.run_study(rows)
+    assert result["adaptive_signal_gate_enabled"] is False
+    assert result["models"]["development"]["same_clock_delayed_baseline"]["accepted"]>=1
