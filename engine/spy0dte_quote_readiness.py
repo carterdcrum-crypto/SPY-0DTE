@@ -112,10 +112,27 @@ def audit_0dte(root: Path,*,min_sessions:int=MIN_COMPLETE_SESSIONS_FOR_OPTION_ST
         raise ValueError("minimum complete sessions must be positive")
     filename=file_audit(root)
     days=available_sessions(root)
+    bars_dates={date.fromisoformat(p.name[9:19])
+                for p in root.glob("spy_bars_*.csv*")}
+    quote_dates={date.fromisoformat(p.name[18:28])
+                 for p in root.glob("spy_option_quotes_*.csv*")}
+    covered_dates=bars_dates|quote_dates
+    missing_market_days=[]
+    if covered_dates:
+        cursor=min(covered_dates)
+        while cursor<=max(covered_dates):
+            if session_close(cursor) is not None and cursor not in covered_dates:
+                missing_market_days.append(cursor.isoformat())
+            cursor+=timedelta(days=1)
+    unpaired_bars=sorted(d.isoformat() for d in bars_dates-quote_dates)
+    unpaired_quotes=sorted(d.isoformat() for d in quote_dates-bars_dates)
     reports=[validate_day(root,day) for day in days]
     complete=[r for r in reports if r["complete_for_0dte_research"]]
+    full_date_coverage=(not unpaired_bars and not unpaired_quotes
+                        and not missing_market_days)
     status=("READY_FOR_DESCRIPTIVE_QUOTE_RESEARCH"
             if len(complete)>=min_sessions and len(complete)==len(reports)
+            and full_date_coverage
             else "BLOCKED_0DTE_EVENT_QUOTE_OR_OHLCV_COVERAGE")
     missing=[]
     if not days:
@@ -127,6 +144,12 @@ def audit_0dte(root: Path,*,min_sessions:int=MIN_COMPLETE_SESSIONS_FOR_OPTION_ST
             missing.append(f"MINIMUM_{min_sessions}_MATCHED_SESSIONS_NOT_MET")
         if len(complete)!=len(reports):
             missing.append("AT_LEAST_ONE_MATCHED_DAY_FAILED_MARKET_COVERAGE")
+    if unpaired_bars:
+        missing.append("MISSING_REAL_OPTION_EVENT_QUOTES_ON_BAR_DAYS")
+    if unpaired_quotes:
+        missing.append("MISSING_REAL_OHLCV_ON_QUOTE_DAYS")
+    if missing_market_days:
+        missing.append("MISSING_WHOLE_TRADING_DAYS_WITHIN_ARCHIVE_DATE_SPAN")
     return {
         "instrument":"SPY",
         "expiration":"0DTE_SAME_SESSION_ONLY",
@@ -135,6 +158,9 @@ def audit_0dte(root: Path,*,min_sessions:int=MIN_COMPLETE_SESSIONS_FOR_OPTION_ST
         "paired_file_days":len(days),
         "complete_days":len(complete),
         "failed_paired_days":len(reports)-len(complete),
+        "unpaired_bar_session_dates":unpaired_bars,
+        "unpaired_option_quote_session_dates":unpaired_quotes,
+        "missing_market_sessions_within_archive_span":missing_market_days,
         "legacy_spy_only_minute_snapshot_files":filename["legacy_minute_snapshot_files"],
         "real_ohlcv_files":filename["true_ohlcv_files"],
         "real_event_quote_files":filename["timestamped_option_quote_files"],
