@@ -65,3 +65,76 @@ python -m engine.spy_pcr_momentum_reversal \
 Research Railway service `spy-0dte-research` uses **`RESEARCH_MODE=spy_pcr_momentum`**. It loads ONLY existing archived data, writes `report.json`, prints separate named reports per period and model; no buying feeds and no broker operations. Adaptive trailing-return signal gate remains OFF and live auto-trading remains OFF.
 
 **Never claim a five-factor PCR backtest was completed when PCR was missing.**
+
+
+## Executed historical results — October 9, 2026
+
+The isolated Railway research worker finished successfully
+(deployment `eeb42016-c866-4266-900a-d71dc23f541d`) on
+**128 archived SPY sessions / 49,792 already stored one-minute
+snapshots**. Complete report was persisted at
+`/data/research/spy_pcr_momentum_reversal/report.json` on the
+existing Railway research volume. **0 put/call ratio input files
+were present; no new market data was purchased.**
+
+### Executable tests versus the previous broad signal baseline
+
+Values below are **underlying SPY ten-minute CLOSE-price signal bps
+after a hypothetical 2bp-per-signal adjustment**. This is neither
+actual option premium P&L nor account return. All chronological
+market dates had been inspected before this experiment.
+
+| Historical regime | Trading days | Fixed model | Selected directional predictions | Correct SPY direction | Positive days on signed SPY-bps proxy | Negative days | Net signed SPY-bps proxy PER MARKET DAY including no signal |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| Apr–Jul development | 82 | Prior 3-family shared-clock baseline | 1,483 | 756 | 15 | 67 | **−31.9688** |
+| Apr–Jul development | **82** | **Momentum + volume + price-action reversal + MACD (no PCR)** | **367** | **184** | **25** | **57** | **−8.3453** |
+| Aug–Sep validation | 25 | Previous 3-family baseline | 447 | 233 | 0 | 25 | **−34.0084** |
+| Aug–Sep validation | **25** | **Four-factor model (no PCR)** | **96** | **43** | **8** | **16** | **−7.8491** |
+| Previously inspected Sep–Oct diagnostic | 21 | Previous 3-family baseline | 359 | 171 | 2 | 19 | **−31.9383** |
+| Previously inspected Sep–Oct diagnostic | **21** | **Four-factor model (no PCR)** | **99** | **37** | **4** | **17** | **−14.1336** |
+
+The four-factor implementation had 1 **zero** proxy day in
+the Aug–Sep 25-day period; every other four-factor day had a
+positive or negative proxy outcome. Directional hits
+(184/367, 43/96, 37/99) were approximately **50.1%, 44.8%,
+and 37.4%**. **Higher win percentage is not proven.**
+
+The **5-trading-session circular block bootstrap** 95%
+descriptive intervals for the four-factor's mean signed SPY bps
+**per market day after hypothetical 2bps** were:
+
+- Apr–Jul: **[−12.7615, −4.3333]**
+- Aug–Sep: **[−11.8514, −3.6679]**
+- Sep–Oct: **[−22.1108, −7.1781]**
+
+All are negative, and the naive zero-signal zero-SPY-bps proxy
+benchmark beats them. **Reducing negative exposure is not a
+repeatable positive trading edge.** The setup never demonstrated
+positive directional expected returns after even the very mild
+SPY underlying cost assumption. We cannot infer whether real
+long SPY 0DTE option trades would have earned money, because true
+event-time option bid/ask and time decay are not represented.
+
+### Five-factor full-fusion verdict: NOT TESTED
+
+The archive contains **zero** genuine full-chain, intraday
+SPY-specific put/call VOLUME ratio input files. Cboe daily
+market-wide close ratios and the limited archived 0DTE option
+snapshot subset cannot substitute for full-chain values known
+at the instant the morning signals were decided. Across all
+three regimes:
+
+`momentum_reversal_plus_verified_spy_pcr =
+NOT_TESTED_INCOMPLETE_VERIFIED_INTRADAY_SPY_PCR`
+
+The model's trade count, win rate, daily basis points and options
+profit are **NULL**, not zero, and it has **no profit claims**.
+
+**Research decision:** keep this as a transparent unsuccessful
+four-factor ablation and a ready-but-blocked PCR-dependent full
+fusion; do NOT merge into live Auto Trade or promise positive
+daily returns. Obtain legitimately timestamped full-chain SPY
+put/call contract-volume as-of the signal time, plus real
+SPY 0DTE option event quotes for actual percentage-profit tests,
+only with explicit user permission if any data purchase is
+required. New market data purchases during this experiment: **$0**.
