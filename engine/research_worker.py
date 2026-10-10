@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weighteddaily":
+    if mode == "spy0dtequotes":
+        from .spy0dte_quote_readiness import main as run_quote_audit
+        raise SystemExit(run_quote_audit([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_SPY0DTE_QUOTE_OUTPUT",
+                str(_data_dir()/"spy0dte_quote_readiness")),
+        ]))
+    elif mode == "weighteddaily":
         from .weighted_daily_coverage import main as run_weighted
         raise SystemExit(run_weighted([
             "--data-dir",str(_data_dir()),
