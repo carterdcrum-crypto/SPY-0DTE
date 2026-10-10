@@ -376,7 +376,14 @@ def run_weekly_narrow_cost_estimate() -> None:
 
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "weighteddaily":
+    if mode == "spy_pcr_momentum":
+        from .spy_pcr_momentum_reversal import main as run_spy_pcr
+        raise SystemExit(run_spy_pcr([
+            "--data-dir",str(_data_dir()),
+            "--output-dir",os.getenv("RESEARCH_SPY_PCR_OUTPUT",
+                str(_data_dir()/"spy_pcr_momentum_reversal")),
+        ]))
+    elif mode == "weighteddaily":
         from .weighted_daily_coverage import main as run_weighted
         raise SystemExit(run_weighted([
             "--data-dir",str(_data_dir()),
