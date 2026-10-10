@@ -131,3 +131,6 @@ def test_no_future_session_spot_files_can_rescue_missing_quote_day(tmp_path):
     assert a["paired_file_days"]==1
     assert a["complete_days"]==1
     assert a["real_ohlcv_files"]==2 and a["real_event_quote_files"]==1
+    assert a["status"]=="BLOCKED_0DTE_EVENT_QUOTE_OR_OHLCV_COVERAGE"
+    assert a["unpaired_bar_session_dates"]==[d1.isoformat()]
+    assert "MISSING_REAL_OPTION_EVENT_QUOTES_ON_BAR_DAYS" in a["missing_or_blockers"]
