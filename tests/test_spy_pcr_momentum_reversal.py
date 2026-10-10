@@ -96,7 +96,7 @@ def test_pcr_parser_never_reads_marketwide_or_incomplete_sampling(tmp_path):
     assert pcr_at(data["2026-08-12"],datetime(2026,8,12,10,58,tzinfo=ET)) is None
     assert pcr_at(data["2026-08-12"],datetime(2026,8,12,11,6,tzinfo=ET)) is None
     with pytest.raises(ValueError,match="complete|incomplete"):
-        replace(pcr(),"coverage","x") if False else replace(pcr(),coverage="sampled_chain")
+        replace(pcr(),coverage="sampled_chain")
     with pytest.raises(ValueError,match="divide by zero"):
         replace(pcr(),call_volume_so_far=0)
     with pytest.raises(ValueError,match="decreasing"):
