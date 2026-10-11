@@ -105,10 +105,12 @@ def simulate(entry_ask: float, trace, *, mode: str, contracts: int):
                 reason = "trailing_stop_20"
             elif credit <= entry_cost * .65:
                 reason = "hard_stop_35"
+            elif is_last:
+                # A 100% target reached only at the forced-close instant
+                # cannot leave a runner without a subsequent quote to sell.
+                reason = "max_hold"
             elif credit >= entry_cost * 2 and already_target_sold == 0:
                 reason = "take_profit_100"
-            elif is_last:
-                reason = "max_hold"
             else:
                 continue
             if reason == "take_profit_100" and contracts >= 3:
