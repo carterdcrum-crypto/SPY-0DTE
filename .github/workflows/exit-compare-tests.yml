@@ -11,5 +11,5 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest -q tests/test_exit_policy_comparison.py tests/test_spy_event_data_preflight.py tests/test_trailing_only_sweep.py
-      - run: python -m compileall -q engine/exit_policy_comparison.py engine/spy_event_data_preflight.py engine/trailing_only_sweep.py
+      - run: python -m pytest -q tests/test_exit_policy_comparison.py tests/test_spy_event_data_preflight.py tests/test_trailing_only_sweep.py tests/test_entry_filter_30pct_study.py
+      - run: python -m compileall -q engine/exit_policy_comparison.py engine/spy_event_data_preflight.py engine/trailing_only_sweep.py engine/entry_filter_30pct_study.py
