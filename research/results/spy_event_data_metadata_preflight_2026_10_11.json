@@ -1,0 +1,138 @@
+{
+  "data_downloaded_bytes": 0,
+  "data_purchased_usd": 0,
+  "existing_archive_summary": {
+    "direct_event_bar_pcr_files": 0,
+    "legacy_canonical_files": 128,
+    "raw_vendor_artifact_count": 0,
+    "strict_event_data_readiness": {
+      "blocker": "Missing real SPY 1-minute OHLCV bars AND/OR event-observed SPY 0DTE OCC option quotes with executable bid/ask and timestamps. Legacy spy_0dte minute close/sampled CBBO files omit full OHLCV and exact quote-observation timestamps; cannot backtest ORB/VWAP honestly.",
+      "legacy_minute_snapshot_files": 128,
+      "paired_sessions": 0,
+      "source": "/data/research",
+      "timestamped_option_quote_files": 0,
+      "true_ohlcv_files": 0,
+      "usable_for_this_experiment": false
+    }
+  },
+  "readiness_blockers": [
+    "NO_EVENT_OBSERVED_OCC_NBBO_FILES",
+    "NO_POINT_IN_TIME_COMPLETE_SPY_CHAIN_VOLUME_PCR",
+    "NO_GENUINE_FULL_SPY_1M_OHLCV_FILES"
+  ],
+  "ready_for_full_five_factor_backtest": false,
+  "sampled_cost_dates": [
+    "2026-04-01",
+    "2026-07-08",
+    "2026-10-06"
+  ],
+  "sampled_price_quotes": [
+    {
+      "day": "2026-04-01",
+      "listed_liquid_symbol_candidates": 17,
+      "pricing_estimates": {
+        "event_nbbo_12_listed_options": {
+          "estimated_usd": 0.3516,
+          "symbols_priced": 12
+        },
+        "full_spy_chain_1m_volume_bars_for_asof_pcr": {
+          "estimated_usd": 7.2801,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_event_nbbo": {
+          "estimated_usd": 22.2609,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_trades_for_asof_pcr": {
+          "estimated_usd": 18.612,
+          "symbols_priced": "SPY.OPT"
+        },
+        "spy_ohlcv_1m": {
+          "estimated_usd": 0.0002,
+          "symbols_priced": 1
+        },
+        "trade_time_nbbo_12_listed_options": {
+          "estimated_usd": 7.8606,
+          "symbols_priced": 12
+        }
+      }
+    },
+    {
+      "day": "2026-07-08",
+      "listed_liquid_symbol_candidates": 15,
+      "pricing_estimates": {
+        "event_nbbo_12_listed_options": {
+          "estimated_usd": 0.4167,
+          "symbols_priced": 12
+        },
+        "full_spy_chain_1m_volume_bars_for_asof_pcr": {
+          "estimated_usd": 6.2611,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_event_nbbo": {
+          "estimated_usd": 24.3741,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_trades_for_asof_pcr": {
+          "estimated_usd": 21.1918,
+          "symbols_priced": "SPY.OPT"
+        },
+        "spy_ohlcv_1m": {
+          "estimated_usd": 0.0002,
+          "symbols_priced": 1
+        },
+        "trade_time_nbbo_12_listed_options": {
+          "estimated_usd": 11.1168,
+          "symbols_priced": 12
+        }
+      }
+    },
+    {
+      "day": "2026-10-06",
+      "listed_liquid_symbol_candidates": 12,
+      "pricing_estimates": {
+        "event_nbbo_12_listed_options": {
+          "estimated_usd": 0.1605,
+          "symbols_priced": 12
+        },
+        "full_spy_chain_1m_volume_bars_for_asof_pcr": {
+          "estimated_usd": 5.8572,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_event_nbbo": {
+          "estimated_usd": 10.5116,
+          "symbols_priced": "SPY.OPT"
+        },
+        "full_spy_chain_trades_for_asof_pcr": {
+          "estimated_usd": 19.8037,
+          "symbols_priced": "SPY.OPT"
+        },
+        "spy_ohlcv_1m": {
+          "estimated_usd": 0.0002,
+          "symbols_priced": 1
+        },
+        "trade_time_nbbo_12_listed_options": {
+          "estimated_usd": 14.3406,
+          "symbols_priced": 12
+        }
+      }
+    }
+  ],
+  "run_deployment": "5ddafb58-0490-41b5-9d44-e2a3ea2e11e4",
+  "report_created_date": "2026-10-11",
+  "metadata_calls_only": true,
+  "sample_scoped_quote_cost_per_day_usd": [
+    {
+      "day": "2026-04-01",
+      "lower_bound_scope_12_contracts": 7.6319
+    },
+    {
+      "day": "2026-07-08",
+      "lower_bound_scope_12_contracts": 6.678
+    },
+    {
+      "day": "2026-10-06",
+      "lower_bound_scope_12_contracts": 6.0179
+    }
+  ]
+}
