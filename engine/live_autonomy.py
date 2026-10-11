@@ -297,7 +297,11 @@ class LiveExecutor:
             target_remaining = profit_exit_quantity(
                 position["entry_quantity"], position["quantity"], position["target_filled"]
             )
-            if reason is None and position["target_requested"] and target_remaining:
+            # A cancelled target order is retried only while the fresh net bid
+            # still clears +100%; do not chase an old target below its price.
+            entry_value = position["average_price"] * 100.0 + fee
+            if (reason is None and position["target_requested"] and target_remaining
+                    and q.bid * 100.0 - fee >= entry_value * 2.0):
                 reason = "take_profit"
             reason = reason or self.strategy.exit(position, now)
             if reason is None:
