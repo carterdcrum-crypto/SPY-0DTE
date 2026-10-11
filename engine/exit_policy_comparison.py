@@ -11,6 +11,8 @@ import argparse
 import csv
 import json
 import math
+import random
+from datetime import date
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -18,7 +20,7 @@ from pathlib import Path
 from .burst_research import _research_files
 from .data import HistoricalFrame, load_canonical_path
 from .spy_pcr_momentum_reversal import session_classifications, select
-from .free_signal_screen import ET
+from .free_signal_screen import ET, PERIODS
 
 STARTING_CONTRACTS = (1, 4)
 FEE = 0.65
@@ -86,38 +88,31 @@ def simulate(entry_ask: float, trace, *, mode: str, contracts: int):
     exit_reason_counts: dict[str, int] = {}
     stop_time = trace[-1][0]
     close_times = []
+    if mode not in {"old_50", "old_50_trail20", "new_100_no_trail", "new_100_trail20"}:
+        raise ValueError("unknown exit experiment arm")
+    trailing = mode in {"old_50_trail20", "new_100_trail20"}
+    target_100 = mode.startswith("new_100")
     for at, bid in trace:
         credit = max(0, (bid - ADVERSE_OPTION_SLIPPAGE_PER_SHARE) * 100 - FEE)
         peak = max(peak, credit)
         is_last = at >= stop_time
-        if mode == "old_50":
-            if credit <= entry_cost * .65:
-                reason = "hard_stop_35"
-            elif credit >= entry_cost * 1.5:
-                reason = "take_profit_50"
-            elif is_last:
-                reason = "max_hold"
-            else:
-                continue
-            count = remaining
+        if trailing and credit <= peak * .80 + 1e-8:
+            reason = "trailing_stop_20"
+        elif credit <= entry_cost * .65:
+            reason = "hard_stop_35"
+        elif is_last:
+            reason = "max_hold"
+        elif target_100 and credit >= entry_cost * 2 and already_target_sold == 0:
+            reason = "take_profit_100"
+        elif not target_100 and credit >= entry_cost * 1.5:
+            reason = "take_profit_50"
         else:
-            if credit <= peak * .80 + 1e-8:
-                reason = "trailing_stop_20"
-            elif credit <= entry_cost * .65:
-                reason = "hard_stop_35"
-            elif is_last:
-                # A 100% target reached only at the forced-close instant
-                # cannot leave a runner without a subsequent quote to sell.
-                reason = "max_hold"
-            elif credit >= entry_cost * 2 and already_target_sold == 0:
-                reason = "take_profit_100"
-            else:
-                continue
-            if reason == "take_profit_100" and contracts >= 3:
-                count = min(remaining, contracts - 1, math.ceil(.75 * contracts))
-                already_target_sold += count
-            else:
-                count = remaining
+            continue
+        if reason == "take_profit_100" and contracts >= 3:
+            count = min(remaining, contracts - 1, math.ceil(.75 * contracts))
+            already_target_sold += count
+        else:
+            count = remaining
         remaining -= count
         proceeds += count * credit
         exit_reason_counts[reason] = exit_reason_counts.get(reason, 0) + count
@@ -140,7 +135,7 @@ def _summary(records: list[dict], policy: str, contracts: int):
     matched = [x for x in records if x["policy"] == policy and
                x["contracts"] == contracts]
     out = {}
-    for key in ("old_50", "new_100_trail20"):
+    for key in ("old_50", "old_50_trail20", "new_100_no_trail", "new_100_trail20"):
         pnls = [x[key]["pnl"] for x in matched]
         if not pnls:
             out[key] = None
@@ -160,6 +155,39 @@ def _summary(records: list[dict], policy: str, contracts: int):
             "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": round(dd, 2),
         }
     return out
+
+
+def _period(day: str) -> str:
+    value = date.fromisoformat(day)
+    return next((name for name, start, end in PERIODS if start <= value <= end), "unclassified")
+
+
+def _paired_delta_ci(records: list[dict], days: list[str], policy: str,
+                     contracts: int, left: str, right: str) -> dict:
+    """Descriptive 5-session day-block CI; already-inspected sample, NOT OOS."""
+    daily = {day: 0.0 for day in days}
+    for row in records:
+        if row["policy"] == policy and row["contracts"] == contracts:
+            daily[row["date"]] += row[right]["pnl"] - row[left]["pnl"]
+    seq = [daily[day] for day in days]
+    if not seq:
+        return {"difference_total_usd": None, "ci95_difference_usd_per_day": None}
+    rnd = random.Random(20261011)
+    means=[]
+    for _ in range(1000):
+        picks=[]
+        while len(picks) < len(seq):
+            offset=rnd.randrange(len(seq))
+            picks.extend(seq[(offset+j)%len(seq)] for j in range(min(5,len(seq))))
+        means.append(sum(picks[:len(seq)])/len(seq))
+    means.sort()
+    return {
+        "difference_total_usd": round(sum(seq),2),
+        "difference_usd_per_archived_day": round(sum(seq)/len(seq),3),
+        "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+            round(means[24],3), round(means[974],3)],
+        "paired_day_count": len(days),
+    }
 
 
 def run(root: Path, output: Path) -> dict:
@@ -198,14 +226,17 @@ def run(root: Path, output: Path) -> dict:
                     continue
                 coverage[f"{policy}_paired_comparable"] += 1
                 for contracts in STARTING_CONTRACTS:
-                    old=simulate(q.ask, history, mode="old_50", contracts=contracts)
-                    new=simulate(q.ask, history, mode="new_100_trail20", contracts=contracts)
+                    outcomes={
+                        name:simulate(q.ask, history, mode=name, contracts=contracts)
+                        for name in ("old_50", "old_50_trail20",
+                                     "new_100_no_trail", "new_100_trail20")
+                    }
                     trades.append({
                         "date":day, "signal":op.signal_at, "setup":op.setup,
                         "side":op.original_direction, "symbol":q.symbol,
                         "entry_sample_bucket":frames[idx].timestamp.isoformat(),
                         "entry_ask":q.ask, "contracts":contracts, "policy":policy,
-                        "old_50":old, "new_100_trail20":new,
+                        **outcomes,
                     })
     for row in trades:
         detail.append({
@@ -236,7 +267,24 @@ def run(root: Path, output: Path) -> dict:
         "fixed_hold_minutes":MAX_HOLD_MIN,
         "matched_results":{
             policy:{
-                str(contracts):_summary(trades,policy,contracts)
+                str(contracts):{
+                    "overall":_summary(trades,policy,contracts),
+                    "by_period":{
+                        name:_summary([r for r in trades if _period(r["date"]) == name],policy,contracts)
+                        for name, _, _ in PERIODS
+                    },
+                    "paired_policy_deltas_usd":{
+                        "trailing_at_old_50_target":_paired_delta_ci(
+                            trades, sorted(days), policy, contracts,
+                            "old_50", "old_50_trail20"),
+                        "trailing_at_new_100_target":_paired_delta_ci(
+                            trades, sorted(days), policy, contracts,
+                            "new_100_no_trail", "new_100_trail20"),
+                        "full_new_vs_full_old":_paired_delta_ci(
+                            trades, sorted(days), policy, contracts,
+                            "old_50", "new_100_trail20"),
+                    },
+                }
                 for contracts in STARTING_CONTRACTS
             } for policy in ("prior_all_three_families","momentum_reversal_four_factors")
         },
