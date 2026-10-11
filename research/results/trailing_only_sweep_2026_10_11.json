@@ -1,0 +1,1289 @@
+{
+  "actual_account_returns": false,
+  "adverse_slippage_per_share_per_side_usd": 0.01,
+  "arms": [
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    55,
+    60,
+    65,
+    70,
+    75,
+    80,
+    85,
+    90,
+    "no_trailing"
+  ],
+  "coverage": {
+    "accepted_signals": 562,
+    "matched_option_scenarios": 537,
+    "no_matching_option_entry": 25,
+    "one_minute_frames": 49792
+  },
+  "data_purchases_usd": 0,
+  "fee_per_contract_per_side_usd": 0.65,
+  "file_count": 128,
+  "full_chain_point_in_time_pcr": false,
+  "full_position_exit": true,
+  "hard_max_hold_minutes": 10,
+  "independent_hard_loss_fraction": 0.35,
+  "inspected_all_sessions_hindsight_ranking": [
+    "trail_30pct",
+    "trail_35pct",
+    "trail_65pct",
+    "trail_70pct",
+    "trail_75pct",
+    "trail_80pct",
+    "trail_85pct",
+    "trail_90pct",
+    "no_trailing",
+    "trail_50pct",
+    "trail_55pct",
+    "trail_45pct",
+    "trail_40pct",
+    "trail_25pct",
+    "trail_60pct",
+    "trail_20pct"
+  ],
+  "note": "Already-inspected historical periods, no untouched holdout; comparisons are sampled quote scenarios, not broker fills. No account cash or settlement constraints.",
+  "paired_difference_vs_trail20": {
+    "no_trailing": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    },
+    "trail_25pct": {
+      "difference_total_usd": 87,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -3.406,
+        5.5
+      ]
+    },
+    "trail_30pct": {
+      "difference_total_usd": 356,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -2.727,
+        8.727
+      ]
+    },
+    "trail_35pct": {
+      "difference_total_usd": 155,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -4.844,
+        7.766
+      ]
+    },
+    "trail_40pct": {
+      "difference_total_usd": 88,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.812,
+        7.133
+      ]
+    },
+    "trail_45pct": {
+      "difference_total_usd": 91,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.82,
+        7.43
+      ]
+    },
+    "trail_50pct": {
+      "difference_total_usd": 103,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.82,
+        7.484
+      ]
+    },
+    "trail_55pct": {
+      "difference_total_usd": 103,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.82,
+        7.484
+      ]
+    },
+    "trail_60pct": {
+      "difference_total_usd": 74,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -6.195,
+        7.313
+      ]
+    },
+    "trail_65pct": {
+      "difference_total_usd": 115,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.719,
+        7.516
+      ]
+    },
+    "trail_70pct": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    },
+    "trail_75pct": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    },
+    "trail_80pct": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    },
+    "trail_85pct": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    },
+    "trail_90pct": {
+      "difference_total_usd": 113,
+      "paired_5session_block_bootstrap_95pct_ci_usd_per_calendar_day": [
+        -5.758,
+        7.516
+      ]
+    }
+  },
+  "partial_sells": false,
+  "real_event_timestamped_nbbo": false,
+  "selected_by_development_pnl_only": "trail_30pct",
+  "sessions": 128,
+  "study": "TRAILING_ONLY_MINUTE_CBBO_SENSITIVITY_NOT_AN_EXECUTION_BACKTEST",
+  "tables": {
+    "no_trailing": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_20pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 4018.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 181,
+          "independent_hard_stop_35pct": 8,
+          "trailing_stop": 348
+        },
+        "mean_option_premium_return_pct": -6.433,
+        "mean_trade_pnl_usd": -6.831,
+        "negative_days": 90,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3668.1,
+        "positive_days": 36,
+        "trades": 537,
+        "win_rate_pct": 28.31
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2901,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 123,
+          "independent_hard_stop_35pct": 6,
+          "trailing_stop": 223
+        },
+        "mean_option_premium_return_pct": -6.405,
+        "mean_trade_pnl_usd": -7.399,
+        "negative_days": 60,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2604.6,
+        "positive_days": 22,
+        "trades": 352,
+        "win_rate_pct": 29.26
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 701.5,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 27,
+          "independent_hard_stop_35pct": 0,
+          "trailing_stop": 68
+        },
+        "mean_option_premium_return_pct": -4.67,
+        "mean_trade_pnl_usd": -5.005,
+        "negative_days": 15,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -475.5,
+        "positive_days": 6,
+        "trades": 95,
+        "win_rate_pct": 25.26
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 726.7,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 31,
+          "independent_hard_stop_35pct": 2,
+          "trailing_stop": 57
+        },
+        "mean_option_premium_return_pct": -8.4,
+        "mean_trade_pnl_usd": -6.533,
+        "negative_days": 15,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -588,
+        "positive_days": 8,
+        "trades": 90,
+        "win_rate_pct": 27.78
+      }
+    },
+    "trail_25pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3906.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 271,
+          "independent_hard_stop_35pct": 21,
+          "trailing_stop": 245
+        },
+        "mean_option_premium_return_pct": -6.337,
+        "mean_trade_pnl_usd": -6.669,
+        "negative_days": 91,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3581.1,
+        "positive_days": 35,
+        "trades": 537,
+        "win_rate_pct": 32.03
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2915,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 177,
+          "independent_hard_stop_35pct": 12,
+          "trailing_stop": 163
+        },
+        "mean_option_premium_return_pct": -6.068,
+        "mean_trade_pnl_usd": -7.223,
+        "negative_days": 62,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2542.6,
+        "positive_days": 20,
+        "trades": 352,
+        "win_rate_pct": 32.95
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 725.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 42,
+          "independent_hard_stop_35pct": 5,
+          "trailing_stop": 48
+        },
+        "mean_option_premium_return_pct": -7.195,
+        "mean_trade_pnl_usd": -6.184,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -587.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 27.37
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 591.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 52,
+          "independent_hard_stop_35pct": 4,
+          "trailing_stop": 34
+        },
+        "mean_option_premium_return_pct": -6.484,
+        "mean_trade_pnl_usd": -5.011,
+        "negative_days": 13,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -451,
+        "positive_days": 10,
+        "trades": 90,
+        "win_rate_pct": 33.33
+      }
+    },
+    "trail_30pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3609.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 330,
+          "independent_hard_stop_35pct": 47,
+          "trailing_stop": 160
+        },
+        "mean_option_premium_return_pct": -6.027,
+        "mean_trade_pnl_usd": -6.168,
+        "negative_days": 87,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3312.1,
+        "positive_days": 39,
+        "trades": 537,
+        "win_rate_pct": 33.89
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2737,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 217,
+          "independent_hard_stop_35pct": 26,
+          "trailing_stop": 109
+        },
+        "mean_option_premium_return_pct": -5.594,
+        "mean_trade_pnl_usd": -6.632,
+        "negative_days": 57,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2334.6,
+        "positive_days": 25,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 630.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 52,
+          "independent_hard_stop_35pct": 12,
+          "trailing_stop": 31
+        },
+        "mean_option_premium_return_pct": -7.175,
+        "mean_trade_pnl_usd": -5.658,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -537.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 30.53
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 583.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 61,
+          "independent_hard_stop_35pct": 9,
+          "trailing_stop": 20
+        },
+        "mean_option_premium_return_pct": -6.512,
+        "mean_trade_pnl_usd": -4.889,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -440,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_35pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3767.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 386,
+          "independent_hard_stop_35pct": 101,
+          "trailing_stop": 50
+        },
+        "mean_option_premium_return_pct": -6.431,
+        "mean_trade_pnl_usd": -6.542,
+        "negative_days": 87,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3513.1,
+        "positive_days": 39,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2788,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 255,
+          "independent_hard_stop_35pct": 62,
+          "trailing_stop": 35
+        },
+        "mean_option_premium_return_pct": -5.78,
+        "mean_trade_pnl_usd": -6.854,
+        "negative_days": 57,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2412.6,
+        "positive_days": 25,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 669.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 59,
+          "independent_hard_stop_35pct": 23,
+          "trailing_stop": 13
+        },
+        "mean_option_premium_return_pct": -8.159,
+        "mean_trade_pnl_usd": -6.532,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -620.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 623.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 72,
+          "independent_hard_stop_35pct": 16,
+          "trailing_stop": 2
+        },
+        "mean_option_premium_return_pct": -7.151,
+        "mean_trade_pnl_usd": -5.333,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -480,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_40pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3845.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 404,
+          "independent_hard_stop_35pct": 115,
+          "trailing_stop": 18
+        },
+        "mean_option_premium_return_pct": -6.588,
+        "mean_trade_pnl_usd": -6.667,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3580.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.33
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2874.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 269,
+          "independent_hard_stop_35pct": 72,
+          "trailing_stop": 11
+        },
+        "mean_option_premium_return_pct": -5.923,
+        "mean_trade_pnl_usd": -6.962,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2450.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 689.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 62,
+          "independent_hard_stop_35pct": 26,
+          "trailing_stop": 7
+        },
+        "mean_option_premium_return_pct": -8.479,
+        "mean_trade_pnl_usd": -6.784,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -644.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_45pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3849.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 412,
+          "independent_hard_stop_35pct": 118,
+          "trailing_stop": 7
+        },
+        "mean_option_premium_return_pct": -6.548,
+        "mean_trade_pnl_usd": -6.661,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3577.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2879.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 273,
+          "independent_hard_stop_35pct": 73,
+          "trailing_stop": 6
+        },
+        "mean_option_premium_return_pct": -5.909,
+        "mean_trade_pnl_usd": -6.976,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2455.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 66,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -8.307,
+        "mean_trade_pnl_usd": -6.7,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -636.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_50pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3837.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 415,
+          "independent_hard_stop_35pct": 118,
+          "trailing_stop": 4
+        },
+        "mean_option_premium_return_pct": -6.506,
+        "mean_trade_pnl_usd": -6.639,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3565.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2867.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 276,
+          "independent_hard_stop_35pct": 73,
+          "trailing_stop": 3
+        },
+        "mean_option_premium_return_pct": -5.844,
+        "mean_trade_pnl_usd": -6.942,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2443.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 66,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -8.307,
+        "mean_trade_pnl_usd": -6.7,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -636.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_55pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3837.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 416,
+          "independent_hard_stop_35pct": 118,
+          "trailing_stop": 3
+        },
+        "mean_option_premium_return_pct": -6.506,
+        "mean_trade_pnl_usd": -6.639,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3565.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2867.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 277,
+          "independent_hard_stop_35pct": 73,
+          "trailing_stop": 2
+        },
+        "mean_option_premium_return_pct": -5.844,
+        "mean_trade_pnl_usd": -6.942,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2443.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 66,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -8.307,
+        "mean_trade_pnl_usd": -6.7,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -636.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_60pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3866.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 416,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 2
+        },
+        "mean_option_premium_return_pct": -6.545,
+        "mean_trade_pnl_usd": -6.693,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3594.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2896.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 277,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -5.904,
+        "mean_trade_pnl_usd": -7.024,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2472.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.38
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 66,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -8.307,
+        "mean_trade_pnl_usd": -6.7,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -636.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_65pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3825.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 417,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -6.533,
+        "mean_trade_pnl_usd": -6.617,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3553.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.71
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 66,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 1
+        },
+        "mean_option_premium_return_pct": -8.468,
+        "mean_trade_pnl_usd": -6.732,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -639.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 29.47
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_70pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_75pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_80pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_85pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "trail_90pct": {
+      "all_inspected": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3827.2,
+        "calendar_sessions_including_no_trade": 128,
+        "exit_reasons": {
+          "hard_max_hold_10min": 418,
+          "independent_hard_stop_35pct": 119,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -6.552,
+        "mean_trade_pnl_usd": -6.62,
+        "negative_days": 89,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -3555.1,
+        "positive_days": 37,
+        "trades": 537,
+        "win_rate_pct": 33.52
+      },
+      "development": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2852.4,
+        "calendar_sessions_including_no_trade": 82,
+        "exit_reasons": {
+          "hard_max_hold_10min": 278,
+          "independent_hard_stop_35pct": 74,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -5.842,
+        "mean_trade_pnl_usd": -6.899,
+        "negative_days": 59,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -2428.6,
+        "positive_days": 23,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 688.2,
+        "calendar_sessions_including_no_trade": 21,
+        "exit_reasons": {
+          "hard_max_hold_10min": 67,
+          "independent_hard_stop_35pct": 28,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -8.575,
+        "mean_trade_pnl_usd": -6.753,
+        "negative_days": 16,
+        "no_trade_or_flat_days": 0,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -641.5,
+        "positive_days": 5,
+        "trades": 95,
+        "win_rate_pct": 28.42
+      },
+      "validation": {
+        "additive_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+        "calendar_sessions_including_no_trade": 25,
+        "exit_reasons": {
+          "hard_max_hold_10min": 73,
+          "independent_hard_stop_35pct": 17,
+          "trailing_stop": 0
+        },
+        "mean_option_premium_return_pct": -7.193,
+        "mean_trade_pnl_usd": -5.389,
+        "negative_days": 14,
+        "no_trade_or_flat_days": 2,
+        "one_contract_aggregate_pnl_usd_NOT_ACCOUNT": -485,
+        "positive_days": 9,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    }
+  },
+  "take_profit_targets": false
+}
