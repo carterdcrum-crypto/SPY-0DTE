@@ -210,6 +210,7 @@ def test_cancelled_target_does_not_chase_bid_below_profit_level(rig):
     assert rig.executor.tick()["state"] == "POSITION_OPEN"
     assert len(rig.broker.submissions) == 2
     rig.provider.bid, rig.provider.ask = 2.10, 2.20
+    rig.clock[0] += timedelta(seconds=2)  # distinct market snapshot
     assert rig.executor.tick()["state"] == "ORDER_SUBMITTED"
     assert rig.broker.submissions[-1].quantity == 1
 
