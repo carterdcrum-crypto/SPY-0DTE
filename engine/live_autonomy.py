@@ -11,6 +11,7 @@ from datetime import datetime, time as wall_time, timezone
 from typing import Any
 
 from .broker import OptionOrderRequest
+from .exit_rules import profit_exit_quantity
 from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
 from .live_market import LiveDataProvider, LiveMarketReader, parse_occ_symbol, position_symbol
 from .live_risk import EASTERN
@@ -281,17 +282,34 @@ class LiveExecutor:
             q = self.market.fresh_quote(position["symbol"], now)
             if q is None or q.bid <= 0:
                 return {**common, "state": "EXIT_WAITING_QUOTE", "reason": "fresh executable production bid required for exit"}
+            # Only a fresh, tradable bid may move the high-water mark.
+            fee = getattr(getattr(self.strategy, "settings", None), "fee_per_contract", 0.70)
+            peak = self.store.record_exit_peak(
+                position["position_id"],
+                max(0.0, q.bid * 100.0 - fee),
+                position["average_price"] * 100.0 + fee,
+            )
+            position["peak_exit_value"] = peak
             reason = "automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None
             reason = reason or ("daily_stop" if daily and daily["halt_reason"] else None)
             reason = reason or ("session_close" if minutes_left <= 10 else None)
             reason = reason or ("continue_exit" if position["exit_requested"] else None)
+            target_remaining = profit_exit_quantity(
+                position["entry_quantity"], position["quantity"], position["target_filled"]
+            )
+            if reason is None and position["target_requested"] and target_remaining:
+                reason = "take_profit"
             reason = reason or self.strategy.exit(position, now)
             if reason is None:
                 return {**common, "state": "POSITION_OPEN", "reason": "managing confirmed broker position"}
+            close_quantity = target_remaining if reason == "take_profit" else position["quantity"]
+            if close_quantity <= 0:
+                return {**common, "state": "POSITION_OPEN",
+                        "reason": "profit scale-out complete; managing trailing runner"}
             request = position["request"]
             order = OptionOrderRequest(**{**request, "client_order_id": uuid.uuid4().hex,
                                          "side": "SELL", "position_intent": "SELL_TO_CLOSE",
-                                         "quantity": position["quantity"], "limit_price": round(q.bid, 2)})
+                                         "quantity": close_quantity, "limit_price": round(q.bid, 2)})
             return {**common, **self._submit(order, symbol=position["symbol"], reason=reason,
                     signal_key=order.client_order_id, policy=policy, now=now, position_id=position["position_id"])}
 
