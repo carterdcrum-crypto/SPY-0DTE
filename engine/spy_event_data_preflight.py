@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from collections import Counter
 from datetime import date, datetime, time
 from pathlib import Path
@@ -76,18 +77,28 @@ def _candidate_contracts(root: Path, day: date) -> list[str]:
     return [s for s,_ in sorted(seen.items(),key=lambda x: (x[1],x[0]))]
 
 
+def _to_opra_symbol(compact: str) -> str:
+    """OPRA raw-symbol format is a six-character, space-padded root."""
+    value=compact.replace(" ","").upper()
+    if not re.fullmatch(r"SPY[0-9]{6}[CP][0-9]{8}",value):
+        raise ValueError("not a SPY OCC option")
+    return value[:3].ljust(6)+value[3:]
+
+
 def metadata_costs(root: Path, client, sample_days: list[date]) -> list[dict]:
     """Read ONLY free historical metadata pricing endpoints."""
     result=[]
     for day in sample_days:
         start=datetime.combine(day,time(9,30),NY).isoformat()
         end=datetime.combine(day,time(16,0),NY).isoformat()
-        symbols=_candidate_contracts(root,day)
+        symbols=[_to_opra_symbol(x) for x in _candidate_contracts(root,day)]
         quotes={
             "spy_ohlcv_1m":dict(dataset="EQUS.MINI",schema="ohlcv-1m",
                                  symbols=["SPY"],start=start,end=end),
             "full_spy_chain_trades_for_asof_pcr":dict(dataset="OPRA.PILLAR",
                 schema="trades",symbols="SPY.OPT",stype_in="parent",start=start,end=end),
+            "full_spy_chain_1m_volume_bars_for_asof_pcr":dict(dataset="OPRA.PILLAR",
+                schema="ohlcv-1m",symbols="SPY.OPT",stype_in="parent",start=start,end=end),
             "full_spy_chain_event_nbbo":dict(dataset="OPRA.PILLAR",
                 schema="cmbp-1",symbols="SPY.OPT",stype_in="parent",start=start,end=end),
         }
@@ -95,6 +106,9 @@ def metadata_costs(root: Path, client, sample_days: list[date]) -> list[dict]:
             if len(symbols) >= limit:
                 quotes[f"event_nbbo_{limit}_listed_options"]=dict(
                     dataset="OPRA.PILLAR",schema="cmbp-1",
+                    symbols=symbols[:limit],stype_in="raw_symbol",start=start,end=end)
+                quotes[f"trade_time_nbbo_{limit}_listed_options"]=dict(
+                    dataset="OPRA.PILLAR",schema="tcbbo",
                     symbols=symbols[:limit],stype_in="raw_symbol",start=start,end=end)
         prices={}
         for name,params in quotes.items():
