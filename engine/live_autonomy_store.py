@@ -56,6 +56,9 @@ class LiveAutonomyStore:
                     trading_date TEXT PRIMARY KEY, start_equity REAL NOT NULL,
                     high_watermark REAL NOT NULL, halt_reason TEXT
                 );
+                CREATE TABLE IF NOT EXISTS live_exit_peaks (
+                    position_id TEXT PRIMARY KEY, peak_exit_value REAL NOT NULL
+                );
             """)
 
     @contextmanager
@@ -125,6 +128,19 @@ class LiveAutonomyStore:
             rows = db.execute("SELECT * FROM live_journal"+where+" ORDER BY created_at, rowid").fetchall()
         return [{**dict(row), "request": json.loads(row["request"])} for row in rows]
 
+    def record_exit_peak(self, position_id: str, exit_value: float, entry_value: float) -> float:
+        """Write high-water marks to SQLite, surviving worker restarts."""
+        if not position_id or not all(math.isfinite(v) and v >= 0 for v in (exit_value, entry_value)):
+            raise ValueError("invalid live trailing mark")
+        with self.connect() as db:
+            db.execute("""INSERT INTO live_exit_peaks(position_id,peak_exit_value) VALUES (?, ?)
+                ON CONFLICT(position_id) DO UPDATE SET
+                peak_exit_value=MAX(peak_exit_value,excluded.peak_exit_value)""",
+                (position_id, max(exit_value, entry_value)))
+            row = db.execute("SELECT peak_exit_value FROM live_exit_peaks WHERE position_id=?",
+                             (position_id,)).fetchone()
+            return float(row["peak_exit_value"])
+
     def positions(self) -> list[dict[str, Any]]:
         groups: dict[str, dict[str, Any]] = {}
         for row in self.orders():
@@ -134,16 +150,28 @@ class LiveAutonomyStore:
                     "position_id": row["position_id"], "symbol": row["symbol"],
                     "quantity": row["filled"], "average_price": row["average_price"],
                     "opened_at": row["created_at"], "request": order,
-                    "exit_requested": False,
+                    "exit_requested": False, "target_requested": False,
+                    "target_filled": 0, "entry_quantity": row["filled"],
                 }
             else:
                 position = groups.get(row["position_id"])
                 if position is None:
                     raise ValueError("exit journal has no corresponding entry")
                 position["quantity"] -= row["filled"]
-                position["exit_requested"] = True
+                if row["reason"] == "take_profit":
+                    position["target_requested"] = True
+                    position["target_filled"] += row["filled"]
+                else:
+                    position["exit_requested"] = True
         if any(p["quantity"] < 0 for p in groups.values()):
             raise ValueError("broker fills exceed owned quantity")
+        with self.connect() as db:
+            peaks = {row["position_id"]: float(row["peak_exit_value"]) for row in
+                     db.execute("SELECT position_id, peak_exit_value FROM live_exit_peaks")}
+        for position in groups.values():
+            position["peak_exit_value"] = peaks.get(
+                position["position_id"], position["average_price"] * 100.0 + 0.70
+            )
         return [p for p in groups.values() if p["quantity"] > 0]
 
     def reserve(self, order: OptionOrderRequest, *, symbol: str, signal_key: str,

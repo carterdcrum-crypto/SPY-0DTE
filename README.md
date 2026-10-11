@@ -44,6 +44,17 @@ new paper entries keeps management of existing paper positions enabled.
   restart counts and next session. Android reconnects automatically and marks a
   disconnected display offline. No new paid service is required by these changes.
 
+Exits use a **fixed +100% option-premium profit target** (roughly double
+the all-in entry cost), rather than the old +50% default; a legacy
+`PAPER_TAKE_PROFIT_FRACTION=.50` override is intentionally ignored.
+At this target, 1–2 contracts are closed in full; positions opened with 3+
+contracts sell roughly 75% (rounded, leaving one runner). The runner can
+continue if its edge holds, but is still subject to a **20% trailing stop**
+from the best fresh executable bid, as well as time, session and safety exits.
+Both paper and live persist the trailing peak through worker restarts.
+These are program-managed exit rules rather than protective stop orders held
+at the exchange; gaps and spreads can cause worse fills.
+
 Paper reports completed exits as `trade_count`, preserving the latest app's
 completed-trade counter. `execution_count` counts buys plus sells, regardless of
 contract quantity, with separate `buy_count` and `sell_count` fields. The app

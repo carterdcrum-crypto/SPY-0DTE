@@ -80,13 +80,14 @@ class Provider:
         self.quality = "option_quote_timestamp"
         self.source = "webull_production"
         self.bid = .99
+        self.ask = 1.0
 
     def collect_once(self, day):
         now = self.clock()
         return [FreeOptionSnapshot(
             timestamp=now-timedelta(seconds=self.delay), received_at=now, timestamp_quality=self.quality,
             feed_delay_seconds=self.delay, option_symbol=f"SPY{day:%y%m%d}C00660000", expiration=day,
-            right="call", strike=660, bid=self.bid, ask=1.0, underlying_price=660,
+            right="call", strike=660, bid=self.bid, ask=self.ask, underlying_price=660,
             minutes_to_expiry=300, volume=2000, open_interest=3000, source=self.source,
             underlying_timestamp=now,
         )]
@@ -171,6 +172,8 @@ def test_partial_exit_cancel_reprices_remaining_only_and_persists_exit_intent(ri
     rig.executor.tick()
     rig.broker.fill()
     rig.strategy.exit_reason = "take_profit"
+    rig.provider.bid = 2.10  # target profit price remains executable through the retry
+    rig.provider.ask = 2.20
     rig.executor.tick()
     rig.broker.fill(quantity=1)
     rig.clock[0] += timedelta(seconds=12)
@@ -178,8 +181,51 @@ def test_partial_exit_cancel_reprices_remaining_only_and_persists_exit_intent(ri
     rig.strategy.exit_reason = None
     rig.executor = rig.create()
     rig.executor.tick()
-    assert [o.quantity for o in rig.broker.submissions] == [3,3,2]
-    assert [o.side for o in rig.broker.submissions] == ["BUY","SELL","SELL"]
+    # At +100% exit two of three; after partial cancellation, retry only
+    # the one contract still due at that target (not the trailing runner).
+    assert [o.quantity for o in rig.broker.submissions] == [3,2,1]
+    rig.broker.fill()
+    assert rig.executor.tick()["state"] == "POSITION_OPEN"
+    open_position = rig.store.positions()[0]
+    assert (open_position["quantity"], open_position["target_filled"]) == (1, 2)
+    assert open_position["exit_requested"] is False
+    rig.strategy.exit_reason = "trailing_stop"
+    assert rig.executor.tick()["state"] == "ORDER_SUBMITTED"
+    assert rig.broker.submissions[-1].quantity == 1
+    assert [o.side for o in rig.broker.submissions] == ["BUY","SELL","SELL","SELL"]
+
+
+def test_cancelled_target_does_not_chase_bid_below_profit_level(rig):
+    rig.executor.tick()
+    rig.broker.fill(price=.98)
+    rig.strategy.exit_reason = "take_profit"
+    rig.provider.bid, rig.provider.ask = 2.10, 2.20
+    rig.executor.tick()
+    rig.broker.fill(quantity=1)
+    rig.clock[0] += timedelta(seconds=12)
+    rig.executor.tick()  # Cancel partial sell, retaining one due at target.
+    rig.strategy.exit_reason = None
+    rig.provider.bid, rig.provider.ask = 1.90, 2.0
+    rig.executor = rig.create()
+    assert rig.executor.tick()["state"] == "POSITION_OPEN"
+    assert len(rig.broker.submissions) == 2
+    rig.provider.bid, rig.provider.ask = 2.10, 2.20
+    rig.clock[0] += timedelta(seconds=2)  # distinct market snapshot
+    assert rig.executor.tick()["state"] == "ORDER_SUBMITTED"
+    assert rig.broker.submissions[-1].quantity == 1
+
+
+def test_live_trailing_peak_survives_executor_restart(rig):
+    rig.executor.tick()
+    rig.broker.fill(price=.60)
+    rig.executor.tick()
+    first = rig.store.positions()[0]
+    assert first["peak_exit_value"] >= 98.0
+    rig.executor = rig.create()
+    rig.provider.bid = .85
+    rig.clock[0] += timedelta(seconds=2)
+    assert rig.executor.tick()["state"] == "POSITION_OPEN"
+    assert rig.store.positions()[0]["peak_exit_value"] == pytest.approx(first["peak_exit_value"])
 
 
 @pytest.mark.parametrize("change", ["delayed", "paper_source", "untrusted", "future", "late_model"])

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from .paper_autotrader import EASTERN, _parse_datetime
+from .exit_rules import profit_exit_quantity, trailing_stop_hit
 from .paper_dynamic_exit import (
     DynamicExitMetrics,
     _confirmation_ticks,
@@ -132,9 +133,9 @@ class SaferDynamicExitPolicyMixin:
         self._update_exit_audits(tick_now)
         return super().tick(now)
 
-    def _close_position(self, *, position, quote, now: datetime, reason: str):
+    def _close_position(self, *, position, quote, now: datetime, reason: str, quantity: int | None = None):
         symbol = str(position["symbol"])
-        quantity = int(position["quantity"])
+        quantity = int(position["quantity"]) if quantity is None else int(quantity)
         actual_exit_value = max(
             0.0,
             quote.bid * 100.0 - self.settings.fee_per_contract,
@@ -144,6 +145,7 @@ class SaferDynamicExitPolicyMixin:
             quote=quote,
             now=now,
             reason=reason,
+            quantity=quantity,
         )
         self._exit_confirmations.pop(symbol, None)
         if reason in SOFT_EXIT_REASONS:
@@ -204,7 +206,9 @@ class SaferDynamicExitPolicyMixin:
         quantity = int(position["quantity"])
         average_cost = float(position["average_cost"])
         stop_price = float(position.get("stop_price") or 0.0)
-        target_price = float(position.get("target_price") or float("inf"))
+        target_price = average_cost * (1.0 + self.settings.take_profit_fraction)
+        if hasattr(self.account_store, "update_exit_target") and position.get("target_price") != target_price:
+            self.account_store.update_exit_target(symbol, target_price)
         opened_text = position.get("opened_at")
         opened_at = _parse_datetime(str(opened_text)) if opened_text else now
         hard_max_hold = int(
@@ -216,12 +220,21 @@ class SaferDynamicExitPolicyMixin:
             quote.bid * 100.0 - self.settings.fee_per_contract,
         )
         unrealized = (exit_value - average_cost) * quantity
+        if hasattr(self.account_store, "record_exit_peak"):
+            peak = self.account_store.record_exit_peak(symbol, exit_value)
+        else:
+            peak = max(average_cost, float(position.get("peak_exit_value") or average_cost), exit_value)
+        initial_quantity = int(position.get("entry_quantity") or quantity)
+        profit_sold = int(position.get("profit_sold") or 0)
+        target_sell_quantity = profit_exit_quantity(initial_quantity, quantity, profit_sold)
         minutes_to_close = self._minutes_to_close(now.astimezone(EASTERN))
 
         hard_reason: str | None = None
-        if exit_value <= stop_price:
+        if trailing_stop_hit(exit_value, peak):
+            hard_reason = "trailing_stop"
+        elif exit_value <= stop_price:
             hard_reason = "stop_loss"
-        elif exit_value >= target_price:
+        elif exit_value >= target_price and target_sell_quantity:
             hard_reason = "take_profit"
         elif held_seconds >= hard_max_hold:
             hard_reason = "hard_max_hold"
@@ -233,6 +246,7 @@ class SaferDynamicExitPolicyMixin:
                 quote=quote,
                 now=now,
                 reason=hard_reason,
+                quantity=target_sell_quantity if hard_reason == "take_profit" else quantity,
             )
             result["mode"] = mode
             return result
@@ -309,6 +323,8 @@ class SaferDynamicExitPolicyMixin:
             "position": {
                 **position,
                 "mark_value": exit_value,
+                "peak_exit_value": peak,
+                "trailing_stop_value": peak * 0.80,
                 "unrealized_pnl": unrealized,
                 "held_seconds": held_seconds,
                 "quote_received_at": quote.cycle.isoformat(),

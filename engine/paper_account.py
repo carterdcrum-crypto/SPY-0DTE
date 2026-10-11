@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -43,6 +44,9 @@ _POSITION_MIGRATIONS = {
     "stop_price": "REAL",
     "target_price": "REAL",
     "max_hold_seconds": "INTEGER",
+    "peak_exit_value": "REAL",
+    "entry_quantity": "INTEGER",
+    "profit_sold": "INTEGER NOT NULL DEFAULT 0",
 }
 
 _TRADE_MIGRATIONS = {
@@ -251,8 +255,9 @@ class PaperAccountStore:
                     """
                     INSERT INTO paper_positions(
                         symbol, quantity, average_cost, opened_at, entry_spot,
-                        strategy, stop_price, target_price, max_hold_seconds
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        strategy, stop_price, target_price, max_hold_seconds,
+                        peak_exit_value, entry_quantity, profit_sold
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                     """,
                     (
                         symbol,
@@ -264,6 +269,8 @@ class PaperAccountStore:
                         float(stop_price),
                         float(target_price),
                         int(max_hold_seconds),
+                        float(fill_price),
+                        int(quantity),
                     ),
                 )
             else:
@@ -277,7 +284,8 @@ class PaperAccountStore:
                     """
                     UPDATE paper_positions
                     SET quantity = ?, average_cost = ?, strategy = ?,
-                        stop_price = ?, target_price = ?, max_hold_seconds = ?
+                        stop_price = ?, target_price = ?, max_hold_seconds = ?,
+                        peak_exit_value = ?, entry_quantity = ?, profit_sold = 0
                     WHERE symbol = ?
                     """,
                     (
@@ -287,6 +295,8 @@ class PaperAccountStore:
                         float(stop_price),
                         float(target_price),
                         int(max_hold_seconds),
+                        new_average,
+                        new_quantity,
                         symbol,
                     ),
                 )
@@ -306,6 +316,31 @@ class PaperAccountStore:
             connection.commit()
 
         return self.position(symbol) or {}
+
+    def record_exit_peak(self, symbol: str, exit_value: float) -> float:
+        """Durably preserve the best executable net bid for a held position."""
+        if not symbol or not math.isfinite(exit_value) or exit_value < 0:
+            raise ValueError("invalid trailing mark")
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute(
+                """UPDATE paper_positions
+                   SET peak_exit_value = MAX(COALESCE(peak_exit_value, average_cost), ?)
+                   WHERE symbol = ?""",
+                (exit_value, symbol),
+            )
+            row = db.execute(
+                "SELECT peak_exit_value FROM paper_positions WHERE symbol = ?", (symbol,)
+            ).fetchone()
+            if row is None:
+                raise ValueError("position unavailable for trailing mark")
+            return float(row["peak_exit_value"])
+
+    def update_exit_target(self, symbol: str, target: float) -> None:
+        """Upgrade held positions created with the old +50% target."""
+        with self._connect() as db:
+            db.execute("UPDATE paper_positions SET target_price = ? WHERE symbol = ?",
+                       (float(target), symbol))
 
     def close_long(
         self,
@@ -343,8 +378,10 @@ class PaperAccountStore:
                 connection.execute("DELETE FROM paper_positions WHERE symbol = ?", (symbol,))
             else:
                 connection.execute(
-                    "UPDATE paper_positions SET quantity = ? WHERE symbol = ?",
-                    (remaining, symbol),
+                    """UPDATE paper_positions
+                       SET quantity = ?, profit_sold = profit_sold + ?
+                       WHERE symbol = ?""",
+                    (remaining, int(quantity) if reason == "take_profit" else 0, symbol),
                 )
 
             connection.execute(
@@ -444,6 +481,9 @@ class PaperAccountStore:
             "strategy": None if row["strategy"] is None else str(row["strategy"]),
             "stop_price": None if row["stop_price"] is None else float(row["stop_price"]),
             "target_price": None if row["target_price"] is None else float(row["target_price"]),
+            "peak_exit_value": None if row["peak_exit_value"] is None else float(row["peak_exit_value"]),
+            "entry_quantity": None if row["entry_quantity"] is None else int(row["entry_quantity"]),
+            "profit_sold": int(row["profit_sold"] or 0),
             "max_hold_seconds": None
             if row["max_hold_seconds"] is None
             else int(row["max_hold_seconds"]),
