@@ -32,7 +32,7 @@ class PaperAutoSettings:
     maximum_position_fraction: float = 0.90
     maximum_contracts: int = 1
     stop_loss_fraction: float = 0.35
-    take_profit_fraction: float = 0.50
+    take_profit_fraction: float = 1.00
     max_hold_seconds: int = 600
     cooldown_seconds: int = 180
     force_exit_minutes_before_close: float = 10.0
@@ -68,9 +68,7 @@ class PaperAutoSettings:
             stop_loss_fraction=_env_float(
                 "PAPER_STOP_LOSS_FRACTION", 0.35, minimum=0.01, maximum=0.99
             ),
-            take_profit_fraction=_env_float(
-                "PAPER_TAKE_PROFIT_FRACTION", 0.50, minimum=0.01, maximum=10.0
-            ),
+            take_profit_fraction=1.00,  # Fixed +100%; ignore legacy 50% env override.
             max_hold_seconds=_env_int("PAPER_MAX_HOLD_SECONDS", 600, minimum=30),
             cooldown_seconds=_env_int("PAPER_COOLDOWN_SECONDS", 180, minimum=0),
             force_exit_minutes_before_close=_env_float(
