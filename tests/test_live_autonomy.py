@@ -189,7 +189,7 @@ def test_partial_exit_cancel_reprices_remaining_only_and_persists_exit_intent(ri
     rig.strategy.exit_reason = "trailing_stop"
     assert rig.executor.tick()["state"] == "ORDER_SUBMITTED"
     assert rig.broker.submissions[-1].quantity == 1
-    assert [o.side for o in rig.broker.submissions] == ["BUY","SELL","SELL"]
+    assert [o.side for o in rig.broker.submissions] == ["BUY","SELL","SELL","SELL"]
 
 
 @pytest.mark.parametrize("change", ["delayed", "paper_source", "untrusted", "future", "late_model"])
