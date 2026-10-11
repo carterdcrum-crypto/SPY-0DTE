@@ -171,6 +171,7 @@ def test_partial_exit_cancel_reprices_remaining_only_and_persists_exit_intent(ri
     rig.executor.tick()
     rig.broker.fill()
     rig.strategy.exit_reason = "take_profit"
+    rig.provider.bid = 2.10  # target profit price remains executable through the retry
     rig.executor.tick()
     rig.broker.fill(quantity=1)
     rig.clock[0] += timedelta(seconds=12)
