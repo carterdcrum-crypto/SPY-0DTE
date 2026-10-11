@@ -34,6 +34,18 @@ def test_one_contract_target_sells_all_and_no_profit_runner():
     assert new["reasons"]=={"take_profit_100":1}
 
 
+def test_factorial_arms_distinguish_target_from_trailing():
+    trace=path(1.70,1.35,1.18,1.12)
+    old=simulate(1.0,trace,mode="old_50",contracts=4)
+    old_trail=simulate(1.0,trace,mode="old_50_trail20",contracts=4)
+    new_no_trail=simulate(1.0,trace,mode="new_100_no_trail",contracts=4)
+    new_trail=simulate(1.0,trace,mode="new_100_trail20",contracts=4)
+    assert old["reasons"] == {"take_profit_50":4}
+    assert old_trail["reasons"] == {"take_profit_50":4}
+    assert "trailing_stop_20" not in new_no_trail["reasons"]
+    assert "trailing_stop_20" in new_trail["reasons"]
+
+
 def test_new_trailing_and_100_can_underperform_old_50_on_pullback():
     trace=path(1.65,1.10,1.0,.89)
     old=simulate(1.0,trace,mode="old_50",contracts=1)
