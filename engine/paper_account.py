@@ -481,6 +481,9 @@ class PaperAccountStore:
             "strategy": None if row["strategy"] is None else str(row["strategy"]),
             "stop_price": None if row["stop_price"] is None else float(row["stop_price"]),
             "target_price": None if row["target_price"] is None else float(row["target_price"]),
+            "peak_exit_value": None if row["peak_exit_value"] is None else float(row["peak_exit_value"]),
+            "entry_quantity": None if row["entry_quantity"] is None else int(row["entry_quantity"]),
+            "profit_sold": int(row["profit_sold"] or 0),
             "max_hold_seconds": None
             if row["max_hold_seconds"] is None
             else int(row["max_hold_seconds"]),
