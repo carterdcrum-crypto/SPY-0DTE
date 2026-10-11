@@ -178,7 +178,17 @@ def test_partial_exit_cancel_reprices_remaining_only_and_persists_exit_intent(ri
     rig.strategy.exit_reason = None
     rig.executor = rig.create()
     rig.executor.tick()
-    assert [o.quantity for o in rig.broker.submissions] == [3,3,2]
+    # At +100% exit two of three; after partial cancellation, retry only
+    # the one contract still due at that target (not the trailing runner).
+    assert [o.quantity for o in rig.broker.submissions] == [3,2,1]
+    rig.broker.fill()
+    assert rig.executor.tick()["state"] == "POSITION_OPEN"
+    open_position = rig.store.positions()[0]
+    assert (open_position["quantity"], open_position["target_filled"]) == (1, 2)
+    assert open_position["exit_requested"] is False
+    rig.strategy.exit_reason = "trailing_stop"
+    assert rig.executor.tick()["state"] == "ORDER_SUBMITTED"
+    assert rig.broker.submissions[-1].quantity == 1
     assert [o.side for o in rig.broker.submissions] == ["BUY","SELL","SELL"]
 
 
