@@ -200,9 +200,10 @@ class DynamicExitEnsemblePaperAutoTrader(EnsemblePaperAutoTrader):
         quote,
         now: datetime,
         reason: str,
+        quantity: int | None = None,
     ) -> dict[str, object]:
         symbol = str(position["symbol"])
-        quantity = int(position["quantity"])
+        quantity = int(position["quantity"]) if quantity is None else int(quantity)
         exit_value = max(0.0, quote.bid * 100.0 - self.settings.fee_per_contract)
         closed = self.account_store.close_long(
             symbol=symbol,
@@ -222,7 +223,8 @@ class DynamicExitEnsemblePaperAutoTrader(EnsemblePaperAutoTrader):
             reason,
         )
         return {
-            "state": "POSITION_CLOSED",
+            "state": "POSITION_CLOSED" if quantity == int(position["quantity"]) else "POSITION_REDUCED",
+            "position": self.account_store.position(symbol),
             "reason": reason,
             "last_signal": None,
             "last_action": "SELL",
