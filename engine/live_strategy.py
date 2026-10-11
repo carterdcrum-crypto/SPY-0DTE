@@ -46,8 +46,9 @@ class LiveStrategy(HoldValueExitPolicyMixin, SaferDynamicExitPolicyMixin, AIAugm
     def _context(self, *args, **kwargs):
         return replace(super()._context(*args, **kwargs), data_mode="LIVE_PRODUCTION")
 
-    def _close_position(self, *, position, quote, now, reason):
-        return {"state": "EXIT_REQUIRED", "reason": reason, "position": position}
+    def _close_position(self, *, position, quote, now, reason, quantity=None):
+        return {"state": "EXIT_REQUIRED", "reason": reason, "position": position,
+                "quantity": int(position["quantity"]) if quantity is None else int(quantity)}
 
     def _remaining_edge(self, symbol: str, now: datetime):
         metrics = super()._remaining_edge(symbol, now)
@@ -102,5 +103,7 @@ class LiveStrategy(HoldValueExitPolicyMixin, SaferDynamicExitPolicyMixin, AIAugm
             "stop_price": cost*(1-self.settings.stop_loss_fraction),
             "target_price": cost*(1+self.settings.take_profit_fraction),
             "max_hold_seconds": self.settings.max_hold_seconds,
+            "entry_quantity": position.get("entry_quantity", position["quantity"]),
+            "profit_sold": position.get("target_filled", 0),
         }, now, "LIVE")
         return result["reason"] if result["state"] == "EXIT_REQUIRED" else None
