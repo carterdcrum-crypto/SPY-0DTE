@@ -1,0 +1,711 @@
+{
+  "archive_days": 128,
+  "archive_files": 128,
+  "caution": "Entries use next-minute sampled CBBO buckets; those are NOT causal event NBBO or guaranteed fills. No full PCR input. Missing paths are excluded and explicitly counted; this is NOT a valid full strategy profitability backtest.",
+  "coverage": {
+    "candidate_signals": 4232,
+    "minute_sample_frames": 49792,
+    "momentum_reversal_four_factors_accepted": 562,
+    "momentum_reversal_four_factors_missing_entry_quote": 25,
+    "momentum_reversal_four_factors_paired_comparable": 537,
+    "prior_all_three_families_accepted": 2289,
+    "prior_all_three_families_missing_entry_quote": 119,
+    "prior_all_three_families_paired_comparable": 2170
+  },
+  "fees_per_contract_per_side_usd": 0.65,
+  "fixed_hold_minutes": 10,
+  "full_algo_status": "NOT_TESTED_MISSING_POINT_IN_TIME_COMPLETE_SPY_PCR_AND_EVENT_QUOTES",
+  "matched_results": {
+    "momentum_reversal_four_factors": {
+      "1": {
+        "by_period": {
+          "development": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2661.4,
+              "mean_pnl_usd": -6.14,
+              "mean_premium_return_pct": -5.17,
+              "net_usd_on_fixed_contract_research_units": -2161.6,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 34.66
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2743.4,
+              "mean_pnl_usd": -6.86,
+              "mean_premium_return_pct": -5.96,
+              "net_usd_on_fixed_contract_research_units": -2415.6,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 29.26
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2456.2,
+              "mean_pnl_usd": -5.3,
+              "mean_premium_return_pct": -4.17,
+              "net_usd_on_fixed_contract_research_units": -1866.6,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 35.51
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2560.2,
+              "mean_pnl_usd": -6.1,
+              "mean_premium_return_pct": -5.21,
+              "net_usd_on_fixed_contract_research_units": -2145.6,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 29.26
+            }
+          },
+          "previously_studied_diagnostic": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 717.2,
+              "mean_pnl_usd": -6.56,
+              "mean_premium_return_pct": -6.65,
+              "net_usd_on_fixed_contract_research_units": -623.5,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 29.47
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 730.5,
+              "mean_pnl_usd": -5.14,
+              "mean_premium_return_pct": -4.41,
+              "net_usd_on_fixed_contract_research_units": -488.5,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 25.26
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 745.4,
+              "mean_pnl_usd": -6.69,
+              "mean_premium_return_pct": -6.68,
+              "net_usd_on_fixed_contract_research_units": -635.5,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 30.53
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 698.5,
+              "mean_pnl_usd": -5.25,
+              "mean_premium_return_pct": -4.61,
+              "net_usd_on_fixed_contract_research_units": -498.5,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 25.26
+            }
+          },
+          "validation": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 628.1,
+              "mean_pnl_usd": -5.39,
+              "mean_premium_return_pct": -7.19,
+              "net_usd_on_fixed_contract_research_units": -485,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 34.44
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 726.7,
+              "mean_pnl_usd": -6.53,
+              "mean_premium_return_pct": -8.4,
+              "net_usd_on_fixed_contract_research_units": -588,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 27.78
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 671.1,
+              "mean_pnl_usd": -6.2,
+              "mean_premium_return_pct": -8.31,
+              "net_usd_on_fixed_contract_research_units": -558,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 34.44
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 735.7,
+              "mean_pnl_usd": -6.97,
+              "mean_premium_return_pct": -8.89,
+              "net_usd_on_fixed_contract_research_units": -627,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 27.78
+            }
+          }
+        },
+        "overall": {
+          "new_100_no_trail": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 3566.2,
+            "mean_pnl_usd": -6.09,
+            "mean_premium_return_pct": -5.77,
+            "net_usd_on_fixed_contract_research_units": -3270.1,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 33.71
+          },
+          "new_100_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 3866.2,
+            "mean_pnl_usd": -6.5,
+            "mean_premium_return_pct": -6.09,
+            "net_usd_on_fixed_contract_research_units": -3492.1,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 28.31
+          },
+          "old_50": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 3538.2,
+            "mean_pnl_usd": -5.7,
+            "mean_premium_return_pct": -5.3,
+            "net_usd_on_fixed_contract_research_units": -3060.1,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 34.45
+          },
+          "old_50_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 3766,
+            "mean_pnl_usd": -6.09,
+            "mean_premium_return_pct": -5.72,
+            "net_usd_on_fixed_contract_research_units": -3271.1,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 28.31
+          }
+        },
+        "paired_policy_deltas_usd": {
+          "full_new_vs_full_old": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -10.766,
+              3.836
+            ],
+            "difference_total_usd": -432,
+            "difference_usd_per_archived_day": -3.375,
+            "paired_day_count": 128
+          },
+          "trailing_at_new_100_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -8.516,
+              4.758
+            ],
+            "difference_total_usd": -222,
+            "difference_usd_per_archived_day": -1.734,
+            "paired_day_count": 128
+          },
+          "trailing_at_old_50_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -7.531,
+              3.984
+            ],
+            "difference_total_usd": -211,
+            "difference_usd_per_archived_day": -1.648,
+            "paired_day_count": 128
+          }
+        }
+      },
+      "4": {
+        "by_period": {
+          "development": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10836.6,
+              "mean_pnl_usd": -25.32,
+              "mean_premium_return_pct": -5.34,
+              "net_usd_on_fixed_contract_research_units": -8913.4,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 34.66
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 11127,
+              "mean_pnl_usd": -27.99,
+              "mean_premium_return_pct": -6.07,
+              "net_usd_on_fixed_contract_research_units": -9851.4,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 29.26
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 9824.8,
+              "mean_pnl_usd": -21.21,
+              "mean_premium_return_pct": -4.17,
+              "net_usd_on_fixed_contract_research_units": -7466.4,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 35.51
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10240.8,
+              "mean_pnl_usd": -24.38,
+              "mean_premium_return_pct": -5.21,
+              "net_usd_on_fixed_contract_research_units": -8582.4,
+              "paired_sampled_trades": 352,
+              "win_rate_pct": 29.26
+            }
+          },
+          "previously_studied_diagnostic": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2839.8,
+              "mean_pnl_usd": -26.44,
+              "mean_premium_return_pct": -7.13,
+              "net_usd_on_fixed_contract_research_units": -2512,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 29.47
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2893,
+              "mean_pnl_usd": -20.43,
+              "mean_premium_return_pct": -4.47,
+              "net_usd_on_fixed_contract_research_units": -1941,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 25.26
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2981.6,
+              "mean_pnl_usd": -26.76,
+              "mean_premium_return_pct": -6.68,
+              "net_usd_on_fixed_contract_research_units": -2542,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 30.53
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2794,
+              "mean_pnl_usd": -20.99,
+              "mean_premium_return_pct": -4.61,
+              "net_usd_on_fixed_contract_research_units": -1994,
+              "paired_sampled_trades": 95,
+              "win_rate_pct": 25.26
+            }
+          },
+          "validation": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2512.4,
+              "mean_pnl_usd": -21.56,
+              "mean_premium_return_pct": -7.19,
+              "net_usd_on_fixed_contract_research_units": -1940,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 34.44
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2906.8,
+              "mean_pnl_usd": -26.13,
+              "mean_premium_return_pct": -8.4,
+              "net_usd_on_fixed_contract_research_units": -2352,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 27.78
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2684.4,
+              "mean_pnl_usd": -24.8,
+              "mean_premium_return_pct": -8.31,
+              "net_usd_on_fixed_contract_research_units": -2232,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 34.44
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2942.8,
+              "mean_pnl_usd": -27.87,
+              "mean_premium_return_pct": -8.89,
+              "net_usd_on_fixed_contract_research_units": -2508,
+              "paired_sampled_trades": 90,
+              "win_rate_pct": 27.78
+            }
+          }
+        },
+        "overall": {
+          "new_100_no_trail": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 14525.8,
+            "mean_pnl_usd": -24.89,
+            "mean_premium_return_pct": -5.97,
+            "net_usd_on_fixed_contract_research_units": -13365.4,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 33.71
+          },
+          "new_100_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 15616.8,
+            "mean_pnl_usd": -26.34,
+            "mean_premium_return_pct": -6.18,
+            "net_usd_on_fixed_contract_research_units": -14144.4,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 28.31
+          },
+          "old_50": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 14152.8,
+            "mean_pnl_usd": -22.79,
+            "mean_premium_return_pct": -5.3,
+            "net_usd_on_fixed_contract_research_units": -12240.4,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 34.45
+          },
+          "old_50_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 15064,
+            "mean_pnl_usd": -24.37,
+            "mean_premium_return_pct": -5.72,
+            "net_usd_on_fixed_contract_research_units": -13084.4,
+            "paired_sampled_trades": 537,
+            "win_rate_pct": 28.31
+          }
+        },
+        "paired_policy_deltas_usd": {
+          "full_new_vs_full_old": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -44.711,
+              13.609
+            ],
+            "difference_total_usd": -1904,
+            "difference_usd_per_archived_day": -14.875,
+            "paired_day_count": 128
+          },
+          "trailing_at_new_100_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -32.93,
+              20.359
+            ],
+            "difference_total_usd": -779,
+            "difference_usd_per_archived_day": -6.086,
+            "paired_day_count": 128
+          },
+          "trailing_at_old_50_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -30.125,
+              15.937
+            ],
+            "difference_total_usd": -844,
+            "difference_usd_per_archived_day": -6.594,
+            "paired_day_count": 128
+          }
+        }
+      }
+    },
+    "prior_all_three_families": {
+      "1": {
+        "by_period": {
+          "development": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 6724.1,
+              "mean_pnl_usd": -4.56,
+              "mean_premium_return_pct": -4.01,
+              "net_usd_on_fixed_contract_research_units": -6500.2,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 36.94
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 6850.7,
+              "mean_pnl_usd": -4.64,
+              "mean_premium_return_pct": -4,
+              "net_usd_on_fixed_contract_research_units": -6610.2,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 32.94
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 6303.1,
+              "mean_pnl_usd": -4.34,
+              "mean_premium_return_pct": -3.84,
+              "net_usd_on_fixed_contract_research_units": -6184.2,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 37.29
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 6473.7,
+              "mean_pnl_usd": -4.45,
+              "mean_premium_return_pct": -3.8,
+              "net_usd_on_fixed_contract_research_units": -6338.2,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 33.01
+            }
+          },
+          "previously_studied_diagnostic": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 1724.7,
+              "mean_pnl_usd": -5.09,
+              "mean_premium_return_pct": -6.41,
+              "net_usd_on_fixed_contract_research_units": -1724.7,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 32.74
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 1813.7,
+              "mean_pnl_usd": -5.35,
+              "mean_premium_return_pct": -6.19,
+              "net_usd_on_fixed_contract_research_units": -1813.7,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 27.14
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 1826.7,
+              "mean_pnl_usd": -5.39,
+              "mean_premium_return_pct": -6.59,
+              "net_usd_on_fixed_contract_research_units": -1826.7,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 33.33
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 1972.7,
+              "mean_pnl_usd": -5.82,
+              "mean_premium_return_pct": -6.64,
+              "net_usd_on_fixed_contract_research_units": -1972.7,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 27.14
+            }
+          },
+          "validation": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2541.4,
+              "mean_pnl_usd": -5.99,
+              "mean_premium_return_pct": -6.74,
+              "net_usd_on_fixed_contract_research_units": -2436.1,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 35.63
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2344.7,
+              "mean_pnl_usd": -5.53,
+              "mean_premium_return_pct": -6.06,
+              "net_usd_on_fixed_contract_research_units": -2252.1,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 30.71
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2602.4,
+              "mean_pnl_usd": -6.15,
+              "mean_premium_return_pct": -6.95,
+              "net_usd_on_fixed_contract_research_units": -2501.1,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 35.63
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 2403.4,
+              "mean_pnl_usd": -5.67,
+              "mean_premium_return_pct": -6.21,
+              "net_usd_on_fixed_contract_research_units": -2306.1,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 30.71
+            }
+          }
+        },
+        "overall": {
+          "new_100_no_trail": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10837.2,
+            "mean_pnl_usd": -4.91,
+            "mean_premium_return_pct": -4.9,
+            "net_usd_on_fixed_contract_research_units": -10661,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 36.04
+          },
+          "new_100_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10868.8,
+            "mean_pnl_usd": -4.92,
+            "mean_premium_return_pct": -4.73,
+            "net_usd_on_fixed_contract_research_units": -10676,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 31.61
+          },
+          "old_50": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10602.2,
+            "mean_pnl_usd": -4.84,
+            "mean_premium_return_pct": -4.85,
+            "net_usd_on_fixed_contract_research_units": -10512,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 36.36
+          },
+          "old_50_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10723.8,
+            "mean_pnl_usd": -4.89,
+            "mean_premium_return_pct": -4.69,
+            "net_usd_on_fixed_contract_research_units": -10617,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 31.66
+          }
+        },
+        "paired_policy_deltas_usd": {
+          "full_new_vs_full_old": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -13.375,
+              8.836
+            ],
+            "difference_total_usd": -164,
+            "difference_usd_per_archived_day": -1.281,
+            "paired_day_count": 128
+          },
+          "trailing_at_new_100_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -9.922,
+              8.844
+            ],
+            "difference_total_usd": -15,
+            "difference_usd_per_archived_day": -0.117,
+            "paired_day_count": 128
+          },
+          "trailing_at_old_50_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -11.711,
+              8.852
+            ],
+            "difference_total_usd": -105,
+            "difference_usd_per_archived_day": -0.82,
+            "paired_day_count": 128
+          }
+        }
+      },
+      "4": {
+        "by_period": {
+          "development": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 27134.4,
+              "mean_pnl_usd": -18.43,
+              "mean_premium_return_pct": -4.04,
+              "net_usd_on_fixed_contract_research_units": -26244.8,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 36.94
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 27480.8,
+              "mean_pnl_usd": -18.63,
+              "mean_premium_return_pct": -4.01,
+              "net_usd_on_fixed_contract_research_units": -26524.8,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 32.94
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 25212.4,
+              "mean_pnl_usd": -17.37,
+              "mean_premium_return_pct": -3.84,
+              "net_usd_on_fixed_contract_research_units": -24736.8,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 37.29
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 25894.8,
+              "mean_pnl_usd": -17.8,
+              "mean_premium_return_pct": -3.8,
+              "net_usd_on_fixed_contract_research_units": -25352.8,
+              "paired_sampled_trades": 1424,
+              "win_rate_pct": 33.01
+            }
+          },
+          "previously_studied_diagnostic": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 6894.8,
+              "mean_pnl_usd": -20.34,
+              "mean_premium_return_pct": -6.4,
+              "net_usd_on_fixed_contract_research_units": -6894.8,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 32.74
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 7256.8,
+              "mean_pnl_usd": -21.41,
+              "mean_premium_return_pct": -6.18,
+              "net_usd_on_fixed_contract_research_units": -7256.8,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 27.14
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 7306.8,
+              "mean_pnl_usd": -21.55,
+              "mean_premium_return_pct": -6.59,
+              "net_usd_on_fixed_contract_research_units": -7306.8,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 33.33
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 7890.8,
+              "mean_pnl_usd": -23.28,
+              "mean_premium_return_pct": -6.64,
+              "net_usd_on_fixed_contract_research_units": -7890.8,
+              "paired_sampled_trades": 339,
+              "win_rate_pct": 27.14
+            }
+          },
+          "validation": {
+            "new_100_no_trail": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10089.6,
+              "mean_pnl_usd": -23.76,
+              "mean_premium_return_pct": -6.65,
+              "net_usd_on_fixed_contract_research_units": -9668.4,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 35.63
+            },
+            "new_100_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 9302.8,
+              "mean_pnl_usd": -21.95,
+              "mean_premium_return_pct": -5.97,
+              "net_usd_on_fixed_contract_research_units": -8932.4,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 30.71
+            },
+            "old_50": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 10409.6,
+              "mean_pnl_usd": -24.58,
+              "mean_premium_return_pct": -6.95,
+              "net_usd_on_fixed_contract_research_units": -10004.4,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 35.63
+            },
+            "old_50_trail20": {
+              "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 9613.6,
+              "mean_pnl_usd": -22.66,
+              "mean_premium_return_pct": -6.21,
+              "net_usd_on_fixed_contract_research_units": -9224.4,
+              "paired_sampled_trades": 407,
+              "win_rate_pct": 30.71
+            }
+          }
+        },
+        "overall": {
+          "new_100_no_trail": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 43512.8,
+            "mean_pnl_usd": -19.73,
+            "mean_premium_return_pct": -4.9,
+            "net_usd_on_fixed_contract_research_units": -42808,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 36.04
+          },
+          "new_100_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 43485.2,
+            "mean_pnl_usd": -19.68,
+            "mean_premium_return_pct": -4.72,
+            "net_usd_on_fixed_contract_research_units": -42714,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 31.61
+          },
+          "old_50": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 42408.8,
+            "mean_pnl_usd": -19.38,
+            "mean_premium_return_pct": -4.85,
+            "net_usd_on_fixed_contract_research_units": -42048,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 36.36
+          },
+          "old_50_trail20": {
+            "max_closed_trade_cumulative_pnl_drawdown_usd_NOT_ACCOUNT": 42895.2,
+            "mean_pnl_usd": -19.57,
+            "mean_premium_return_pct": -4.69,
+            "net_usd_on_fixed_contract_research_units": -42468,
+            "paired_sampled_trades": 2170,
+            "win_rate_pct": 31.66
+          }
+        },
+        "paired_policy_deltas_usd": {
+          "full_new_vs_full_old": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -53.172,
+              33.812
+            ],
+            "difference_total_usd": -666,
+            "difference_usd_per_archived_day": -5.203,
+            "paired_day_count": 128
+          },
+          "trailing_at_new_100_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -38.578,
+              37.398
+            ],
+            "difference_total_usd": 94,
+            "difference_usd_per_archived_day": 0.734,
+            "paired_day_count": 128
+          },
+          "trailing_at_old_50_target": {
+            "descriptive_paired_block_bootstrap_ci95_usd_per_day": [
+              -46.844,
+              35.406
+            ],
+            "difference_total_usd": -420,
+            "difference_usd_per_archived_day": -3.281,
+            "paired_day_count": 128
+          }
+        }
+      }
+    }
+  },
+  "modeled_greeks_no_raw_open_interest_bid_size_proof": true,
+  "new_data_purchases_usd": 0,
+  "real_option_account_max_drawdown": null,
+  "real_option_account_return": null,
+  "slippage_per_share_per_side_usd": 0.01,
+  "source": "already_cached_historical_SPY_OPRA_cbbo-1m_minute_bucket_snapshots",
+  "status": "SAMPLED_CBBO_EXIT_SENSITIVITY_ONLY",
+  "true_event_observed_nbbo": false,
+  "untouched_holdout": false,
+  "generated_from_railway_deployment": "4d55b549-aadb-4a2d-b3af-910a69c4513c",
+  "generated_at_utc": "2026-10-11"
+}
