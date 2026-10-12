@@ -32,16 +32,10 @@ def execution_lock(account_path: str):
 
 
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
-    selection = os.environ.get("PAPER_STRATEGY", "combined_regime_reclaim_v1").strip().lower()
-    if selection == "combined_regime_reclaim_v1":
-        from .paper_regime_reclaim import RegimeReclaimDelayedPaperTrader, RegimeReclaimPaperTrader
-        trader_class = RegimeReclaimDelayedPaperTrader if delayed else RegimeReclaimPaperTrader
-    elif selection == "legacy_ai":
-        from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
-        from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
-        trader_class = AIDelayedSimulationPaperAutoTrader if delayed else SaferAIAugmentedDynamicExitTrader
-    else:
-        raise ValueError(f"unknown PAPER_STRATEGY: {selection}")
+    from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
+    from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
+
+    trader_class = AIDelayedSimulationPaperAutoTrader if delayed else SaferAIAugmentedDynamicExitTrader
     return trader_class(
         mode_getter=mode_getter,
         market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),

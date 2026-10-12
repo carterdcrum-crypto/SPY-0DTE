@@ -6,33 +6,40 @@
 
 Simulation-first SPY 0DTE research, paper-trading, and guarded execution platform with an Android control app.
 
-## Forward-test primary strategy (paper only)
+## Selected forward-test algorithm: combined Regime Reclaim (frozen)
 
-`PAPER_STRATEGY=combined_regime_reclaim_v1` is the default for both PAPER and
-SHADOW. It uses a newly specified **combined Regime Reclaim** signal:
-12/36 observation EMA trend-pullback reclaim OR a 40-observation z-score
-stretch reversal (excursion at least 1.6 sigma, recovery past 0.9 sigma).
-Only current and earlier source-stamped SPY observations are used; 45+
-observations spanning at least 60 seconds are required on one market day.
-Contract spreads must be <=3.5% of mid; model-implied IV / spot-quadratic-
-variation RV must be <=1.5 with enough recent observations. Existing scenario
-EV, settled-cash and dynamic sizing gates still apply. There is no fixed
-profit target or partial runner; exits are 35% loss, 30% trailing drawdown after
-a positive peak, 10-minute maximum hold, and existing session-close guard.
-The trial is marked `combined_regime_reclaim_v1` in paper entry records.
-Old positions retain their original exit logic. `PAPER_STRATEGY=legacy_ai`
-restores the previous ensemble+AI PAPER/SHADOW strategy without touching LIVE.
-Do not turn on LIVE to trial this strategy: the Webull live entry brain is
-independent and unchanged. No live orders are enabled by this switch.
+The **primary research candidate** is the frozen `blend_trend_or_stretch_cost_aware`
+SPY 0DTE strategy from commit `2aa21568ff72e4cafbf718e75084d3c0fa4ee83b`.
+It combines an **8/21 EMA trend reclaim** with a **20-bar, 1.2-standard-deviation
+stretch reclaim**, evaluated only after a full SPY 1-minute bar closes and
+relative volume >= 0.75. The earliest eligible as-of 0DTE 50-delta option
+quote **1–2 minutes after the signal** must have spread <=3.5%, IV / realized
+SPY volatility <=1.5, and verifiable event-time bid/ask/size. It starts with
+**$1,000 simulated settled cash**, one contract/position maximum, T+1 proceeds,
+and **no fixed take profit**: whole-position 30% trailing, separate 35% loss
+stop, maximum 10-minute hold. No runners or scale-outs.
 
-**Research limitation:** the earlier $1,000 Regime Reclaim proxy backtest
-(146 trades, 52.05% win rate, +$1,942.20, max EOD drawdown $165) was
-minute-quote-approximated and does not establish profitability. Its exact
-entry-bar parameters were not captured in this repository; the thresholds above
-are versioned *forward-test specifications*, not a claim of exact backtest
-replication. Delayed-snapshot PAPER is simulated on a shifted clock, not an
-executable realtime paper-trading performance estimate. Run genuinely new
-sessions before judging net edge after spread, fees, slip, and downtime.
+**Start prospective offline paper replay** (needs independently observed real
+event-time option NBBO and complete SPY OHLCV/IV/RVOL inputs on *new* sessions):
+
+```bash
+python -m engine.frozen_regime_forward --event-dir /data/research/forward_events --legacy-dir /data/research --output-dir /data/research/frozen_forward
+```
+
+The replay writes a manifest and decision/trade CSV files even when it fails
+closed for missing new data. Previously inspected CBBO-minute history is **not**
+accepted as prospective evidence. The original historical $1,000->$2,942.20
+result (146 modeled trades, 52.05% win rate) was an **unverified exploratory
+proxy**, not a demonstrated or reproducible real-fill rate. Read
+`docs/frozen_regime_prospective_replay.md` and
+`docs/regime_reclaim_high_winrate_backtest_2026_10_12.md`.
+
+**Boundary:** existing continuously running PAPER/SHADOW and LIVE trader modes
+are **not switched** to this strategy: the current collector does not supply
+all mandatory frozen features or true event NBBO. We will not silently replace
+these observations with assumptions or use a different EMA signal under the
+same name. This code places **zero broker orders**; new event feed acquisition
+must be confirmed before ongoing forward performance can be measured.
 
 ## Current state
 

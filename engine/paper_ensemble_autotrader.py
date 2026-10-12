@@ -306,19 +306,6 @@ class EnsemblePaperAutoTrader(DynamicPaperAutoTrader):
             }
         return super()._manage_position(position, now, mode)
 
-    def _direction_for_entry(self, forecast: EnsembleForecast, cycles: tuple[MarketCycle, ...]) -> str | None:
-        """Overridable direction gate; default preserves the original ensemble behavior."""
-        threshold = _direction_threshold()
-        if forecast.probability_up >= threshold:
-            return "call"
-        if forecast.probability_up <= 1.0 - threshold:
-            return "put"
-        return None
-
-    def _candidate_regime_allowed(self, row: QuoteRow, greeks, cycles: tuple[MarketCycle, ...]) -> bool:
-        """Allow a named paper experiment to impose an additional quote/IV gate."""
-        return True
-
     def _select_ensemble_opportunity(
         self,
         latest: MarketCycle,
@@ -330,8 +317,12 @@ class EnsemblePaperAutoTrader(DynamicPaperAutoTrader):
     ) -> tuple[PaperSignal, OpportunityResult, EnsembleForecast] | None:
         horizon = min(_horizon_minutes(), max(0.5, self._minutes_to_close(eastern) - 1.0))
         forecast = build_market_ensemble(cycles, horizon)
-        right = self._direction_for_entry(forecast, cycles)
-        if right is None:
+        threshold = _direction_threshold()
+        if forecast.probability_up >= threshold:
+            right = "call"
+        elif forecast.probability_up <= 1.0 - threshold:
+            right = "put"
+        else:
             return None
 
         scenarios = generate_return_scenarios(forecast, points=31, tail_scale=1.20)
@@ -366,8 +357,6 @@ class EnsemblePaperAutoTrader(DynamicPaperAutoTrader):
             except ValueError:
                 continue
             if not (0.05 <= abs(greeks.delta) <= 0.80):
-                continue
-            if not self._candidate_regime_allowed(row, greeks, cycles):
                 continue
 
             quote = OptionQuote(
@@ -629,9 +618,9 @@ class EnsemblePaperAutoTrader(DynamicPaperAutoTrader):
             fill_price=signal.contract_cost,
             opened_at=current,
             entry_spot=signal.spot,
-            strategy=getattr(self, "position_strategy", POSITION_STRATEGY),
+            strategy=POSITION_STRATEGY,
             stop_price=stop,
-            target_price=getattr(self, "paper_target_placeholder", target),
+            target_price=target,
             max_hold_seconds=self.settings.max_hold_seconds,
             reason=f"{signal.reason}; {risk_reason}",
         )
