@@ -1,0 +1,717 @@
+{
+  "actual_fills_and_account_drawdown": false,
+  "actual_full_chain_PCR": false,
+  "algorithms": [
+    "both_experts_unfiltered",
+    "momentum_expert_only",
+    "pullback_expert_only",
+    "adaptive_predicted_win_45",
+    "adaptive_positive_stressed_expected_value",
+    "adaptive_predicted_win_60_and_ev",
+    "adaptive_predicted_win_75_and_ev",
+    "adaptive_prior_profit_evidence"
+  ],
+  "calibration": {
+    "bins": {
+      "[0,0.25)": {
+        "mean_predicted_win_pct": 20.95,
+        "observed_win_pct": 100,
+        "signals": 1
+      },
+      "[0.25,0.4)": {
+        "mean_predicted_win_pct": 34.26,
+        "observed_win_pct": 34.78,
+        "signals": 23
+      },
+      "[0.4,0.5)": {
+        "mean_predicted_win_pct": 44.79,
+        "observed_win_pct": 58.82,
+        "signals": 17
+      },
+      "[0.5,0.6)": {
+        "mean_predicted_win_pct": 55.75,
+        "observed_win_pct": 100,
+        "signals": 2
+      },
+      "[0.6,0.75)": {
+        "mean_predicted_win_pct": 62.48,
+        "observed_win_pct": 0,
+        "signals": 2
+      },
+      "[0.75,1.00001)": {
+        "mean_predicted_win_pct": null,
+        "observed_win_pct": null,
+        "signals": 0
+      }
+    },
+    "brier_loss_lower_is_better": 0.259132,
+    "test_predictions": 45
+  },
+  "candidate_coverage": {
+    "completed_minute_frames": 49792,
+    "completed_sessions": 128,
+    "confirmed_trend_pullback_matched": 32,
+    "missing_entry_quote": 1,
+    "morning_high_volume_momentum_matched": 72
+  },
+  "data_purchases": 0,
+  "expert_names": [
+    "morning_high_volume_momentum",
+    "confirmed_trend_pullback"
+  ],
+  "fresh_untouched_holdout": false,
+  "independent_hard_loss_pct": 35,
+  "maximum_hold_minutes": 10,
+  "minimum_prior_matched_training_trades": 30,
+  "no_profit_targets_or_scaleouts": true,
+  "post_warmup_test_sessions": 68,
+  "quote_data_event_executable_NBBO": false,
+  "research_only": true,
+  "results": {
+    "adaptive_positive_stressed_expected_value": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 53.2,
+        "extra_slippage_stressed_pnl_usd_not_account": -34.7,
+        "flat_or_no_trade_days": 120,
+        "hypothetical_pnl_usd_not_account": -16.7,
+        "mean_pnl_per_trade_usd": -1.8556,
+        "mean_premium_return_pct": -1.433,
+        "negative_days": 4,
+        "positive_days": 4,
+        "trades": 9,
+        "win_rate_pct": 55.56
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 41.6,
+          "extra_slippage_stressed_pnl_usd_not_account": -46.2,
+          "flat_or_no_trade_days": 18,
+          "hypothetical_pnl_usd_not_account": -38.2,
+          "mean_pnl_per_trade_usd": -9.55,
+          "mean_premium_return_pct": -7.225,
+          "negative_days": 3,
+          "positive_days": 1,
+          "trades": 4,
+          "win_rate_pct": 25
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 28.4,
+          "flat_or_no_trade_days": 19,
+          "hypothetical_pnl_usd_not_account": 32.4,
+          "mean_pnl_per_trade_usd": 16.2,
+          "mean_premium_return_pct": 12.372,
+          "negative_days": 0,
+          "positive_days": 2,
+          "trades": 2,
+          "win_rate_pct": 100
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 21.3,
+          "extra_slippage_stressed_pnl_usd_not_account": -16.9,
+          "flat_or_no_trade_days": 23,
+          "hypothetical_pnl_usd_not_account": -10.9,
+          "mean_pnl_per_trade_usd": -3.6333,
+          "mean_premium_return_pct": -2.914,
+          "negative_days": 1,
+          "positive_days": 1,
+          "trades": 3,
+          "win_rate_pct": 66.67
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 53.2,
+        "extra_slippage_stressed_pnl_usd_not_account": -34.7,
+        "flat_or_no_trade_days": 60,
+        "hypothetical_pnl_usd_not_account": -16.7,
+        "mean_pnl_per_trade_usd": -1.8556,
+        "mean_premium_return_pct": -1.433,
+        "negative_days": 4,
+        "positive_days": 4,
+        "trades": 9,
+        "win_rate_pct": 55.56
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          -2.2544,
+          0.9515
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          -1.7941,
+          1.2
+        ]
+      }
+    },
+    "adaptive_predicted_win_45": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 67.1,
+        "extra_slippage_stressed_pnl_usd_not_account": -53.4,
+        "flat_or_no_trade_days": 120,
+        "hypothetical_pnl_usd_not_account": -37.4,
+        "mean_pnl_per_trade_usd": -4.675,
+        "mean_premium_return_pct": -4.704,
+        "negative_days": 5,
+        "positive_days": 3,
+        "trades": 8,
+        "win_rate_pct": 37.5
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 45.9,
+          "extra_slippage_stressed_pnl_usd_not_account": -51.9,
+          "flat_or_no_trade_days": 19,
+          "hypothetical_pnl_usd_not_account": -45.9,
+          "mean_pnl_per_trade_usd": -15.3,
+          "mean_premium_return_pct": -12.433,
+          "negative_days": 3,
+          "positive_days": 0,
+          "trades": 3,
+          "win_rate_pct": 0
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 30.9,
+          "extra_slippage_stressed_pnl_usd_not_account": -9.2,
+          "flat_or_no_trade_days": 17,
+          "hypothetical_pnl_usd_not_account": -1.2,
+          "mean_pnl_per_trade_usd": -0.3,
+          "mean_premium_return_pct": -2.445,
+          "negative_days": 2,
+          "positive_days": 2,
+          "trades": 4,
+          "win_rate_pct": 50
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 7.7,
+          "flat_or_no_trade_days": 24,
+          "hypothetical_pnl_usd_not_account": 9.7,
+          "mean_pnl_per_trade_usd": 9.7,
+          "mean_premium_return_pct": 9.45,
+          "negative_days": 0,
+          "positive_days": 1,
+          "trades": 1,
+          "win_rate_pct": 100
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 67.1,
+        "extra_slippage_stressed_pnl_usd_not_account": -53.4,
+        "flat_or_no_trade_days": 60,
+        "hypothetical_pnl_usd_not_account": -37.4,
+        "mean_pnl_per_trade_usd": -4.675,
+        "mean_premium_return_pct": -4.704,
+        "negative_days": 5,
+        "positive_days": 3,
+        "trades": 8,
+        "win_rate_pct": 37.5
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          -2.6132,
+          0.8368
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          -2.2824,
+          0.9397
+        ]
+      }
+    },
+    "adaptive_predicted_win_60_and_ev": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 128,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 22,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 68,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          0,
+          0
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ]
+      }
+    },
+    "adaptive_predicted_win_75_and_ev": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 128,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 22,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 68,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          0,
+          0
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ]
+      }
+    },
+    "adaptive_prior_profit_evidence": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 128,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 22,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+        "extra_slippage_stressed_pnl_usd_not_account": 0,
+        "flat_or_no_trade_days": 68,
+        "hypothetical_pnl_usd_not_account": 0,
+        "mean_pnl_per_trade_usd": null,
+        "mean_premium_return_pct": null,
+        "negative_days": 0,
+        "positive_days": 0,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          0,
+          0
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ]
+      }
+    },
+    "both_experts_unfiltered": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 279.9,
+        "extra_slippage_stressed_pnl_usd_not_account": -182.2,
+        "flat_or_no_trade_days": 52,
+        "hypothetical_pnl_usd_not_account": 25.8,
+        "mean_pnl_per_trade_usd": 0.2481,
+        "mean_premium_return_pct": 1.145,
+        "negative_days": 43,
+        "positive_days": 33,
+        "trades": 104,
+        "win_rate_pct": 41.35
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 136.7,
+          "extra_slippage_stressed_pnl_usd_not_account": -115.2,
+          "flat_or_no_trade_days": 11,
+          "hypothetical_pnl_usd_not_account": -87.2,
+          "mean_pnl_per_trade_usd": -6.2286,
+          "mean_premium_return_pct": -7.217,
+          "negative_days": 7,
+          "positive_days": 4,
+          "trades": 14,
+          "win_rate_pct": 35.71
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 155.7,
+          "extra_slippage_stressed_pnl_usd_not_account": 55,
+          "flat_or_no_trade_days": 8,
+          "hypothetical_pnl_usd_not_account": 95,
+          "mean_pnl_per_trade_usd": 4.75,
+          "mean_premium_return_pct": 8.813,
+          "negative_days": 6,
+          "positive_days": 7,
+          "trades": 20,
+          "win_rate_pct": 50
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 54.5,
+          "extra_slippage_stressed_pnl_usd_not_account": 82.7,
+          "flat_or_no_trade_days": 15,
+          "hypothetical_pnl_usd_not_account": 104.7,
+          "mean_pnl_per_trade_usd": 9.5182,
+          "mean_premium_return_pct": 11.792,
+          "negative_days": 5,
+          "positive_days": 5,
+          "trades": 11,
+          "win_rate_pct": 54.55
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 155.7,
+        "extra_slippage_stressed_pnl_usd_not_account": 22.5,
+        "flat_or_no_trade_days": 34,
+        "hypothetical_pnl_usd_not_account": 112.5,
+        "mean_pnl_per_trade_usd": 2.5,
+        "mean_premium_return_pct": 4.554,
+        "negative_days": 18,
+        "positive_days": 16,
+        "trades": 45,
+        "win_rate_pct": 46.67
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          -7.4118,
+          7.6074
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          -5.875,
+          9.6809
+        ]
+      }
+    },
+    "momentum_expert_only": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 490.4,
+        "extra_slippage_stressed_pnl_usd_not_account": -444.6,
+        "flat_or_no_trade_days": 68,
+        "hypothetical_pnl_usd_not_account": -300.6,
+        "mean_pnl_per_trade_usd": -4.175,
+        "mean_premium_return_pct": -2.436,
+        "negative_days": 37,
+        "positive_days": 23,
+        "trades": 72,
+        "win_rate_pct": 37.5
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 141.1,
+          "extra_slippage_stressed_pnl_usd_not_account": -92.7,
+          "flat_or_no_trade_days": 13,
+          "hypothetical_pnl_usd_not_account": -74.7,
+          "mean_pnl_per_trade_usd": -8.3,
+          "mean_premium_return_pct": -9.982,
+          "negative_days": 6,
+          "positive_days": 3,
+          "trades": 9,
+          "win_rate_pct": 33.33
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 101,
+          "extra_slippage_stressed_pnl_usd_not_account": -79.6,
+          "flat_or_no_trade_days": 11,
+          "hypothetical_pnl_usd_not_account": -55.6,
+          "mean_pnl_per_trade_usd": -4.6333,
+          "mean_premium_return_pct": -4.334,
+          "negative_days": 6,
+          "positive_days": 4,
+          "trades": 12,
+          "win_rate_pct": 50
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 54.5,
+          "extra_slippage_stressed_pnl_usd_not_account": 82.7,
+          "flat_or_no_trade_days": 15,
+          "hypothetical_pnl_usd_not_account": 104.7,
+          "mean_pnl_per_trade_usd": 9.5182,
+          "mean_premium_return_pct": 11.792,
+          "negative_days": 5,
+          "positive_days": 5,
+          "trades": 11,
+          "win_rate_pct": 54.55
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 141.1,
+        "extra_slippage_stressed_pnl_usd_not_account": -89.6,
+        "flat_or_no_trade_days": 39,
+        "hypothetical_pnl_usd_not_account": -25.6,
+        "mean_pnl_per_trade_usd": -0.8,
+        "mean_premium_return_pct": -0.379,
+        "negative_days": 17,
+        "positive_days": 12,
+        "trades": 32,
+        "win_rate_pct": 46.88
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          -7.1015,
+          4.25
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          -6.0426,
+          4.7176
+        ]
+      }
+    },
+    "pullback_expert_only": {
+      "all_128_days_reference": {
+        "calendar_sessions": 128,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 173,
+        "extra_slippage_stressed_pnl_usd_not_account": 262.4,
+        "flat_or_no_trade_days": 99,
+        "hypothetical_pnl_usd_not_account": 326.4,
+        "mean_pnl_per_trade_usd": 10.2,
+        "mean_premium_return_pct": 9.202,
+        "negative_days": 16,
+        "positive_days": 13,
+        "trades": 32,
+        "win_rate_pct": 50
+      },
+      "period_breakdown": {
+        "development": {
+          "calendar_sessions": 22,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 21.6,
+          "extra_slippage_stressed_pnl_usd_not_account": -22.5,
+          "flat_or_no_trade_days": 17,
+          "hypothetical_pnl_usd_not_account": -12.5,
+          "mean_pnl_per_trade_usd": -2.5,
+          "mean_premium_return_pct": -2.24,
+          "negative_days": 3,
+          "positive_days": 2,
+          "trades": 5,
+          "win_rate_pct": 40
+        },
+        "previously_studied_diagnostic": {
+          "calendar_sessions": 21,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 77.9,
+          "extra_slippage_stressed_pnl_usd_not_account": 134.6,
+          "flat_or_no_trade_days": 13,
+          "hypothetical_pnl_usd_not_account": 150.6,
+          "mean_pnl_per_trade_usd": 18.825,
+          "mean_premium_return_pct": 28.533,
+          "negative_days": 4,
+          "positive_days": 4,
+          "trades": 8,
+          "win_rate_pct": 50
+        },
+        "validation": {
+          "calendar_sessions": 25,
+          "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 0,
+          "extra_slippage_stressed_pnl_usd_not_account": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_pnl_usd_not_account": 0,
+          "mean_pnl_per_trade_usd": null,
+          "mean_premium_return_pct": null,
+          "negative_days": 0,
+          "positive_days": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      },
+      "post_warmup_68_days": {
+        "calendar_sessions": 68,
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 77.9,
+        "extra_slippage_stressed_pnl_usd_not_account": 112.1,
+        "flat_or_no_trade_days": 55,
+        "hypothetical_pnl_usd_not_account": 138.1,
+        "mean_pnl_per_trade_usd": 10.6231,
+        "mean_premium_return_pct": 16.697,
+        "negative_days": 7,
+        "positive_days": 6,
+        "trades": 13,
+        "win_rate_pct": 46.15
+      },
+      "post_warmup_bootstrap": {
+        "descriptive_only_not_multiple_test_or_true_holdout": true,
+        "extra_friction_stress_same_CI": [
+          -2.5147,
+          7.825
+        ],
+        "five_session_block_CI_mean_pnl_per_calendar_day_usd": [
+          -2.2971,
+          8.3853
+        ]
+      }
+    }
+  },
+  "selection_bias_warning": "Research-only already-inspected archive and multiple candidate policies. Descriptive chronological splits are NOT untouched future validation.",
+  "study": "FROZEN_30PCT_TRAILING_CAUSAL_ADAPTIVE_TWO_EXPERT_LOGISTIC_WALKFORWARD",
+  "trading_orders": 0,
+  "train_only_prior_days": 60,
+  "training_sessions_with_model": 68
+}
