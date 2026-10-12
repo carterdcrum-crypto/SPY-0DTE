@@ -1,0 +1,45 @@
+{
+  "broker_orders": 0,
+  "candidate_decisions": 0,
+  "cost_purchase": 0,
+  "errors": {},
+  "excluded_reused_or_pre_cutoff_event_sessions": [],
+  "frozen_arm": "blend_trend_or_stretch_cost_aware",
+  "frozen_exit": {
+    "hard_pct": 35,
+    "hold_minutes": 10,
+    "take_profit": false,
+    "trail_pct": 30
+  },
+  "frozen_git_sha": "2aa21568ff72e4cafbf718e75084d3c0fa4ee83b",
+  "frozen_start_cash_usd": 1000,
+  "hypothetical_equity_usd": 1000,
+  "last_inspected_legacy_date": "2026-10-06",
+  "limitations": [
+    "Only genuinely new days strictly after previously inspected archive max date qualify.",
+    "Strict event schema and as-of volume_ratio, SPY realized-vol and option IV are required; never inferred from CBBO buckets.",
+    "Offline shadow replay after new session files are uploaded, not a streaming live paper broker.",
+    "Instruments are sampled as-of reported event timestamps; source provenance cannot be externally verified.",
+    "Missing exit path leaves premium reserved and return unscored, not a fictitious profitable position.",
+    "No real exchange execution, spread depth guarantee or exercise/assignment outcome."
+  ],
+  "modeled_one_contract_pnl_usd": 0,
+  "name": "frozen_regime_reclaim_true_event_forward_replay",
+  "new_event_sessions_available": [],
+  "no_autonomous_trading": true,
+  "not_real_broker_fills": true,
+  "paper_positions": 0,
+  "processed": [],
+  "scorable_positions": 0,
+  "status": "BLOCKED_NO_NEW_EVENT_SESSIONS",
+  "strict_event_readiness": {
+    "blocker": "Missing real SPY 1-minute OHLCV bars AND/OR event-observed SPY 0DTE OCC option quotes with executable bid/ask and timestamps. Legacy spy_0dte minute close/sampled CBBO files omit full OHLCV and exact quote-observation timestamps; cannot backtest ORB/VWAP honestly.",
+    "legacy_minute_snapshot_files": 0,
+    "paired_sessions": 0,
+    "source": "/data/research/forward_events",
+    "timestamped_option_quote_files": 0,
+    "true_ohlcv_files": 0,
+    "usable_for_this_experiment": false
+  },
+  "unscorable_positions": 0
+}
