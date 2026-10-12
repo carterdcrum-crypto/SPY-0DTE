@@ -57,8 +57,8 @@ def test_new_1000_dollar_research_balance_allows_multiple_fully_funded_debits():
 def test_latest_net_edge_csv_fields_and_no_trade_market_calendar(tmp_path):
     ledger=tmp_path/"trades.csv"
     ledger.write_text(
-        "day,arm,entry_at,entry_debit_usd,pnl_usd\\n"
-        "2026-10-05,option_friction_only,2026-10-05T13:40:00+00:00,125.65,12.45\\n"
+        "day,arm,entry_at,entry_debit_usd,pnl_usd\n"
+        "2026-10-05,option_friction_only,2026-10-05T13:40:00+00:00,125.65,12.45\n"
     )
     # Prior source includes archived CSV filenames containing a market
     # session date, even when no entry qualified that day.
