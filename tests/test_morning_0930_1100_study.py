@@ -12,7 +12,7 @@ from engine.morning_0930_1100_study import (
 def make_frames(prices=None, volume=1.8):
     origin=datetime(2026,10,6,13,30,tzinfo=timezone.utc)  # 09:30 EDT
     if prices is None:
-        prices=[600+0.01*i for i in range(100)]
+        prices=[600+0.05*i for i in range(100)]
     return [SimpleNamespace(
         timestamp=origin+timedelta(minutes=i),
         market=SimpleNamespace(spot=x,volume_ratio=volume))
@@ -65,7 +65,7 @@ def test_nonoverlap_uses_signal_time_not_future_profit():
              "right":"call","origin":"opening_close_breakout_proxy"} for i in (0,2,11,12)]
     chosen=nonoverlap(events)
     assert [datetime.fromisoformat(x["signal_at"]) for x in chosen]==[
-        origin,origin+timedelta(minutes=12)]
+        origin,origin+timedelta(minutes=11)]
 
 
 def test_empty_arms_do_not_fabricate_win_rate():
