@@ -150,7 +150,9 @@ def test_identical_flat_new_sessions_produce_identical_empty_ledgers(tmp_path):
             w.writerow((ts,600,600,600,600,1000,1.0,.20))
     (feed/"spy_option_quotes_2026-10-12.csv").write_text(
         "observed_at,symbol,expiration,right,strike,bid,ask,delta,bid_size,"
-        "ask_size,volume,open_interest,schema,implied_volatility\n")
+        "ask_size,volume,open_interest,schema,implied_volatility\n"
+        "2026-10-12T14:10:00+00:00,SPY261012C00600000,2026-10-12,"
+        "call,600,1.0,1.02,0.5,10,10,200,300,nbbo-event,0.20\n")
     result=run_compare(feed,legacy,tmp_path/"out")
     assert result["status"]=="EXPLORATORY_FORWARD_PAIR_COMPARISON_COMPLETED"
     assert len(result["processed"])==1

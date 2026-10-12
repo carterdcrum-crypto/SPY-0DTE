@@ -330,6 +330,8 @@ def run_compare(event_dir: Path, legacy_dir: Path, output_dir: Path) -> dict:
             decisions_v1, possible_v1, stats_v1 = session_plan(event_dir,day)
             decisions_v2, possible_v2, stats_v2 = session_plan_v2(event_dir,day)
             session = load_session(event_dir,day)
+            if len(session.bars) < 36 or not session.quotes:
+                raise ValueError("incomplete forward feed: need at least 36 completed bars and real event-observed option quotes")
         except (ValueError, FileNotFoundError, KeyError) as exc:
             skipped[str(day)] = str(exc)
             continue
