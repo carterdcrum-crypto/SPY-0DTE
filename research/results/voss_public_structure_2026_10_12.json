@@ -1,0 +1,237 @@
+{
+  "actual_OHLCV_support_resistance": false,
+  "archived_sessions_previously_studied": true,
+  "cash_settlement": "T+1",
+  "cash_start_usd": 1000,
+  "channel": "https://www.youtube.com/@officialvosstrading",
+  "coverage": {
+    "minute_frames": 49792,
+    "sessions": 128,
+    "signal_candidates": 3023,
+    "unquoted_signals": 226,
+    "voss_confirmed_trend_pullback_insufficient_settled_cash": 92,
+    "voss_level_break_retest_insufficient_settled_cash": 1,
+    "voss_structure_combo_insufficient_settled_cash": 2416,
+    "voss_support_resistance_rejection_insufficient_settled_cash": 1959
+  },
+  "data_purchased": 0,
+  "exit": {
+    "fixed_take_profit": false,
+    "hard_stop_initial_pct": 35,
+    "max_hold_minutes": 10,
+    "partial_sales": false,
+    "trail_pct": 30
+  },
+  "independent_from_regime_reclaim": true,
+  "no_untouched_holdout": true,
+  "option_quote_source": "legacy_CBBO_1m_NOT_event_executable_NBBO",
+  "orders": 0,
+  "predeclared_research_arms": [
+    "voss_level_break_retest",
+    "voss_support_resistance_rejection",
+    "voss_confirmed_trend_pullback",
+    "voss_structure_combo",
+    "voss_structure_combo_option_cost_gate"
+  ],
+  "predeclared_setups": [
+    "level_break_retest",
+    "level_rejection",
+    "confirmed_trend_pullback"
+  ],
+  "research_name": "Voss public price-structure inspired SPY 0DTE exploratory research",
+  "research_only": true,
+  "results": {
+    "voss_confirmed_trend_pullback": {
+      "active_days": 73,
+      "added_2usd_each_extra_execution_stress_pnl_usd": -1213.3,
+      "calendar_days": 128,
+      "days_2_or_more_trades": 35,
+      "mean_loser_usd": -34.56,
+      "mean_winner_usd": 41.24,
+      "modeled_1000_cash_account": {
+        "account_profit_loss_usd": -931.3,
+        "ending_equity_usd": 68.7,
+        "max_end_of_day_drawdown_pct_initial_capital": 125.99,
+        "max_end_of_day_drawdown_usd": 1259.9,
+        "post_hoc_path_uses_modeled_quote_fills": true,
+        "starting_settled_cash_usd": 1000,
+        "total_return_pct": -93.13,
+        "weeks": 28,
+        "weeks_doubled": 1
+      },
+      "modeled_pnl_usd": -931.3,
+      "periods": {
+        "development": {
+          "modeled_pnl_usd": -922.5,
+          "trades": 125
+        },
+        "previously_studied_diagnostic": {
+          "modeled_pnl_usd": 5.1,
+          "trades": 13
+        },
+        "validation": {
+          "modeled_pnl_usd": -13.9,
+          "trades": 3
+        }
+      },
+      "trades": 141,
+      "trades_per_market_day": 1.102,
+      "win_pct": 36.88,
+      "wins": 52
+    },
+    "voss_level_break_retest": {
+      "active_days": 63,
+      "added_2usd_each_extra_execution_stress_pnl_usd": -999.4,
+      "calendar_days": 128,
+      "days_2_or_more_trades": 12,
+      "mean_loser_usd": -28.38,
+      "mean_winner_usd": 26.42,
+      "modeled_1000_cash_account": {
+        "account_profit_loss_usd": -843.4,
+        "ending_equity_usd": 156.6,
+        "max_end_of_day_drawdown_pct_initial_capital": 84.65,
+        "max_end_of_day_drawdown_usd": 846.5,
+        "post_hoc_path_uses_modeled_quote_fills": true,
+        "starting_settled_cash_usd": 1000,
+        "total_return_pct": -84.34,
+        "weeks": 28,
+        "weeks_doubled": 0
+      },
+      "modeled_pnl_usd": -843.4,
+      "periods": {
+        "development": {
+          "modeled_pnl_usd": -621.9,
+          "trades": 53
+        },
+        "previously_studied_diagnostic": {
+          "modeled_pnl_usd": -110.7,
+          "trades": 9
+        },
+        "validation": {
+          "modeled_pnl_usd": -110.8,
+          "trades": 16
+        }
+      },
+      "trades": 78,
+      "trades_per_market_day": 0.609,
+      "win_pct": 32.05,
+      "wins": 25
+    },
+    "voss_structure_combo": {
+      "active_days": 53,
+      "added_2usd_each_extra_execution_stress_pnl_usd": -1398.6,
+      "calendar_days": 128,
+      "days_2_or_more_trades": 34,
+      "mean_loser_usd": -22,
+      "mean_winner_usd": 30.71,
+      "modeled_1000_cash_account": {
+        "account_profit_loss_usd": -974.6,
+        "ending_equity_usd": 25.4,
+        "max_end_of_day_drawdown_pct_initial_capital": 165.68,
+        "max_end_of_day_drawdown_usd": 1656.8,
+        "post_hoc_path_uses_modeled_quote_fills": true,
+        "starting_settled_cash_usd": 1000,
+        "total_return_pct": -97.46,
+        "weeks": 28,
+        "weeks_doubled": 0
+      },
+      "modeled_pnl_usd": -974.6,
+      "periods": {
+        "development": {
+          "modeled_pnl_usd": -979.3,
+          "trades": 211
+        },
+        "previously_studied_diagnostic": {
+          "modeled_pnl_usd": 4.7,
+          "trades": 1
+        },
+        "validation": {
+          "modeled_pnl_usd": 0,
+          "trades": 0
+        }
+      },
+      "trades": 212,
+      "trades_per_market_day": 1.656,
+      "win_pct": 33.02,
+      "wins": 70
+    },
+    "voss_structure_combo_option_cost_gate": {
+      "active_days": 67,
+      "added_2usd_each_extra_execution_stress_pnl_usd": 247.1,
+      "calendar_days": 128,
+      "days_2_or_more_trades": 24,
+      "mean_loser_usd": -26.76,
+      "mean_winner_usd": 43,
+      "modeled_1000_cash_account": {
+        "account_profit_loss_usd": 453.1,
+        "ending_equity_usd": 1453.1,
+        "max_end_of_day_drawdown_pct_initial_capital": 27.03,
+        "max_end_of_day_drawdown_usd": 270.3,
+        "post_hoc_path_uses_modeled_quote_fills": true,
+        "starting_settled_cash_usd": 1000,
+        "total_return_pct": 45.31,
+        "weeks": 28,
+        "weeks_doubled": 0
+      },
+      "modeled_pnl_usd": 453.1,
+      "periods": {
+        "development": {
+          "modeled_pnl_usd": 186.6,
+          "trades": 58
+        },
+        "previously_studied_diagnostic": {
+          "modeled_pnl_usd": 398.7,
+          "trades": 21
+        },
+        "validation": {
+          "modeled_pnl_usd": -132.2,
+          "trades": 24
+        }
+      },
+      "trades": 103,
+      "trades_per_market_day": 0.805,
+      "win_pct": 44.66,
+      "wins": 46
+    },
+    "voss_support_resistance_rejection": {
+      "active_days": 96,
+      "added_2usd_each_extra_execution_stress_pnl_usd": -1581.8,
+      "calendar_days": 128,
+      "days_2_or_more_trades": 59,
+      "mean_loser_usd": -22.23,
+      "mean_winner_usd": 28.48,
+      "modeled_1000_cash_account": {
+        "account_profit_loss_usd": -969.8,
+        "ending_equity_usd": 30.2,
+        "max_end_of_day_drawdown_pct_initial_capital": 147.38,
+        "max_end_of_day_drawdown_usd": 1473.8,
+        "post_hoc_path_uses_modeled_quote_fills": true,
+        "starting_settled_cash_usd": 1000,
+        "total_return_pct": -96.98,
+        "weeks": 28,
+        "weeks_doubled": 2
+      },
+      "modeled_pnl_usd": -969.8,
+      "periods": {
+        "development": {
+          "modeled_pnl_usd": -856,
+          "trades": 290
+        },
+        "previously_studied_diagnostic": {
+          "modeled_pnl_usd": 4.7,
+          "trades": 1
+        },
+        "validation": {
+          "modeled_pnl_usd": -118.5,
+          "trades": 15
+        }
+      },
+      "trades": 306,
+      "trades_per_market_day": 2.391,
+      "win_pct": 37.58,
+      "wins": 115
+    }
+  },
+  "source_for_general_principles": "https://vosstradingvip.com/",
+  "source_limit": "Public site supports context, support/resistance, price confirmation, defined invalidation; YouTube video transcripts/specific formula NOT verified; ALL quantitative rules here are newly invented testable hypotheses, NOT attributable as Voss's exact signals."
+}
