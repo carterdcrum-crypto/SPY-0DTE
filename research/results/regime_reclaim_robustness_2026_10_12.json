@@ -1,0 +1,156 @@
+{
+  "archive_sessions": 128,
+  "best_single_day": {
+    "day": "2026-04-23",
+    "net_pnl_usd": 335.1
+  },
+  "by_option_side": {
+    "call": {
+      "sum_pnl_usd": 797.9,
+      "trades": 77,
+      "win_pct": 53.25
+    },
+    "put": {
+      "sum_pnl_usd": 1144.3,
+      "trades": 69,
+      "win_pct": 50.72
+    }
+  },
+  "by_setup": {
+    "stretch_reclaim": {
+      "sum_pnl_usd": 1621.4,
+      "trades": 112,
+      "win_pct": 51.79
+    },
+    "trend_reclaim": {
+      "sum_pnl_usd": 320.8,
+      "trades": 34,
+      "win_pct": 52.94
+    }
+  },
+  "by_time_bucket_diagnostic_only": {
+    "1100_to_1300": {
+      "sum_pnl_usd": 605.2,
+      "trades": 46,
+      "win_pct": 54.35
+    },
+    "1300_plus": {
+      "sum_pnl_usd": 484.1,
+      "trades": 23,
+      "win_pct": 52.17
+    },
+    "before_1100": {
+      "sum_pnl_usd": 852.9,
+      "trades": 77,
+      "win_pct": 50.65
+    }
+  },
+  "candidate": "blend_trend_or_stretch_cost_aware",
+  "daily_block_bootstrap": {
+    "extra_0_per_trade_usd": {
+      "aggregate_cost_stressed_historical_usd": 1942.2,
+      "five_session_block_95pct_mean_pnl_usd_per_market_session": [
+        6.279,
+        24.147
+      ],
+      "positive_bootstrap_fraction_pct": 100
+    },
+    "extra_10_per_trade_usd": {
+      "aggregate_cost_stressed_historical_usd": 482.2,
+      "five_session_block_95pct_mean_pnl_usd_per_market_session": [
+        -4.391,
+        12.49
+      ],
+      "positive_bootstrap_fraction_pct": 81.47
+    },
+    "extra_2_per_trade_usd": {
+      "aggregate_cost_stressed_historical_usd": 1650.2,
+      "five_session_block_95pct_mean_pnl_usd_per_market_session": [
+        4.26,
+        21.97
+      ],
+      "positive_bootstrap_fraction_pct": 99.92
+    },
+    "extra_5_per_trade_usd": {
+      "aggregate_cost_stressed_historical_usd": 1212.2,
+      "five_session_block_95pct_mean_pnl_usd_per_market_session": [
+        1.192,
+        18.174
+      ],
+      "positive_bootstrap_fraction_pct": 98.92
+    }
+  },
+  "five_largest_days": [
+    [
+      335.09999999999997,
+      "2026-04-23"
+    ],
+    [
+      245.8,
+      "2026-06-09"
+    ],
+    [
+      239.5,
+      "2026-09-25"
+    ],
+    [
+      164.5,
+      "2026-07-24"
+    ],
+    [
+      164.4,
+      "2026-09-09"
+    ]
+  ],
+  "negative_weeks": 8,
+  "no_trade_or_flat_weeks": 2,
+  "positive_weeks": 18,
+  "purpose": "DESCRIPTIVE_FALSIFICATION_NOT_NEW_HIGH_WINRATE_CLAIM",
+  "sum_without_best_day_usd": 1607.1,
+  "sum_without_best_three_days_usd": 1121.8,
+  "total_weeks": 28,
+  "trades": 146,
+  "unadjusted_wilson_95pct_winrate_CI_pct": [
+    44,
+    60
+  ],
+  "warnings": [
+    "Eight candidate strategies evaluated; the apparent winner may be selection bias.",
+    "No untouched historical out-of-sample, real orders, option tick/event-NBBO, or new market data.",
+    "Historical trades are output of a one-position-per-arm $1000 T+1 cash simulation; additive PnL without extra stress being rerouted through affordability.",
+    "Option quotes are sampled CBBO minute buckets and do not capture true intraminute stop fills.",
+    "Wilson interval assumes trade independence (not realistic); block bootstrap handles some calendar clustering but does not correct selection bias.",
+    "Positive historical cumulative results do not validate repeated +100% weekly account returns."
+  ],
+  "weekly_one_contract_additive_pnl_usd": {
+    "(2026, 14)": -36.599999999999994,
+    "(2026, 15)": -41.8,
+    "(2026, 16)": -26.6,
+    "(2026, 17)": 275.49999999999994,
+    "(2026, 18)": 96.8,
+    "(2026, 19)": 27.8,
+    "(2026, 20)": 0,
+    "(2026, 21)": 77.00000000000003,
+    "(2026, 22)": -131.09999999999997,
+    "(2026, 23)": 156.39999999999998,
+    "(2026, 24)": 448.1000000000001,
+    "(2026, 25)": 35.10000000000001,
+    "(2026, 26)": 59.90000000000001,
+    "(2026, 27)": 34.7,
+    "(2026, 28)": 189.20000000000002,
+    "(2026, 29)": 218.60000000000002,
+    "(2026, 30)": 176.6,
+    "(2026, 31)": 71.8,
+    "(2026, 32)": 102.5,
+    "(2026, 33)": 79.1,
+    "(2026, 34)": -30.800000000000008,
+    "(2026, 35)": 24.800000000000004,
+    "(2026, 36)": -4.900000000000002,
+    "(2026, 37)": 29.69999999999999,
+    "(2026, 38)": -30.3,
+    "(2026, 39)": 208.3,
+    "(2026, 40)": -67.59999999999997,
+    "(2026, 41)": 0
+  },
+  "win_rate_pct": 52.05
+}
