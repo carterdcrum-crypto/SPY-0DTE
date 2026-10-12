@@ -20,6 +20,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .greeks import model_greeks_from_quote
+from .providers.databento_history import _parse_contract_from_symbol
 from .weekly_options_data import Bar, Quote, load_session, available_sessions, audit, aware
 from .session_calendar import session_close
 
@@ -118,8 +119,11 @@ def _quote_rows(path: Path, day: date, bars: list[Bar]):
     seen={}
     with _stream_csv(path) as handle:
         reader=csv.DictReader(handle)
-        _required(reader,("ts_recv","symbol","schema","bid","ask",
-                          "bid_size","ask_size"),path.name)
+        _required(reader,("ts_recv","symbol","schema","publisher_id"),path.name)
+        names=set(reader.fieldnames or ())
+        if not ({"bid","ask","bid_size","ask_size"} <= names or
+                {"bid_px_00","ask_px_00","bid_sz_00","ask_sz_00"} <= names):
+            raise ValueError("event feed missing bid/ask prices and displayed depth")
         for number,record in enumerate(reader,1):
             if number>MAX_EVENT_ROWS:
                 raise ValueError("too many unbounded OPRA event records for 500MB service")
@@ -133,7 +137,6 @@ def _quote_rows(path: Path, day: date, bars: list[Bar]):
             if at.astimezone(NY).date()!=day or not datetime.combine(day,time(9,30),NY).astimezone(timezone.utc)<=at<=close:
                 exclusions["outside_session"]=exclusions.get("outside_session",0)+1
                 continue
-            from .providers.databento_history import _parse_contract_from_symbol
             contract=_parse_contract_from_symbol(record["symbol"])
             if contract is None or contract.expiration != day or not contract.symbol.startswith("SPY"):
                 exclusions["non_spy_zero_dte"]=exclusions.get("non_spy_zero_dte",0)+1
@@ -143,8 +146,10 @@ def _quote_rows(path: Path, day: date, bars: list[Bar]):
                 exclusions["no_completed_asof_spy_bar"]=exclusions.get("no_completed_asof_spy_bar",0)+1
                 continue
             try:
-                bid=float(record["bid"]);ask=float(record["ask"])
-                sizebid=int(record["bid_size"]);sizeask=int(record["ask_size"])
+                bid=float(record.get("bid") or record.get("bid_px_00"))
+                ask=float(record.get("ask") or record.get("ask_px_00"))
+                sizebid=int(record.get("bid_size") or record.get("bid_sz_00"))
+                sizeask=int(record.get("ask_size") or record.get("ask_sz_00"))
                 if not(0<bid<=ask and sizebid>0 and sizeask>0):
                     raise ValueError("non-executable market")
                 minutes=(close-at).total_seconds()/60.
