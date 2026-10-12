@@ -91,7 +91,7 @@ def test_strict_75_rule_does_not_falsely_pass_low_predicted_probability():
 
 def test_profit_evidence_gate_requires_prior_positivity_across_days():
     pos=[pastcase(i,expert=EXPERTS[0],win=True,pnl=50.,
-                  day=f"2026-07-{1+i//3:02d}") for i in range(45)]
+                  day=f"2026-07-{1+i//3:02d}") for i in range(90)]
     neg=[{**case,"net_pnl_usd":-15.} for case in pos]
     assert prior_profit_gate(pos,EXPERTS[0])
     assert not prior_profit_gate(neg,EXPERTS[0])
