@@ -1,7 +1,7 @@
 name: exit-policy-research-tests
 on:
   push:
-    branches: [research/exit-trailing20-vs-50, research/event-nbbo-acquisition-preflight, research/trailing-only-sensitivity-20261011, research/cost-aware-entry-edge-20261011, research/morning-window-0930-1100-20261011, research/0930-1100-no-target-entry-combos-20261011, research/or-retest-frequency-20261011, research/option-net-edge-walkforward-20261012]
+    branches: [research/exit-trailing20-vs-50, research/event-nbbo-acquisition-preflight, research/trailing-only-sensitivity-20261011, research/cost-aware-entry-edge-20261011, research/morning-window-0930-1100-20261011, research/0930-1100-no-target-entry-combos-20261011, research/or-retest-frequency-20261011, research/option-net-edge-walkforward-20261012, research/1000-starting-balance-20261012]
 jobs:
   test:
     runs-on: ubuntu-latest
