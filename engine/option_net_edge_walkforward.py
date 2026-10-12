@@ -186,7 +186,7 @@ def candidates_for_day(frames)->list[dict]:
         if when.astimezone(ET).time()>=time(15,25):
             continue
         signal_idx=index.get(when)
-        if signal_idx is None or signal_idx<15:
+        if signal_idx is None or signal_idx<5:
             continue
         selected=_select_entry(frames,when,event["right"])
         if selected is None:
