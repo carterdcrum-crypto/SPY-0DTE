@@ -7,7 +7,8 @@ No strategy tuning, broker orders, or market data purchases.
 from __future__ import annotations
 import argparse,csv,json,math,random,statistics
 from collections import defaultdict,Counter
-from datetime import date
+from datetime import date,datetime
+from .free_signal_screen import ET
 from pathlib import Path
 from .burst_research import _research_files
 
@@ -72,10 +73,9 @@ def run(ledger_path:Path,data_dir:Path,out:Path)->dict:
         pnl=float(x["pnl_usd"])
         side[x["side"]].append(pnl)
         setup[x["setup"]].append(pnl)
-        at=x["entry_at"][11:16]
-        bucket=("before_1100" if at < "15:00" else
-                ("1100_to_1300" if at<"17:00" else "1300_plus"))
-        # NOTE: UTC cutoff switches during DST; bucket diagnostic only.
+        at=datetime.fromisoformat(x["entry_at"]).astimezone(ET).time()
+        bucket=("before_1100" if at < datetime.strptime("11:00","%H:%M").time() else
+                ("1100_to_1300" if at<datetime.strptime("13:00","%H:%M").time() else "1300_plus"))
         et[bucket].append(pnl)
     def group(g):
         return {k:{"trades":len(vals),"win_pct":round(
