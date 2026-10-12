@@ -55,7 +55,10 @@ def signal_eligible(row, variant: str, *, five_minute_trend_bps: float | None = 
     momentum=row.family_mode=="momentum"
     pullback=row.opportunity.setup=="trend_pullback_reclaim"
     macd_price=row.macd_histo_aligned_or_improving and row.price_action_confirmed
-    # Shift the MORNING RESEARCH strategy from 10:00-12:00 to 09:30-11:00 ET.\n    # The legacy four-factor scanner still needs 75 completed bars, so\n    # this alone cannot issue signals during the first 75 market minutes.\n    at=datetime.fromisoformat(row.opportunity.signal_at).astimezone(ET)
+    # Shift the MORNING RESEARCH strategy from 10:00-12:00 to 09:30-11:00 ET.
+    # The legacy four-factor scanner still needs 75 completed bars, so
+    # this alone cannot issue signals during the first 75 market minutes.
+    at=datetime.fromisoformat(row.opportunity.signal_at).astimezone(ET)
     return {
         "baseline": True,
         "volume_150": v>=1.50,
