@@ -1,0 +1,93 @@
+{
+  "broker_orders": 0,
+  "comparability": "Identical original frozen entry/cost rules; only exit horizon is varied",
+  "fees_per_side_usd": 0.65,
+  "first_day": "2026-04-01",
+  "independent_hard_loss_pct": 35,
+  "intra_trade_drawdown_unavailable": true,
+  "last_day": "2026-10-06",
+  "max_drawdown_basis": "peak-to-trough end-of-day modeled CASH + settled T+1 proceeds; unscored premium conservatively reserved/marked zero, not a verified realized loss",
+  "new_data_purchases": 0,
+  "no_max_hold_until": "verified-session-close minus 15 minutes; at latest 15:45 ET normal day",
+  "results": {
+    "frozen_10min": {
+      "coverage_issues": {
+        "position_busy": 34
+      },
+      "drawdown_trough_day": "2026-09-24",
+      "exit_reasons": {
+        "hard_max_hold_10min": 99,
+        "independent_hard_stop_35pct": 3,
+        "trailing_stop": 44
+      },
+      "maximum_end_of_day_cash_drawdown_pct_of_peak": 5.48,
+      "maximum_end_of_day_cash_drawdown_usd": 165,
+      "modeled_cash_equity_usd": 2942.2,
+      "modeled_cash_profit_vs_1000_usd": 1942.2,
+      "profit_factor": 2.14,
+      "scored_trade_net_pnl_usd": 1942.2,
+      "scored_trades": 146,
+      "stress_plus_2usd_per_scored_trade_pnl_usd": 1650.2,
+      "total_entry_positions": 146,
+      "unknown_outcomes_assumed_zero_liquidation_value_in_cash_mark": true,
+      "unscorable_positions": 0,
+      "win_rate_scored_pct": 52.05
+    },
+    "no_max_30pct_trail": {
+      "coverage_issues": {
+        "position_busy": 50,
+        "unscorable_quote_end": 1
+      },
+      "drawdown_trough_day": "2026-09-28",
+      "exit_reasons": {
+        "independent_hard_stop_35pct": 5,
+        "mandatory_pre_expiry_liquidation": 3,
+        "trailing_stop": 121
+      },
+      "maximum_end_of_day_cash_drawdown_pct_of_peak": 15.7,
+      "maximum_end_of_day_cash_drawdown_usd": 314.9,
+      "modeled_cash_equity_usd": 1857.65,
+      "modeled_cash_profit_vs_1000_usd": 857.65,
+      "profit_factor": 1.44,
+      "scored_trade_net_pnl_usd": 993.3,
+      "scored_trades": 129,
+      "stress_plus_2usd_per_scored_trade_pnl_usd": 735.3,
+      "total_entry_positions": 130,
+      "unknown_outcomes_assumed_zero_liquidation_value_in_cash_mark": true,
+      "unscorable_positions": 1,
+      "win_rate_scored_pct": 38.76
+    },
+    "no_max_adaptive20pct": {
+      "coverage_issues": {
+        "position_busy": 40
+      },
+      "drawdown_trough_day": "2026-04-17",
+      "exit_reasons": {
+        "adaptive_trailing_20pct": 131,
+        "independent_hard_stop_35pct": 2,
+        "mandatory_pre_expiry_liquidation": 1,
+        "trailing_stop": 6
+      },
+      "maximum_end_of_day_cash_drawdown_pct_of_peak": 5.32,
+      "maximum_end_of_day_cash_drawdown_usd": 162,
+      "modeled_cash_equity_usd": 3044,
+      "modeled_cash_profit_vs_1000_usd": 2044,
+      "profit_factor": 2.16,
+      "scored_trade_net_pnl_usd": 2044,
+      "scored_trades": 140,
+      "stress_plus_2usd_per_scored_trade_pnl_usd": 1764,
+      "total_entry_positions": 140,
+      "unknown_outcomes_assumed_zero_liquidation_value_in_cash_mark": true,
+      "unscorable_positions": 0,
+      "win_rate_scored_pct": 42.14
+    }
+  },
+  "sessions": 128,
+  "slippage_per_option_share": 0.01,
+  "source": "pre-inspected SPY minute close/CBBO-1m buckets, NOT event NBBO",
+  "status": "HISTORICAL_EXPLORATORY_PROXY_NOT_FORWARD_VALIDATED",
+  "study": "Frozen SPY Regime Reclaim: no-max-hold exit sensitivity",
+  "t1_cash_no_same_day_recycling": true,
+  "trailing_original_pct": 30,
+  "v2_not_backtested": "Legacy data lacks true SPY OHLCV/VWAP needed for V2 regime router"
+}
