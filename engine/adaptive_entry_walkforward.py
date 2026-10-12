@@ -15,7 +15,7 @@ import math
 import random
 import statistics
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from .burst_research import _research_files
@@ -27,7 +27,7 @@ from .trailing_only_sweep import simulate, period
 
 TRAIL_PCT = 30
 PRIOR_SESSIONS = 60
-MIN_TRAINING_MATCHED = 75
+MIN_TRAINING_MATCHED = 30
 RANDOM_SEED = 20261011
 FRICTION_STRESS_EXTRA_PER_TRADE = 2.00  # extra $0.01/option share EACH side
 REGULARIZATION = 0.11  # mean-loss objective L2 penalty, not fitted
@@ -291,7 +291,7 @@ def run(root:Path,out:Path)->dict:
                 continue
             signal_time=datetime.fromisoformat(row.opportunity.signal_at)
             i=at_close.get(signal_time.replace(microsecond=0)
-                           -__import__("datetime").timedelta(minutes=1))
+                           -timedelta(minutes=1))
             if i is None or i<20:
                 coverage["unmatched_asof_signal_bar"]+=1
                 continue
