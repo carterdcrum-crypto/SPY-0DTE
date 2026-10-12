@@ -106,7 +106,7 @@ def test_research_decision_cannot_use_future_option_profit(monkeypatch):
     prior=[]
     examples,selected,diagnostics=day_evaluate(f,"2026-10-06",[c],prior)
     assert examples[0]["pnl_usd"]==999999
-    assert {s["arm"] for s in selected}=={"all_setups_one_at_a_time"}
+    assert {s["arm"] for s in selected}=={"all_setups_one_at_a_time","option_friction_only"}
 
 
 def test_no_trade_sessions_keep_winrate_null():
