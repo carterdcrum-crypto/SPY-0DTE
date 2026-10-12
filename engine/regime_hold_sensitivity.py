@@ -36,7 +36,7 @@ HARD_STOP=.35
 MAX_FIXED_MIN=10
 CUTOFF_BUFFER_MIN=15
 BAR_TOLERANCE_SECONDS=60
-ARMS=("frozen_10min","no_max_30pct_trail","no_max_adaptive20pct")
+ARMS=("frozen_10min","no_max_30pct_trail","no_max_adaptive20pct","conditional_extend_v4")
 
 
 def liquidation_cutoff(day):
@@ -208,6 +208,11 @@ def backtest(data_dir:Path, output:Path):
                     outcome={"pnl_usd":res["pnl_usd"],
                              "exit_at":datetime.fromisoformat(res["exit_time"]),
                              "exit_reason":res["exit_reason"]}
+                elif arm=="conditional_extend_v4":
+                    from .regime_hold_conditional import simulate_conditional
+                    trace=quote_path(frames,idx,q.symbol,cutoff)
+                    outcome=simulate_conditional(q.ask,trace,frames,entry_at=at,
+                        side=entry["signal"]["side"],symbol=q.symbol,cutoff=cutoff)
                 else:
                     trace=quote_path(frames,idx,q.symbol,cutoff)
                     outcome=simulate_unlimited(
@@ -277,13 +282,13 @@ def backtest(data_dir:Path, output:Path):
             "unknown_outcomes_assumed_zero_liquidation_value_in_cash_mark":True,
         }
     result={
-        "study":"Frozen SPY Regime Reclaim: no-max-hold exit sensitivity",
+        "study":"Frozen SPY Regime Reclaim: fixed versus no-max versus conditional 10-minute hold extension",
         "status":"HISTORICAL_EXPLORATORY_PROXY_NOT_FORWARD_VALIDATED",
         "sessions":len(inspected),
         "first_day":min(inspected) if inspected else None,
         "last_day":max(inspected) if inspected else None,
         "source":"pre-inspected SPY minute close/CBBO-1m buckets, NOT event NBBO",
-        "comparability":"Identical original frozen entry/cost rules; only exit horizon is varied",
+        "comparability":"Identical original frozen entry/cost rules; exit policies varied. V4 momentum confirmation is strictly causal close/volume-ratio proxy.",
         "v2_not_backtested":"Legacy data lacks true SPY OHLCV/VWAP needed for V2 regime router",
         "no_max_hold_until":"verified-session-close minus 15 minutes; at latest 15:45 ET normal day",
         "fees_per_side_usd":PREMIUM_FEE_PER_SIDE,
