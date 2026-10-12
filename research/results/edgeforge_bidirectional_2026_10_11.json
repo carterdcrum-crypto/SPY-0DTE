@@ -1,0 +1,543 @@
+{
+  "cash_affordability_study_cap_usd_NOT_CURRENT_ACCOUNT": 115,
+  "coverage": {
+    "matched_both_direction_events": 534,
+    "matched_call": 541,
+    "matched_put": 537,
+    "minute_frames": 49792,
+    "missing_entry_quote_call": 21,
+    "missing_entry_quote_put": 25,
+    "original_signals": 562,
+    "sessions": 128
+  },
+  "decision": "Only promote if future prospective paper/fill studies show durable NET expected value.",
+  "fixed_policy_count": 7,
+  "frozen_trailing_stop_pct": 30,
+  "independent_hard_loss_pct": 35,
+  "limitations": [
+    "All dates were inspected previously; no fully untouched holdout.",
+    "CBBO-1m snapshots lack independently event-observed executable NBBO.",
+    "Real option fill size, slippage, and cash settlement not validated.",
+    "Complete intraday SPY-specific full-chain put/call volume unavailable.",
+    "Paired long CALL/PUT hypothetical options are independent comparisons not hedged positions.",
+    "Model estimates are descriptive frequencies, not calibrated 75% success predictions.",
+    "Extra friction stress does not guarantee a realistic execution."
+  ],
+  "max_hold_minutes": 10,
+  "modeled_extra_roundtrip_slippage_usd": 2,
+  "new_market_data_cost_usd": 0,
+  "orders_submitted": 0,
+  "partial_exits": false,
+  "prior_completed_market_sessions": 45,
+  "profit_targets": false,
+  "results": {
+    "contrarian_direction": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          -44.9434,
+          -13.8855
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          -37.5916,
+          -4.6663
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": -2476.9,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 1819.7,
+        "correct_original_direction_trades": 0,
+        "flat_or_no_trade_days": 2,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -1770.9,
+        "mean_option_return_pct": -4.695,
+        "negative_days": 61,
+        "opposite_direction_trades": 353,
+        "positive_days": 20,
+        "sessions": 83,
+        "trades": 353,
+        "win_rate_pct": 35.13
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": -1366.8,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 1040.6,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 0,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -1034.8,
+          "mean_option_return_pct": -5.05,
+          "negative_days": 27,
+          "opposite_direction_trades": 166,
+          "positive_days": 10,
+          "sessions": 37,
+          "trades": 166,
+          "win_rate_pct": 37.35
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": -532.8,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 432.6,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 0,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -340.8,
+          "mean_option_return_pct": -3.427,
+          "negative_days": 15,
+          "opposite_direction_trades": 96,
+          "positive_days": 6,
+          "sessions": 21,
+          "trades": 96,
+          "win_rate_pct": 28.12
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": -577.3,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 395.3,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 2,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -395.3,
+          "mean_option_return_pct": -5.385,
+          "negative_days": 19,
+          "opposite_direction_trades": 91,
+          "positive_days": 4,
+          "sessions": 25,
+          "trades": 91,
+          "win_rate_pct": 38.46
+        }
+      }
+    },
+    "edgeforge_best_expected_net": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          -5.4494,
+          -0.4735
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          -4.7723,
+          -0.2301
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": -220.2,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 225.6,
+        "correct_original_direction_trades": 1,
+        "flat_or_no_trade_days": 71,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -192.2,
+        "mean_option_return_pct": -10.408,
+        "negative_days": 9,
+        "opposite_direction_trades": 13,
+        "positive_days": 3,
+        "sessions": 83,
+        "trades": 14,
+        "win_rate_pct": 28.57
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": -186.9,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 194.3,
+          "correct_original_direction_trades": 1,
+          "flat_or_no_trade_days": 26,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -160.9,
+          "mean_option_return_pct": -8.664,
+          "negative_days": 8,
+          "opposite_direction_trades": 12,
+          "positive_days": 3,
+          "sessions": 37,
+          "trades": 13,
+          "win_rate_pct": 30.77
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 21,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": -33.3,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 31.3,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 24,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -31.3,
+          "mean_option_return_pct": -33.069,
+          "negative_days": 1,
+          "opposite_direction_trades": 1,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 1,
+          "win_rate_pct": 0
+        }
+      }
+    },
+    "edgeforge_expert_consensus_115_cap": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          0,
+          0
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": 0,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+        "correct_original_direction_trades": 0,
+        "flat_or_no_trade_days": 83,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+        "mean_option_return_pct": null,
+        "negative_days": 0,
+        "opposite_direction_trades": 0,
+        "positive_days": 0,
+        "sessions": 83,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 37,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 37,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 21,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      }
+    },
+    "edgeforge_positive_expert_consensus": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          0,
+          0
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": 0,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+        "correct_original_direction_trades": 0,
+        "flat_or_no_trade_days": 83,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+        "mean_option_return_pct": null,
+        "negative_days": 0,
+        "opposite_direction_trades": 0,
+        "positive_days": 0,
+        "sessions": 83,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 37,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 37,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 21,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      }
+    },
+    "edgeforge_precise_60": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          0,
+          0
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": 0,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+        "correct_original_direction_trades": 0,
+        "flat_or_no_trade_days": 83,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+        "mean_option_return_pct": null,
+        "negative_days": 0,
+        "opposite_direction_trades": 0,
+        "positive_days": 0,
+        "sessions": 83,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 37,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 37,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 21,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      }
+    },
+    "edgeforge_precise_75": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          0,
+          0
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          0,
+          0
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": 0,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+        "correct_original_direction_trades": 0,
+        "flat_or_no_trade_days": 83,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+        "mean_option_return_pct": null,
+        "negative_days": 0,
+        "opposite_direction_trades": 0,
+        "positive_days": 0,
+        "sessions": 83,
+        "trades": 0,
+        "win_rate_pct": null
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 37,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 37,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 21,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 21,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": 0,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 0,
+          "correct_original_direction_trades": 0,
+          "flat_or_no_trade_days": 25,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": 0,
+          "mean_option_return_pct": null,
+          "negative_days": 0,
+          "opposite_direction_trades": 0,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 0,
+          "win_rate_pct": null
+        }
+      }
+    },
+    "original_signal_direction": {
+      "five_day_block_bootstrap": {
+        "additional_2usd_friction_same_interval": [
+          -49.4904,
+          -23.4506
+        ],
+        "five_session_block_bootstrap_average_pnl_per_calendar_day_usd": [
+          -39.8133,
+          -14.2241
+        ],
+        "model_selection_adjusted": false,
+        "untouched_holdout": false
+      },
+      "post_warmup_all_sessions": {
+        "additional_2usd_per_contract_stressed_pnl": -2977.3,
+        "additive_closed_trade_pnl_drawdown_not_account_usd": 2493.8,
+        "correct_original_direction_trades": 351,
+        "flat_or_no_trade_days": 2,
+        "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -2275.3,
+        "mean_option_return_pct": -6.318,
+        "negative_days": 57,
+        "opposite_direction_trades": 0,
+        "positive_days": 24,
+        "sessions": 83,
+        "trades": 351,
+        "win_rate_pct": 34.19
+      },
+      "predeclared_regimes": {
+        "development": {
+          "additional_2usd_per_contract_stressed_pnl": -1629.8,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 1621.6,
+          "correct_original_direction_trades": 166,
+          "flat_or_no_trade_days": 0,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -1297.8,
+          "mean_option_return_pct": -5.723,
+          "negative_days": 27,
+          "opposite_direction_trades": 0,
+          "positive_days": 10,
+          "sessions": 37,
+          "trades": 166,
+          "win_rate_pct": 36.14
+        },
+        "previously_studied_diagnostic": {
+          "additional_2usd_per_contract_stressed_pnl": -727.5,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 630.2,
+          "correct_original_direction_trades": 95,
+          "flat_or_no_trade_days": 0,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -537.5,
+          "mean_option_return_pct": -7.175,
+          "negative_days": 16,
+          "opposite_direction_trades": 0,
+          "positive_days": 5,
+          "sessions": 21,
+          "trades": 95,
+          "win_rate_pct": 30.53
+        },
+        "validation": {
+          "additional_2usd_per_contract_stressed_pnl": -620,
+          "additive_closed_trade_pnl_drawdown_not_account_usd": 583.1,
+          "correct_original_direction_trades": 90,
+          "flat_or_no_trade_days": 2,
+          "hypothetical_one_contract_pnl_usd_NOT_ACCOUNT": -440,
+          "mean_option_return_pct": -6.512,
+          "negative_days": 14,
+          "opposite_direction_trades": 0,
+          "positive_days": 9,
+          "sessions": 25,
+          "trades": 90,
+          "win_rate_pct": 34.44
+        }
+      }
+    }
+  },
+  "seen_session_count": 128,
+  "status": "RESEARCH_ONLY_NOT_BROKER_FILLS",
+  "study": "EDGEFORGE_BIDIRECTIONAL_OPTION_NET_PNL_ANALOG_FROZEN_30PCT_TRAIL",
+  "test_sessions_after_warmup": 83
+}
