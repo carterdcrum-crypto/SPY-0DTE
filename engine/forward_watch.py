@@ -1,4 +1,4 @@
-"""Long-running ZERO-PURCHASE V1/V2 forward comparison on real event CSVs.
+"""Long-running ZERO-PURCHASE V1/V2/V3/V4 forward comparison on real event CSVs.
 
 Designed for the existing isolated /data/research Railway volume. It watches
 for paired, independently sourced raw SPY OHLCV + OPRA event CSVs, validates
@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .forward_event_ingest import ingest
 from .frozen_regime_forward import latest_legacy_day
-from .regime_reclaim_v3 import run_v3_comparison
+from .regime_reclaim_v4 import compare_v4
 
 
 def process_once(root: Path) -> dict:
@@ -65,7 +65,7 @@ def process_once(root: Path) -> dict:
         except (ValueError,FileNotFoundError,OSError) as exc:
             failures[str(day)]=f"{type(exc).__name__}: {exc}"
     try:
-        result=run_v3_comparison(paired,root,output)
+        result=compare_v4(paired,root,output)
         outcome=result["status"]
         processed=len(result["processed"])
     except (ValueError,FileNotFoundError,KeyError) as exc:
