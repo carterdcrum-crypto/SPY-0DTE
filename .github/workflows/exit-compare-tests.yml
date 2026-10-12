@@ -1,7 +1,7 @@
 name: exit-policy-research-tests
 on:
   push:
-    branches: [research/exit-trailing20-vs-50, research/event-nbbo-acquisition-preflight, research/trailing-only-sensitivity-20261011, research/cost-aware-entry-edge-20261011, research/adaptive-entry-walkforward-20261011]
+    branches: [research/exit-trailing20-vs-50, research/event-nbbo-acquisition-preflight, research/trailing-only-sensitivity-20261011, research/cost-aware-entry-edge-20261011, research/adaptive-entry-walkforward-20261011, research/edgeforge-bidirectional-20261011]
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -11,5 +11,5 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
-      - run: python -m pytest -q tests/test_exit_policy_comparison.py tests/test_spy_event_data_preflight.py tests/test_trailing_only_sweep.py tests/test_entry_filter_30pct_study.py tests/test_deferred_reversal_30pct_study.py tests/test_cost_aware_entry_edge.py tests/test_adaptive_entry_walkforward.py
-      - run: python -m compileall -q engine/exit_policy_comparison.py engine/spy_event_data_preflight.py engine/trailing_only_sweep.py engine/entry_filter_30pct_study.py engine/deferred_reversal_30pct_study.py engine/cost_aware_entry_edge.py engine/adaptive_entry_walkforward.py
+      - run: python -m pytest -q tests/test_exit_policy_comparison.py tests/test_spy_event_data_preflight.py tests/test_trailing_only_sweep.py tests/test_entry_filter_30pct_study.py tests/test_deferred_reversal_30pct_study.py tests/test_cost_aware_entry_edge.py tests/test_adaptive_entry_walkforward.py tests/test_edgeforge_bidirectional.py
+      - run: python -m compileall -q engine/exit_policy_comparison.py engine/spy_event_data_preflight.py engine/trailing_only_sweep.py engine/entry_filter_30pct_study.py engine/deferred_reversal_30pct_study.py engine/cost_aware_entry_edge.py engine/adaptive_entry_walkforward.py engine/edgeforge_bidirectional.py
