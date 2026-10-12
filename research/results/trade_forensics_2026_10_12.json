@@ -1,0 +1,1825 @@
+{
+  "actual_account_simulation": false,
+  "archived_market_sessions": 128,
+  "arms": {
+    "all_setups_one_at_a_time": {
+      "by_expert": {
+        "direct_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 8,
+          "entry_spread_pct_average": 1.09,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 59,
+            "independent_hard_stop_35pct": 7,
+            "trailing_stop": 38
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1594.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -222.1,
+              "trades": 7
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -95.8,
+              "trades": 6
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -8.9,
+              "trades": 3
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1998.4,
+              "trades": 58
+            }
+          },
+          "losses_or_breakevens": 74,
+          "mean_loser_or_flat_usd": -31.42,
+          "mean_modeled_execution_drag_usd": 4.51,
+          "mean_trade_pnl_usd": -13.33,
+          "mean_winner_usd": 31.3,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 468.7,
+          "pnl_usd": -1386.2,
+          "summed_mid_to_mid_usd": -917.5,
+          "trades": 104,
+          "win_rate_pct": 28.85,
+          "wins": 30
+        },
+        "direct_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 21,
+          "entry_spread_pct_average": 1.005,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 161,
+            "independent_hard_stop_35pct": 17,
+            "trailing_stop": 74
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1680.6,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -165.2,
+              "trades": 14
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -408.1,
+              "trades": 17
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -21.3,
+              "trades": 11
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -4368.2,
+              "trades": 114
+            }
+          },
+          "losses_or_breakevens": 156,
+          "mean_loser_or_flat_usd": -31.81,
+          "mean_modeled_execution_drag_usd": 4.64,
+          "mean_trade_pnl_usd": -4.67,
+          "mean_winner_usd": 39.44,
+          "mid_up_but_realized_net_nonpositive_count": 16,
+          "modeled_execution_drag_total_usd": 1169.1,
+          "pnl_usd": -1176.6,
+          "summed_mid_to_mid_usd": -7.5,
+          "trades": 252,
+          "win_rate_pct": 38.1,
+          "wins": 96
+        },
+        "legacy_4f": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 27,
+          "entry_spread_pct_average": 1.312,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 209,
+            "independent_hard_stop_35pct": 34,
+            "trailing_stop": 96
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -2403.7,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -231.7,
+              "trades": 19
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -403.4,
+              "trades": 28
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -27.6,
+              "trades": 12
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -4658.8,
+              "trades": 166
+            }
+          },
+          "losses_or_breakevens": 225,
+          "mean_loser_or_flat_usd": -23.65,
+          "mean_modeled_execution_drag_usd": 4.48,
+          "mean_trade_pnl_usd": -5.09,
+          "mean_winner_usd": 31.54,
+          "mid_up_but_realized_net_nonpositive_count": 13,
+          "modeled_execution_drag_total_usd": 1520.2,
+          "pnl_usd": -1725.7,
+          "summed_mid_to_mid_usd": -205.5,
+          "trades": 339,
+          "win_rate_pct": 33.63,
+          "wins": 114
+        },
+        "retest_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 1.798,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1,
+            "independent_hard_stop_35pct": 1
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -9.6,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -14.3,
+              "trades": 1
+            }
+          },
+          "losses_or_breakevens": 1,
+          "mean_loser_or_flat_usd": -14.3,
+          "mean_modeled_execution_drag_usd": 4.55,
+          "mean_trade_pnl_usd": -2.8,
+          "mean_winner_usd": 8.7,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 9.1,
+          "pnl_usd": -5.6,
+          "summed_mid_to_mid_usd": 3.5,
+          "trades": 2,
+          "win_rate_pct": 50,
+          "wins": 1
+        },
+        "retest_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 1.615,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1,
+            "trailing_stop": 3
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": 15.8,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -53.9,
+              "trades": 3
+            }
+          },
+          "losses_or_breakevens": 3,
+          "mean_loser_or_flat_usd": -17.97,
+          "mean_modeled_execution_drag_usd": 4.42,
+          "mean_trade_pnl_usd": 5.95,
+          "mean_winner_usd": 77.7,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 17.7,
+          "pnl_usd": 23.8,
+          "summed_mid_to_mid_usd": 41.5,
+          "trades": 4,
+          "win_rate_pct": 25,
+          "wins": 1
+        }
+      },
+      "by_period": {
+        "development": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 42,
+          "entry_spread_pct_average": 1.099,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 289,
+            "independent_hard_stop_35pct": 33,
+            "trailing_stop": 135
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -3126.1,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -513,
+              "trades": 30
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -511.8,
+              "trades": 26
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -30.2,
+              "trades": 14
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -7577.1,
+              "trades": 217
+            }
+          },
+          "losses_or_breakevens": 287,
+          "mean_loser_or_flat_usd": -30.08,
+          "mean_modeled_execution_drag_usd": 4.61,
+          "mean_trade_pnl_usd": -4.84,
+          "mean_winner_usd": 37.76,
+          "mid_up_but_realized_net_nonpositive_count": 18,
+          "modeled_execution_drag_total_usd": 2106.6,
+          "pnl_usd": -2212.1,
+          "summed_mid_to_mid_usd": -105.5,
+          "trades": 457,
+          "win_rate_pct": 37.2,
+          "wins": 170
+        },
+        "previously_studied_diagnostic": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 4,
+          "entry_spread_pct_average": 1.341,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 57,
+            "independent_hard_stop_35pct": 13,
+            "trailing_stop": 40
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1192,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -45.6,
+              "trades": 2
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -187,
+              "trades": 10
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -12.8,
+              "trades": 6
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1767.6,
+              "trades": 62
+            }
+          },
+          "losses_or_breakevens": 80,
+          "mean_loser_or_flat_usd": -25.16,
+          "mean_modeled_execution_drag_usd": 4.36,
+          "mean_trade_pnl_usd": -8.84,
+          "mean_winner_usd": 34.7,
+          "mid_up_but_realized_net_nonpositive_count": 7,
+          "modeled_execution_drag_total_usd": 479.5,
+          "pnl_usd": -972,
+          "summed_mid_to_mid_usd": -492.5,
+          "trades": 110,
+          "win_rate_pct": 27.27,
+          "wins": 30
+        },
+        "validation": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 10,
+          "entry_spread_pct_average": 1.28,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 85,
+            "independent_hard_stop_35pct": 13,
+            "trailing_stop": 36
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1354.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -60.4,
+              "trades": 8
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -208.5,
+              "trades": 15
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -14.8,
+              "trades": 6
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1748.9,
+              "trades": 63
+            }
+          },
+          "losses_or_breakevens": 92,
+          "mean_loser_or_flat_usd": -22.09,
+          "mean_modeled_execution_drag_usd": 4.47,
+          "mean_trade_pnl_usd": -8.11,
+          "mean_winner_usd": 22.53,
+          "mid_up_but_realized_net_nonpositive_count": 7,
+          "modeled_execution_drag_total_usd": 598.7,
+          "pnl_usd": -1086.2,
+          "summed_mid_to_mid_usd": -487.5,
+          "trades": 134,
+          "win_rate_pct": 31.34,
+          "wins": 42
+        }
+      },
+      "by_time_bucket": {
+        "afternoon_1300_1524": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 29,
+          "entry_spread_pct_average": 1.451,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 159,
+            "independent_hard_stop_35pct": 35,
+            "trailing_stop": 93
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -2156.1,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -258,
+              "trades": 20
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -352.1,
+              "trades": 27
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -25.3,
+              "trades": 11
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -3681.8,
+              "trades": 136
+            }
+          },
+          "losses_or_breakevens": 194,
+          "mean_loser_or_flat_usd": -22.25,
+          "mean_modeled_execution_drag_usd": 4.48,
+          "mean_trade_pnl_usd": -5.51,
+          "mean_winner_usd": 29.41,
+          "mid_up_but_realized_net_nonpositive_count": 12,
+          "modeled_execution_drag_total_usd": 1285.6,
+          "pnl_usd": -1582.1,
+          "summed_mid_to_mid_usd": -296.5,
+          "trades": 287,
+          "win_rate_pct": 32.4,
+          "wins": 93
+        },
+        "late_morning_1030_1059": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 3,
+          "entry_spread_pct_average": 0.869,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 38,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 14
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -182.8,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -35.6,
+              "trades": 2
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -17.3,
+              "trades": 1
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -3.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1065.5,
+              "trades": 25
+            }
+          },
+          "losses_or_breakevens": 30,
+          "mean_loser_or_flat_usd": -37.4,
+          "mean_modeled_execution_drag_usd": 4.51,
+          "mean_trade_pnl_usd": -1.26,
+          "mean_winner_usd": 40.43,
+          "mid_up_but_realized_net_nonpositive_count": 2,
+          "modeled_execution_drag_total_usd": 252.3,
+          "pnl_usd": -70.8,
+          "summed_mid_to_mid_usd": 181.5,
+          "trades": 56,
+          "win_rate_pct": 46.43,
+          "wins": 26
+        },
+        "midday_1100_1259": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 14,
+          "entry_spread_pct_average": 1.117,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 147,
+            "independent_hard_stop_35pct": 13,
+            "trailing_stop": 54
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1423.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -118,
+              "trades": 10
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -296.2,
+              "trades": 14
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -21.7,
+              "trades": 9
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -3147.2,
+              "trades": 104
+            }
+          },
+          "losses_or_breakevens": 137,
+          "mean_loser_or_flat_usd": -26.15,
+          "mean_modeled_execution_drag_usd": 4.61,
+          "mean_trade_pnl_usd": -4.65,
+          "mean_winner_usd": 33.61,
+          "mid_up_but_realized_net_nonpositive_count": 13,
+          "modeled_execution_drag_total_usd": 986.2,
+          "pnl_usd": -995.2,
+          "summed_mid_to_mid_usd": -9,
+          "trades": 214,
+          "win_rate_pct": 35.98,
+          "wins": 77
+        },
+        "open_0930_1029": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 10,
+          "entry_spread_pct_average": 0.814,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 87,
+            "independent_hard_stop_35pct": 7,
+            "trailing_stop": 50
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1910.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -207.4,
+              "trades": 8
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -241.7,
+              "trades": 9
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -7.2,
+              "trades": 4
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -3199.1,
+              "trades": 77
+            }
+          },
+          "losses_or_breakevens": 98,
+          "mean_loser_or_flat_usd": -37.3,
+          "mean_modeled_execution_drag_usd": 4.59,
+          "mean_trade_pnl_usd": -11.27,
+          "mean_winner_usd": 44.2,
+          "mid_up_but_realized_net_nonpositive_count": 5,
+          "modeled_execution_drag_total_usd": 660.7,
+          "pnl_usd": -1622.2,
+          "summed_mid_to_mid_usd": -961.5,
+          "trades": 144,
+          "win_rate_pct": 31.94,
+          "wins": 46
+        }
+      },
+      "correct_spy_direction_but_option_net_nonpositive_count": 56,
+      "entry_spread_pct_average": 1.172,
+      "exit_reason_counts": {
+        "hard_max_hold_10min": 431,
+        "independent_hard_stop_35pct": 59,
+        "trailing_stop": 211
+      },
+      "extra_2usd_roundtrip_cost_stress_sum_usd": -5672.3,
+      "losers_previously_showed_positive_bid_MFE": 210,
+      "loss_types": {
+        "correct_spot_direction_but_option_lost": {
+          "net_pnl_usd": -619,
+          "trades": 40
+        },
+        "flat_underlying_option_lost": {
+          "net_pnl_usd": -907.3,
+          "trades": 51
+        },
+        "gross_mid_gain_erased_by_modeled_execution_costs": {
+          "net_pnl_usd": -57.8,
+          "trades": 26
+        },
+        "wrong_underlying_direction": {
+          "net_pnl_usd": -11093.6,
+          "trades": 342
+        }
+      },
+      "losses_or_breakevens": 459,
+      "mean_loser_or_flat_usd": -27.62,
+      "mean_modeled_execution_drag_usd": 4.54,
+      "mean_trade_pnl_usd": -6.09,
+      "mean_winner_usd": 34.74,
+      "mid_up_but_realized_net_nonpositive_count": 32,
+      "modeled_execution_drag_total_usd": 3184.8,
+      "pnl_usd": -4270.3,
+      "summed_mid_to_mid_usd": -1085.5,
+      "trades": 701,
+      "win_rate_pct": 34.52,
+      "wins": 242
+    },
+    "option_friction_only": {
+      "by_expert": {
+        "direct_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 4,
+          "entry_spread_pct_average": 1.086,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 40,
+            "independent_hard_stop_35pct": 7,
+            "trailing_stop": 33
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1295,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -80.9,
+              "trades": 3
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -46.6,
+              "trades": 2
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -8.9,
+              "trades": 3
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1755.7,
+              "trades": 49
+            }
+          },
+          "losses_or_breakevens": 57,
+          "mean_loser_or_flat_usd": -33.19,
+          "mean_modeled_execution_drag_usd": 4.51,
+          "mean_trade_pnl_usd": -14.19,
+          "mean_winner_usd": 32.92,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 361,
+          "pnl_usd": -1135,
+          "summed_mid_to_mid_usd": -774,
+          "trades": 80,
+          "win_rate_pct": 28.75,
+          "wins": 23
+        },
+        "direct_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 17,
+          "entry_spread_pct_average": 0.975,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 125,
+            "independent_hard_stop_35pct": 15,
+            "trailing_stop": 60
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1070,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -187.6,
+              "trades": 12
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -271,
+              "trades": 10
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -15.1,
+              "trades": 7
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -3587.3,
+              "trades": 91
+            }
+          },
+          "losses_or_breakevens": 120,
+          "mean_loser_or_flat_usd": -33.84,
+          "mean_modeled_execution_drag_usd": 4.62,
+          "mean_trade_pnl_usd": -3.35,
+          "mean_winner_usd": 42.39,
+          "mid_up_but_realized_net_nonpositive_count": 9,
+          "modeled_execution_drag_total_usd": 923,
+          "pnl_usd": -670,
+          "summed_mid_to_mid_usd": 253,
+          "trades": 200,
+          "win_rate_pct": 40,
+          "wins": 80
+        },
+        "legacy_4f": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 22,
+          "entry_spread_pct_average": 1.233,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 176,
+            "independent_hard_stop_35pct": 26,
+            "trailing_stop": 89
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -2282.3,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -191.5,
+              "trades": 15
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -367.5,
+              "trades": 25
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -23,
+              "trades": 10
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -4225.6,
+              "trades": 142
+            }
+          },
+          "losses_or_breakevens": 192,
+          "mean_loser_or_flat_usd": -25.04,
+          "mean_modeled_execution_drag_usd": 4.47,
+          "mean_trade_pnl_usd": -5.84,
+          "mean_winner_usd": 31.39,
+          "mid_up_but_realized_net_nonpositive_count": 10,
+          "modeled_execution_drag_total_usd": 1300.8,
+          "pnl_usd": -1700.3,
+          "summed_mid_to_mid_usd": -399.5,
+          "trades": 291,
+          "win_rate_pct": 34.02,
+          "wins": 99
+        },
+        "retest_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 1.23,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 3,
+            "independent_hard_stop_35pct": 1
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -81.2,
+          "loss_types": {
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -5.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -67.9,
+              "trades": 3
+            }
+          },
+          "losses_or_breakevens": 4,
+          "mean_loser_or_flat_usd": -18.3,
+          "mean_modeled_execution_drag_usd": 4.3,
+          "mean_trade_pnl_usd": -18.3,
+          "mean_winner_usd": null,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 17.2,
+          "pnl_usd": -73.2,
+          "summed_mid_to_mid_usd": -56,
+          "trades": 4,
+          "win_rate_pct": 0,
+          "wins": 0
+        },
+        "retest_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 1.356,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 6,
+            "trailing_stop": 5
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -145.3,
+          "loss_types": {
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -29.9,
+              "trades": 3
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -4.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -166.8,
+              "trades": 6
+            }
+          },
+          "losses_or_breakevens": 10,
+          "mean_loser_or_flat_usd": -20.1,
+          "mean_modeled_execution_drag_usd": 4.48,
+          "mean_trade_pnl_usd": -11.21,
+          "mean_winner_usd": 77.7,
+          "mid_up_but_realized_net_nonpositive_count": 1,
+          "modeled_execution_drag_total_usd": 49.3,
+          "pnl_usd": -123.3,
+          "summed_mid_to_mid_usd": -74,
+          "trades": 11,
+          "win_rate_pct": 9.09,
+          "wins": 1
+        }
+      },
+      "by_period": {
+        "development": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 33,
+          "entry_spread_pct_average": 1.061,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 243,
+            "independent_hard_stop_35pct": 28,
+            "trailing_stop": 117
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -2768.4,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -359.6,
+              "trades": 22
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -436.6,
+              "trades": 22
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -27.9,
+              "trades": 13
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -6786.1,
+              "trades": 187
+            }
+          },
+          "losses_or_breakevens": 244,
+          "mean_loser_or_flat_usd": -31.19,
+          "mean_modeled_execution_drag_usd": 4.61,
+          "mean_trade_pnl_usd": -5.14,
+          "mean_winner_usd": 39.01,
+          "mid_up_but_realized_net_nonpositive_count": 14,
+          "modeled_execution_drag_total_usd": 1787.4,
+          "pnl_usd": -1992.4,
+          "summed_mid_to_mid_usd": -205,
+          "trades": 388,
+          "win_rate_pct": 37.11,
+          "wins": 144
+        },
+        "previously_studied_diagnostic": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 1.294,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 41,
+            "independent_hard_stop_35pct": 11,
+            "trailing_stop": 36
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -963.4,
+          "loss_types": {
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -141.4,
+              "trades": 8
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -7.9,
+              "trades": 3
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1542.6,
+              "trades": 52
+            }
+          },
+          "losses_or_breakevens": 63,
+          "mean_loser_or_flat_usd": -26.86,
+          "mean_modeled_execution_drag_usd": 4.37,
+          "mean_trade_pnl_usd": -8.95,
+          "mean_winner_usd": 36.18,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 384.4,
+          "pnl_usd": -787.4,
+          "summed_mid_to_mid_usd": -403,
+          "trades": 88,
+          "win_rate_pct": 28.41,
+          "wins": 25
+        },
+        "validation": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 9,
+          "entry_spread_pct_average": 1.227,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 66,
+            "independent_hard_stop_35pct": 10,
+            "trailing_stop": 34
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1142,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -100.4,
+              "trades": 8
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -142.3,
+              "trades": 11
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -15.5,
+              "trades": 5
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1474.6,
+              "trades": 52
+            }
+          },
+          "losses_or_breakevens": 76,
+          "mean_loser_or_flat_usd": -22.8,
+          "mean_modeled_execution_drag_usd": 4.36,
+          "mean_trade_pnl_usd": -8.38,
+          "mean_winner_usd": 23.85,
+          "mid_up_but_realized_net_nonpositive_count": 6,
+          "modeled_execution_drag_total_usd": 479.5,
+          "pnl_usd": -922,
+          "summed_mid_to_mid_usd": -442.5,
+          "trades": 110,
+          "win_rate_pct": 30.91,
+          "wins": 34
+        }
+      },
+      "by_time_bucket": {
+        "afternoon_1300_1524": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 22,
+          "entry_spread_pct_average": 1.384,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 125,
+            "independent_hard_stop_35pct": 24,
+            "trailing_stop": 81
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1613,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -203.8,
+              "trades": 16
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -309.2,
+              "trades": 24
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -21.4,
+              "trades": 8
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -3071.4,
+              "trades": 108
+            }
+          },
+          "losses_or_breakevens": 156,
+          "mean_loser_or_flat_usd": -23.11,
+          "mean_modeled_execution_drag_usd": 4.5,
+          "mean_trade_pnl_usd": -5.01,
+          "mean_winner_usd": 33.15,
+          "mid_up_but_realized_net_nonpositive_count": 8,
+          "modeled_execution_drag_total_usd": 1034.5,
+          "pnl_usd": -1153,
+          "summed_mid_to_mid_usd": -118.5,
+          "trades": 230,
+          "win_rate_pct": 32.17,
+          "wins": 74
+        },
+        "late_morning_1030_1059": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 0.845,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 29,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 12
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": 11.5,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -21.3,
+              "trades": 1
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -1.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -881,
+              "trades": 20
+            }
+          },
+          "losses_or_breakevens": 22,
+          "mean_loser_or_flat_usd": -41.07,
+          "mean_modeled_execution_drag_usd": 4.52,
+          "mean_trade_pnl_usd": 2.26,
+          "mean_winner_usd": 43.7,
+          "mid_up_but_realized_net_nonpositive_count": 1,
+          "modeled_execution_drag_total_usd": 203.5,
+          "pnl_usd": 101.5,
+          "summed_mid_to_mid_usd": 305,
+          "trades": 45,
+          "win_rate_pct": 51.11,
+          "wins": 23
+        },
+        "midday_1100_1259": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 12,
+          "entry_spread_pct_average": 1.081,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 126,
+            "independent_hard_stop_35pct": 13,
+            "trailing_stop": 50
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1373.7,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -123.4,
+              "trades": 8
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -244,
+              "trades": 10
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -21.7,
+              "trades": 9
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -2945.6,
+              "trades": 92
+            }
+          },
+          "losses_or_breakevens": 119,
+          "mean_loser_or_flat_usd": -28.02,
+          "mean_modeled_execution_drag_usd": 4.52,
+          "mean_trade_pnl_usd": -5.27,
+          "mean_winner_usd": 33.41,
+          "mid_up_but_realized_net_nonpositive_count": 11,
+          "modeled_execution_drag_total_usd": 854.2,
+          "pnl_usd": -995.7,
+          "summed_mid_to_mid_usd": -141.5,
+          "trades": 189,
+          "win_rate_pct": 37.04,
+          "wins": 70
+        },
+        "open_0930_1029": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 7,
+          "entry_spread_pct_average": 0.82,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 70,
+            "independent_hard_stop_35pct": 8,
+            "trailing_stop": 44
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -1898.6,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -111.5,
+              "trades": 5
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -167.1,
+              "trades": 7
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -6.9,
+              "trades": 3
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -2905.3,
+              "trades": 71
+            }
+          },
+          "losses_or_breakevens": 86,
+          "mean_loser_or_flat_usd": -37.1,
+          "mean_modeled_execution_drag_usd": 4.58,
+          "mean_trade_pnl_usd": -13.56,
+          "mean_winner_usd": 42.67,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 559.1,
+          "pnl_usd": -1654.6,
+          "summed_mid_to_mid_usd": -1095.5,
+          "trades": 122,
+          "win_rate_pct": 29.51,
+          "wins": 36
+        }
+      },
+      "correct_spy_direction_but_option_net_nonpositive_count": 43,
+      "entry_spread_pct_average": 1.127,
+      "exit_reason_counts": {
+        "hard_max_hold_10min": 350,
+        "independent_hard_stop_35pct": 49,
+        "trailing_stop": 187
+      },
+      "extra_2usd_roundtrip_cost_stress_sum_usd": -4873.8,
+      "losers_previously_showed_positive_bid_MFE": 177,
+      "loss_types": {
+        "correct_spot_direction_but_option_lost": {
+          "net_pnl_usd": -460,
+          "trades": 30
+        },
+        "flat_underlying_option_lost": {
+          "net_pnl_usd": -720.3,
+          "trades": 41
+        },
+        "gross_mid_gain_erased_by_modeled_execution_costs": {
+          "net_pnl_usd": -51.3,
+          "trades": 21
+        },
+        "wrong_underlying_direction": {
+          "net_pnl_usd": -9803.3,
+          "trades": 291
+        }
+      },
+      "losses_or_breakevens": 383,
+      "mean_loser_or_flat_usd": -28.81,
+      "mean_modeled_execution_drag_usd": 4.52,
+      "mean_trade_pnl_usd": -6.32,
+      "mean_winner_usd": 36.12,
+      "mid_up_but_realized_net_nonpositive_count": 23,
+      "modeled_execution_drag_total_usd": 2651.3,
+      "pnl_usd": -3701.8,
+      "summed_mid_to_mid_usd": -1050.5,
+      "trades": 586,
+      "win_rate_pct": 34.64,
+      "wins": 203
+    },
+    "prior_analog_net_plus_friction": {
+      "by_expert": {
+        "direct_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 1.003,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 15,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 6
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -35.5,
+          "loss_types": {
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -25.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -458.9,
+              "trades": 13
+            }
+          },
+          "losses_or_breakevens": 14,
+          "mean_loser_or_flat_usd": -34.59,
+          "mean_modeled_execution_drag_usd": 4.58,
+          "mean_trade_pnl_usd": 0.58,
+          "mean_winner_usd": 45.34,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 114.5,
+          "pnl_usd": 14.5,
+          "summed_mid_to_mid_usd": 129,
+          "trades": 25,
+          "win_rate_pct": 44,
+          "wins": 11
+        },
+        "direct_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 4,
+          "entry_spread_pct_average": 0.951,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 45,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 15
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -248.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -64.9,
+              "trades": 3
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -67.6,
+              "trades": 2
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -3.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -956.9,
+              "trades": 23
+            }
+          },
+          "losses_or_breakevens": 30,
+          "mean_loser_or_flat_usd": -36.43,
+          "mean_modeled_execution_drag_usd": 4.58,
+          "mean_trade_pnl_usd": -1.88,
+          "mean_winner_usd": 28.61,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 293.2,
+          "pnl_usd": -120.2,
+          "summed_mid_to_mid_usd": 173,
+          "trades": 64,
+          "win_rate_pct": 53.12,
+          "wins": 34
+        },
+        "legacy_4f": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 1.774,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 5,
+            "trailing_stop": 7
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -149.6,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -36.3,
+              "trades": 1
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -26.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -118.8,
+              "trades": 6
+            }
+          },
+          "losses_or_breakevens": 9,
+          "mean_loser_or_flat_usd": -20.19,
+          "mean_modeled_execution_drag_usd": 4.63,
+          "mean_trade_pnl_usd": -10.47,
+          "mean_winner_usd": 18.7,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 55.6,
+          "pnl_usd": -125.6,
+          "summed_mid_to_mid_usd": -70,
+          "trades": 12,
+          "win_rate_pct": 25,
+          "wins": 3
+        },
+        "retest_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 2.105,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -12.3,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -10.3,
+              "trades": 1
+            }
+          },
+          "losses_or_breakevens": 1,
+          "mean_loser_or_flat_usd": -10.3,
+          "mean_modeled_execution_drag_usd": 4.3,
+          "mean_trade_pnl_usd": -10.3,
+          "mean_winner_usd": null,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 4.3,
+          "pnl_usd": -10.3,
+          "summed_mid_to_mid_usd": -6,
+          "trades": 1,
+          "win_rate_pct": 0,
+          "wins": 0
+        }
+      },
+      "by_period": {
+        "development": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 4,
+          "entry_spread_pct_average": 1.063,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 65,
+            "independent_hard_stop_35pct": 7,
+            "trailing_stop": 24
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -304.8,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -60.9,
+              "trades": 3
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -119.5,
+              "trades": 5
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -3.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1417.7,
+              "trades": 39
+            }
+          },
+          "losses_or_breakevens": 49,
+          "mean_loser_or_flat_usd": -32.69,
+          "mean_modeled_execution_drag_usd": 4.6,
+          "mean_trade_pnl_usd": -1.17,
+          "mean_winner_usd": 31.68,
+          "mid_up_but_realized_net_nonpositive_count": 3,
+          "modeled_execution_drag_total_usd": 441.3,
+          "pnl_usd": -112.8,
+          "summed_mid_to_mid_usd": 328.5,
+          "trades": 96,
+          "win_rate_pct": 48.96,
+          "wins": 47
+        },
+        "previously_studied_diagnostic": {
+          "pnl_usd": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 1.215,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1,
+            "independent_hard_stop_35pct": 1,
+            "trailing_stop": 4
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -140.8,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -40.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -127.2,
+              "trades": 4
+            }
+          },
+          "losses_or_breakevens": 5,
+          "mean_loser_or_flat_usd": -33.5,
+          "mean_modeled_execution_drag_usd": 4.38,
+          "mean_trade_pnl_usd": -21.47,
+          "mean_winner_usd": 38.7,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 26.3,
+          "pnl_usd": -128.8,
+          "summed_mid_to_mid_usd": -102.5,
+          "trades": 6,
+          "win_rate_pct": 16.67,
+          "wins": 1
+        }
+      },
+      "by_time_bucket": {
+        "afternoon_1300_1524": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 1.457,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 16,
+            "independent_hard_stop_35pct": 3,
+            "trailing_stop": 8
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": 39.9,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -24.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -305.6,
+              "trades": 12
+            }
+          },
+          "losses_or_breakevens": 14,
+          "mean_loser_or_flat_usd": -23.59,
+          "mean_modeled_execution_drag_usd": 4.58,
+          "mean_trade_pnl_usd": 3.48,
+          "mean_winner_usd": 32.62,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 123.6,
+          "pnl_usd": 93.9,
+          "summed_mid_to_mid_usd": 217.5,
+          "trades": 27,
+          "win_rate_pct": 48.15,
+          "wins": 13
+        },
+        "late_morning_1030_1059": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 0.96,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 7,
+            "independent_hard_stop_35pct": 1,
+            "trailing_stop": 3
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": 126.7,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -142.2,
+              "trades": 4
+            }
+          },
+          "losses_or_breakevens": 4,
+          "mean_loser_or_flat_usd": -35.55,
+          "mean_modeled_execution_drag_usd": 4.44,
+          "mean_trade_pnl_usd": 13.52,
+          "mean_winner_usd": 41.56,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 48.8,
+          "pnl_usd": 148.7,
+          "summed_mid_to_mid_usd": 197.5,
+          "trades": 11,
+          "win_rate_pct": 63.64,
+          "wins": 7
+        },
+        "midday_1100_1259": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 1.196,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 21,
+            "independent_hard_stop_35pct": 1,
+            "trailing_stop": 7
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -96.7,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -76.6,
+              "trades": 2
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -26.6,
+              "trades": 2
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -2.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -248.7,
+              "trades": 9
+            }
+          },
+          "losses_or_breakevens": 14,
+          "mean_loser_or_flat_usd": -25.3,
+          "mean_modeled_execution_drag_usd": 4.58,
+          "mean_trade_pnl_usd": -1.33,
+          "mean_winner_usd": 21.03,
+          "mid_up_but_realized_net_nonpositive_count": 2,
+          "modeled_execution_drag_total_usd": 132.7,
+          "pnl_usd": -38.7,
+          "summed_mid_to_mid_usd": 94,
+          "trades": 29,
+          "win_rate_pct": 51.72,
+          "wins": 15
+        },
+        "open_0930_1029": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 0.708,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 22,
+            "independent_hard_stop_35pct": 3,
+            "trailing_stop": 10
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -515.5,
+          "loss_types": {
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -92.9,
+              "trades": 3
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -1.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -848.4,
+              "trades": 18
+            }
+          },
+          "losses_or_breakevens": 22,
+          "mean_loser_or_flat_usd": -42.85,
+          "mean_modeled_execution_drag_usd": 4.64,
+          "mean_trade_pnl_usd": -12.73,
+          "mean_winner_usd": 38.24,
+          "mid_up_but_realized_net_nonpositive_count": 1,
+          "modeled_execution_drag_total_usd": 162.5,
+          "pnl_usd": -445.5,
+          "summed_mid_to_mid_usd": -283,
+          "trades": 35,
+          "win_rate_pct": 37.14,
+          "wins": 13
+        }
+      },
+      "correct_spy_direction_but_option_net_nonpositive_count": 5,
+      "entry_spread_pct_average": 1.072,
+      "exit_reason_counts": {
+        "hard_max_hold_10min": 66,
+        "independent_hard_stop_35pct": 8,
+        "trailing_stop": 28
+      },
+      "extra_2usd_roundtrip_cost_stress_sum_usd": -445.6,
+      "losers_previously_showed_positive_bid_MFE": 25,
+      "loss_types": {
+        "correct_spot_direction_but_option_lost": {
+          "net_pnl_usd": -101.2,
+          "trades": 4
+        },
+        "flat_underlying_option_lost": {
+          "net_pnl_usd": -119.5,
+          "trades": 5
+        },
+        "gross_mid_gain_erased_by_modeled_execution_costs": {
+          "net_pnl_usd": -3.6,
+          "trades": 2
+        },
+        "wrong_underlying_direction": {
+          "net_pnl_usd": -1544.9,
+          "trades": 43
+        }
+      },
+      "losses_or_breakevens": 54,
+      "mean_loser_or_flat_usd": -32.76,
+      "mean_modeled_execution_drag_usd": 4.58,
+      "mean_trade_pnl_usd": -2.37,
+      "mean_winner_usd": 31.82,
+      "mid_up_but_realized_net_nonpositive_count": 3,
+      "modeled_execution_drag_total_usd": 467.6,
+      "pnl_usd": -241.6,
+      "summed_mid_to_mid_usd": 226,
+      "trades": 102,
+      "win_rate_pct": 47.06,
+      "wins": 48
+    },
+    "prior_analog_positive_net": {
+      "by_expert": {
+        "direct_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 1.042,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 23,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 7
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -85.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -9.3,
+              "trades": 1
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -35.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -544.8,
+              "trades": 16
+            }
+          },
+          "losses_or_breakevens": 19,
+          "mean_loser_or_flat_usd": -31.04,
+          "mean_modeled_execution_drag_usd": 4.54,
+          "mean_trade_pnl_usd": -0.51,
+          "mean_winner_usd": 38.17,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 154.2,
+          "pnl_usd": -17.2,
+          "summed_mid_to_mid_usd": 137,
+          "trades": 34,
+          "win_rate_pct": 44.12,
+          "wins": 15
+        },
+        "direct_5m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 5,
+          "entry_spread_pct_average": 0.937,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 48,
+            "independent_hard_stop_35pct": 5,
+            "trailing_stop": 15
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -353.4,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -73.2,
+              "trades": 4
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -67.6,
+              "trades": 2
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -3.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1054.5,
+              "trades": 25
+            }
+          },
+          "losses_or_breakevens": 33,
+          "mean_loser_or_flat_usd": -36.33,
+          "mean_modeled_execution_drag_usd": 4.57,
+          "mean_trade_pnl_usd": -3.2,
+          "mean_winner_usd": 28.04,
+          "mid_up_but_realized_net_nonpositive_count": 4,
+          "modeled_execution_drag_total_usd": 310.9,
+          "pnl_usd": -217.4,
+          "summed_mid_to_mid_usd": 93.5,
+          "trades": 68,
+          "win_rate_pct": 51.47,
+          "wins": 35
+        },
+        "legacy_4f": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 1.753,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 7,
+            "trailing_stop": 7
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -164.2,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -54.6,
+              "trades": 2
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -26.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -118.8,
+              "trades": 6
+            }
+          },
+          "losses_or_breakevens": 10,
+          "mean_loser_or_flat_usd": -20,
+          "mean_modeled_execution_drag_usd": 4.59,
+          "mean_trade_pnl_usd": -9.73,
+          "mean_winner_usd": 15.95,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 64.2,
+          "pnl_usd": -136.2,
+          "summed_mid_to_mid_usd": -72,
+          "trades": 14,
+          "win_rate_pct": 28.57,
+          "wins": 4
+        },
+        "retest_15m": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 2.105,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -12.3,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -10.3,
+              "trades": 1
+            }
+          },
+          "losses_or_breakevens": 1,
+          "mean_loser_or_flat_usd": -10.3,
+          "mean_modeled_execution_drag_usd": 4.3,
+          "mean_trade_pnl_usd": -10.3,
+          "mean_winner_usd": null,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 4.3,
+          "pnl_usd": -10.3,
+          "summed_mid_to_mid_usd": -6,
+          "trades": 1,
+          "win_rate_pct": 0,
+          "wins": 0
+        }
+      },
+      "by_period": {
+        "development": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 7,
+          "entry_spread_pct_average": 1.073,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 78,
+            "independent_hard_stop_35pct": 7,
+            "trailing_stop": 26
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -453.3,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -96.8,
+              "trades": 6
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -129.8,
+              "trades": 6
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -3.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -1580.2,
+              "trades": 44
+            }
+          },
+          "losses_or_breakevens": 58,
+          "mean_loser_or_flat_usd": -31.21,
+          "mean_modeled_execution_drag_usd": 4.57,
+          "mean_trade_pnl_usd": -2.08,
+          "mean_winner_usd": 29.79,
+          "mid_up_but_realized_net_nonpositive_count": 4,
+          "modeled_execution_drag_total_usd": 507.3,
+          "pnl_usd": -231.3,
+          "summed_mid_to_mid_usd": 276,
+          "trades": 111,
+          "win_rate_pct": 47.75,
+          "wins": 53
+        },
+        "previously_studied_diagnostic": {
+          "pnl_usd": 0,
+          "trades": 0,
+          "win_rate_pct": null
+        },
+        "validation": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 1,
+          "entry_spread_pct_average": 1.107,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 1,
+            "independent_hard_stop_35pct": 2,
+            "trailing_stop": 3
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -161.8,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -40.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -148.2,
+              "trades": 4
+            }
+          },
+          "losses_or_breakevens": 5,
+          "mean_loser_or_flat_usd": -37.7,
+          "mean_modeled_execution_drag_usd": 4.38,
+          "mean_trade_pnl_usd": -24.97,
+          "mean_winner_usd": 38.7,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 26.3,
+          "pnl_usd": -149.8,
+          "summed_mid_to_mid_usd": -123.5,
+          "trades": 6,
+          "win_rate_pct": 16.67,
+          "wins": 1
+        }
+      },
+      "by_time_bucket": {
+        "afternoon_1300_1524": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 1.479,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 19,
+            "independent_hard_stop_35pct": 4,
+            "trailing_stop": 8
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -17.3,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -24.6,
+              "trades": 2
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -375.2,
+              "trades": 14
+            }
+          },
+          "losses_or_breakevens": 16,
+          "mean_loser_or_flat_usd": -24.99,
+          "mean_modeled_execution_drag_usd": 4.54,
+          "mean_trade_pnl_usd": 1.44,
+          "mean_winner_usd": 29.63,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 140.8,
+          "pnl_usd": 44.7,
+          "summed_mid_to_mid_usd": 185.5,
+          "trades": 31,
+          "win_rate_pct": 48.39,
+          "wins": 15
+        },
+        "late_morning_1030_1059": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 0,
+          "entry_spread_pct_average": 0.969,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 9,
+            "independent_hard_stop_35pct": 1,
+            "trailing_stop": 3
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": 148.1,
+          "loss_types": {
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -142.2,
+              "trades": 4
+            }
+          },
+          "losses_or_breakevens": 4,
+          "mean_loser_or_flat_usd": -35.55,
+          "mean_modeled_execution_drag_usd": 4.42,
+          "mean_trade_pnl_usd": 13.39,
+          "mean_winner_usd": 35.14,
+          "mid_up_but_realized_net_nonpositive_count": 0,
+          "modeled_execution_drag_total_usd": 57.4,
+          "pnl_usd": 174.1,
+          "summed_mid_to_mid_usd": 231.5,
+          "trades": 13,
+          "win_rate_pct": 69.23,
+          "wins": 9
+        },
+        "midday_1100_1259": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 4,
+          "entry_spread_pct_average": 1.153,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 24,
+            "independent_hard_stop_35pct": 1,
+            "trailing_stop": 7
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -139.6,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -103.2,
+              "trades": 4
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -36.9,
+              "trades": 3
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -2.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -248.7,
+              "trades": 9
+            }
+          },
+          "losses_or_breakevens": 17,
+          "mean_loser_or_flat_usd": -23.01,
+          "mean_modeled_execution_drag_usd": 4.55,
+          "mean_trade_pnl_usd": -2.36,
+          "mean_winner_usd": 21.03,
+          "mid_up_but_realized_net_nonpositive_count": 2,
+          "modeled_execution_drag_total_usd": 145.6,
+          "pnl_usd": -75.6,
+          "summed_mid_to_mid_usd": 70,
+          "trades": 32,
+          "win_rate_pct": 46.88,
+          "wins": 15
+        },
+        "open_0930_1029": {
+          "correct_spy_direction_but_option_net_nonpositive_count": 2,
+          "entry_spread_pct_average": 0.743,
+          "exit_reason_counts": {
+            "hard_max_hold_10min": 27,
+            "independent_hard_stop_35pct": 3,
+            "trailing_stop": 11
+          },
+          "extra_2usd_roundtrip_cost_stress_sum_usd": -606.3,
+          "loss_types": {
+            "correct_spot_direction_but_option_lost": {
+              "net_pnl_usd": -9.3,
+              "trades": 1
+            },
+            "flat_underlying_option_lost": {
+              "net_pnl_usd": -92.9,
+              "trades": 3
+            },
+            "gross_mid_gain_erased_by_modeled_execution_costs": {
+              "net_pnl_usd": -1.3,
+              "trades": 1
+            },
+            "wrong_underlying_direction": {
+              "net_pnl_usd": -962.3,
+              "trades": 21
+            }
+          },
+          "losses_or_breakevens": 26,
+          "mean_loser_or_flat_usd": -40.99,
+          "mean_modeled_execution_drag_usd": 4.63,
+          "mean_trade_pnl_usd": -12.79,
+          "mean_winner_usd": 36.1,
+          "mid_up_but_realized_net_nonpositive_count": 2,
+          "modeled_execution_drag_total_usd": 189.8,
+          "pnl_usd": -524.3,
+          "summed_mid_to_mid_usd": -334.5,
+          "trades": 41,
+          "win_rate_pct": 36.59,
+          "wins": 15
+        }
+      },
+      "correct_spy_direction_but_option_net_nonpositive_count": 8,
+      "entry_spread_pct_average": 1.075,
+      "exit_reason_counts": {
+        "hard_max_hold_10min": 79,
+        "independent_hard_stop_35pct": 9,
+        "trailing_stop": 29
+      },
+      "extra_2usd_roundtrip_cost_stress_sum_usd": -615.1,
+      "losers_previously_showed_positive_bid_MFE": 28,
+      "loss_types": {
+        "correct_spot_direction_but_option_lost": {
+          "net_pnl_usd": -137.1,
+          "trades": 7
+        },
+        "flat_underlying_option_lost": {
+          "net_pnl_usd": -129.8,
+          "trades": 6
+        },
+        "gross_mid_gain_erased_by_modeled_execution_costs": {
+          "net_pnl_usd": -3.6,
+          "trades": 2
+        },
+        "wrong_underlying_direction": {
+          "net_pnl_usd": -1728.4,
+          "trades": 48
+        }
+      },
+      "losses_or_breakevens": 63,
+      "mean_loser_or_flat_usd": -31.73,
+      "mean_modeled_execution_drag_usd": 4.56,
+      "mean_trade_pnl_usd": -3.26,
+      "mean_winner_usd": 29.96,
+      "mid_up_but_realized_net_nonpositive_count": 4,
+      "modeled_execution_drag_total_usd": 533.6,
+      "pnl_usd": -381.1,
+      "summed_mid_to_mid_usd": 152.5,
+      "trades": 117,
+      "win_rate_pct": 46.15,
+      "wins": 54
+    }
+  },
+  "coverage": {
+    "matched_sampled_trade": 1506
+  },
+  "data_purchased": 0,
+  "frozen_exit": "30% whole-position trail + 35% initial loss + 10-minute cap; NO take profits",
+  "matched_historical_cases": 1506,
+  "method": "Rejoin archived option ask-at-entry and bid-at-exit; compare modeled ask-to-bid PnL with simultaneous synthetic mid-to-mid change and actual SPY sampled exit-direction; group by setup and time.",
+  "orders_placed": 0,
+  "portfolio_starting_capital_scenario_usd": 1000,
+  "research_mode": "POST_TRADE_FORENSIC_DIAGNOSTIC_NOT_ENTRY_MODEL",
+  "total_historical_ledger_trades": 1506,
+  "warning": [
+    "FUTURE outcomes are used for diagnostic LABELS only: NEVER use them as entry features.",
+    "SPY close movement at option entry-to-exit is descriptive; cannot isolate an execution-causal trade-loss reason.",
+    "Mid-to-mid option mark is hypothetical. Fees+spread decomposition is mechanical, not a verified achievable mid fill.",
+    "Minute-bucket CBBO option quotes are not executable event-timestamped NBBO; intraminute stops unknown.",
+    "Previously inspected 128 sessions; neither stable edge nor independent forward test proven.",
+    "$1k figure is a comparison label from earlier study; per-contract diagnostics do NOT replay cash affordability."
+  ]
+}
