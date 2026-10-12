@@ -1,0 +1,913 @@
+{
+  "additional_roundtrip_cost_stress_per_contract_usd": 2,
+  "archive_sessions": 128,
+  "coverage": {
+    "archived_minute_frames": 49792,
+    "eligible_quoted_candidates": 243,
+    "opening_0946_to_1030_accepted": 93,
+    "opening_5min_drive_5bps_accepted": 138,
+    "opening_breakout_base_accepted": 163,
+    "opening_breakout_candidates": 194,
+    "opening_directional_efficiency_55_accepted": 31,
+    "opening_efficiency55_spread08_accepted": 31,
+    "opening_pause_reclaim_accepted": 49,
+    "opening_pause_reclaim_efficiency55_accepted": 3,
+    "opening_rvol_accelerating_accepted": 153,
+    "opening_spread_08_accepted": 163,
+    "opening_volume200_efficiency55_accepted": 16,
+    "opening_volume200_spread08_accepted": 75,
+    "opening_volume_200_accepted": 75,
+    "pause_reclaim_candidates": 49
+  },
+  "exit": {
+    "fixed_take_profit": false,
+    "independent_hard_stop_pct": 35,
+    "max_hold_minutes": 10,
+    "partial_position_take_profit": false,
+    "runner": false,
+    "trailing_stop_pct": 30
+  },
+  "external_market_data_purchases": false,
+  "full_chain_asof_put_call_volume_not_available": true,
+  "hypotheses_evaluated": 12,
+  "live_or_paper_orders_submitted": false,
+  "not_new_out_of_sample_data": true,
+  "prior_legacy_CBBO_1m_not_true_event_nbbo": true,
+  "research_only": true,
+  "rules": {
+    "opening_0946_to_1030": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -851.9,
+          "closed_trade_additive_drawdown_not_account_usd": 717.7,
+          "hypothetical_net_one_contract_sum_usd": -665.9,
+          "mean_option_premium_return_pct": -3.167,
+          "negative_days": 50,
+          "positive_days": 32,
+          "sessions": 128,
+          "trades": 93,
+          "win_rate_pct": 36.56,
+          "wins": 34,
+          "zero_or_no_trade_days": 46
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -545,
+          "closed_trade_additive_drawdown_not_account_usd": 590.3,
+          "hypothetical_net_one_contract_sum_usd": -425,
+          "mean_option_premium_return_pct": -3.194,
+          "negative_days": 32,
+          "positive_days": 19,
+          "sessions": 82,
+          "trades": 60,
+          "win_rate_pct": 35,
+          "wins": 21,
+          "zero_or_no_trade_days": 31
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": -170.1,
+          "closed_trade_additive_drawdown_not_account_usd": 149.8,
+          "hypothetical_net_one_contract_sum_usd": -136.1,
+          "mean_option_premium_return_pct": -3.596,
+          "negative_days": 10,
+          "positive_days": 5,
+          "sessions": 21,
+          "trades": 17,
+          "win_rate_pct": 29.41,
+          "wins": 5,
+          "zero_or_no_trade_days": 6
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -136.8,
+          "closed_trade_additive_drawdown_not_account_usd": 150.7,
+          "hypothetical_net_one_contract_sum_usd": -104.8,
+          "mean_option_premium_return_pct": -2.609,
+          "negative_days": 8,
+          "positive_days": 8,
+          "sessions": 25,
+          "trades": 16,
+          "win_rate_pct": 50,
+          "wins": 8,
+          "zero_or_no_trade_days": 9
+        }
+      },
+      "robustness": {
+        "best_day": "2026-07-09",
+        "best_day_pnl": 129.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -12.71,
+          -0.515
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -795.6,
+        "net_sum_without_best_three_days_usd": -1013.7,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -11.072,
+          1.099
+        ]
+      }
+    },
+    "opening_5min_drive_5bps": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -634.4,
+          "closed_trade_additive_drawdown_not_account_usd": 797.1,
+          "hypothetical_net_one_contract_sum_usd": -358.4,
+          "mean_option_premium_return_pct": -0.443,
+          "negative_days": 57,
+          "positive_days": 39,
+          "sessions": 128,
+          "trades": 138,
+          "win_rate_pct": 39.86,
+          "wins": 55,
+          "zero_or_no_trade_days": 32
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -490.5,
+          "closed_trade_additive_drawdown_not_account_usd": 657.4,
+          "hypothetical_net_one_contract_sum_usd": -300.5,
+          "mean_option_premium_return_pct": -0.763,
+          "negative_days": 38,
+          "positive_days": 27,
+          "sessions": 82,
+          "trades": 95,
+          "win_rate_pct": 38.95,
+          "wins": 37,
+          "zero_or_no_trade_days": 17
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": -2.5,
+          "closed_trade_additive_drawdown_not_account_usd": 128.1,
+          "hypothetical_net_one_contract_sum_usd": 47.5,
+          "mean_option_premium_return_pct": 3.039,
+          "negative_days": 11,
+          "positive_days": 6,
+          "sessions": 21,
+          "trades": 25,
+          "win_rate_pct": 40,
+          "wins": 10,
+          "zero_or_no_trade_days": 4
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -141.4,
+          "closed_trade_additive_drawdown_not_account_usd": 167.4,
+          "hypothetical_net_one_contract_sum_usd": -105.4,
+          "mean_option_premium_return_pct": -3.593,
+          "negative_days": 8,
+          "positive_days": 6,
+          "sessions": 25,
+          "trades": 18,
+          "win_rate_pct": 44.44,
+          "wins": 8,
+          "zero_or_no_trade_days": 11
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 166.4,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -12.567,
+          2.627
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -524.8,
+        "net_sum_without_best_three_days_usd": -803.6,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -9.978,
+          4.825
+        ]
+      }
+    },
+    "opening_breakout_base": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -884.9,
+          "closed_trade_additive_drawdown_not_account_usd": 1037.6,
+          "hypothetical_net_one_contract_sum_usd": -558.9,
+          "mean_option_premium_return_pct": -0.943,
+          "negative_days": 64,
+          "positive_days": 42,
+          "sessions": 128,
+          "trades": 163,
+          "win_rate_pct": 39.26,
+          "wins": 64,
+          "zero_or_no_trade_days": 22
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -795,
+          "closed_trade_additive_drawdown_not_account_usd": 869.6,
+          "hypothetical_net_one_contract_sum_usd": -575,
+          "mean_option_premium_return_pct": -2.088,
+          "negative_days": 44,
+          "positive_days": 27,
+          "sessions": 82,
+          "trades": 110,
+          "win_rate_pct": 35.45,
+          "wins": 39,
+          "zero_or_no_trade_days": 11
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 26.6,
+          "closed_trade_additive_drawdown_not_account_usd": 128.1,
+          "hypothetical_net_one_contract_sum_usd": 82.6,
+          "mean_option_premium_return_pct": 3.546,
+          "negative_days": 11,
+          "positive_days": 6,
+          "sessions": 21,
+          "trades": 28,
+          "win_rate_pct": 42.86,
+          "wins": 12,
+          "zero_or_no_trade_days": 4
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -116.5,
+          "closed_trade_additive_drawdown_not_account_usd": 183.6,
+          "hypothetical_net_one_contract_sum_usd": -66.5,
+          "mean_option_premium_return_pct": -0.934,
+          "negative_days": 9,
+          "positive_days": 9,
+          "sessions": 25,
+          "trades": 25,
+          "win_rate_pct": 52,
+          "wins": 13,
+          "zero_or_no_trade_days": 7
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 166.4,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -14.716,
+          1.059
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -725.3,
+        "net_sum_without_best_three_days_usd": -990.1,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -12.158,
+          3.66
+        ]
+      }
+    },
+    "opening_directional_efficiency_55": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -4.3,
+          "closed_trade_additive_drawdown_not_account_usd": 281.7,
+          "hypothetical_net_one_contract_sum_usd": 57.7,
+          "mean_option_premium_return_pct": 3.613,
+          "negative_days": 20,
+          "positive_days": 11,
+          "sessions": 128,
+          "trades": 31,
+          "win_rate_pct": 35.48,
+          "wins": 11,
+          "zero_or_no_trade_days": 97
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -119.6,
+          "closed_trade_additive_drawdown_not_account_usd": 281.7,
+          "hypothetical_net_one_contract_sum_usd": -75.6,
+          "mean_option_premium_return_pct": 0.118,
+          "negative_days": 15,
+          "positive_days": 7,
+          "sessions": 82,
+          "trades": 22,
+          "win_rate_pct": 31.82,
+          "wins": 7,
+          "zero_or_no_trade_days": 60
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 118.5,
+          "closed_trade_additive_drawdown_not_account_usd": 82.9,
+          "hypothetical_net_one_contract_sum_usd": 128.5,
+          "mean_option_premium_return_pct": 22.168,
+          "negative_days": 3,
+          "positive_days": 2,
+          "sessions": 21,
+          "trades": 5,
+          "win_rate_pct": 40,
+          "wins": 2,
+          "zero_or_no_trade_days": 16
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -3.2,
+          "closed_trade_additive_drawdown_not_account_usd": 76.9,
+          "hypothetical_net_one_contract_sum_usd": 4.8,
+          "mean_option_premium_return_pct": -0.359,
+          "negative_days": 2,
+          "positive_days": 2,
+          "sessions": 25,
+          "trades": 4,
+          "win_rate_pct": 50,
+          "wins": 2,
+          "zero_or_no_trade_days": 21
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 193.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -5.192,
+          5.602
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -136,
+        "net_sum_without_best_three_days_usd": -403.4,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -4.423,
+          5.72
+        ]
+      }
+    },
+    "opening_efficiency55_spread08": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -4.3,
+          "closed_trade_additive_drawdown_not_account_usd": 281.7,
+          "hypothetical_net_one_contract_sum_usd": 57.7,
+          "mean_option_premium_return_pct": 3.613,
+          "negative_days": 20,
+          "positive_days": 11,
+          "sessions": 128,
+          "trades": 31,
+          "win_rate_pct": 35.48,
+          "wins": 11,
+          "zero_or_no_trade_days": 97
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -119.6,
+          "closed_trade_additive_drawdown_not_account_usd": 281.7,
+          "hypothetical_net_one_contract_sum_usd": -75.6,
+          "mean_option_premium_return_pct": 0.118,
+          "negative_days": 15,
+          "positive_days": 7,
+          "sessions": 82,
+          "trades": 22,
+          "win_rate_pct": 31.82,
+          "wins": 7,
+          "zero_or_no_trade_days": 60
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 118.5,
+          "closed_trade_additive_drawdown_not_account_usd": 82.9,
+          "hypothetical_net_one_contract_sum_usd": 128.5,
+          "mean_option_premium_return_pct": 22.168,
+          "negative_days": 3,
+          "positive_days": 2,
+          "sessions": 21,
+          "trades": 5,
+          "win_rate_pct": 40,
+          "wins": 2,
+          "zero_or_no_trade_days": 16
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -3.2,
+          "closed_trade_additive_drawdown_not_account_usd": 76.9,
+          "hypothetical_net_one_contract_sum_usd": 4.8,
+          "mean_option_premium_return_pct": -0.359,
+          "negative_days": 2,
+          "positive_days": 2,
+          "sessions": 25,
+          "trades": 4,
+          "win_rate_pct": 50,
+          "wins": 2,
+          "zero_or_no_trade_days": 21
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 193.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -5.192,
+          5.602
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -136,
+        "net_sum_without_best_three_days_usd": -403.4,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -4.423,
+          5.72
+        ]
+      }
+    },
+    "opening_pause_reclaim": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -848.7,
+          "closed_trade_additive_drawdown_not_account_usd": 839.5,
+          "hypothetical_net_one_contract_sum_usd": -750.7,
+          "mean_option_premium_return_pct": -6.22,
+          "negative_days": 26,
+          "positive_days": 17,
+          "sessions": 128,
+          "trades": 49,
+          "win_rate_pct": 36.73,
+          "wins": 18,
+          "zero_or_no_trade_days": 85
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -622.8,
+          "closed_trade_additive_drawdown_not_account_usd": 576.7,
+          "hypothetical_net_one_contract_sum_usd": -550.8,
+          "mean_option_premium_return_pct": -5.939,
+          "negative_days": 18,
+          "positive_days": 13,
+          "sessions": 82,
+          "trades": 36,
+          "win_rate_pct": 38.89,
+          "wins": 14,
+          "zero_or_no_trade_days": 51
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 16.8,
+          "closed_trade_additive_drawdown_not_account_usd": 43.3,
+          "hypothetical_net_one_contract_sum_usd": 24.8,
+          "mean_option_premium_return_pct": 10.298,
+          "negative_days": 1,
+          "positive_days": 3,
+          "sessions": 21,
+          "trades": 4,
+          "win_rate_pct": 75,
+          "wins": 3,
+          "zero_or_no_trade_days": 17
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -242.7,
+          "closed_trade_additive_drawdown_not_account_usd": 252.4,
+          "hypothetical_net_one_contract_sum_usd": -224.7,
+          "mean_option_premium_return_pct": -14.686,
+          "negative_days": 7,
+          "positive_days": 1,
+          "sessions": 25,
+          "trades": 9,
+          "win_rate_pct": 11.11,
+          "wins": 1,
+          "zero_or_no_trade_days": 17
+        }
+      },
+      "robustness": {
+        "best_day": "2026-07-15",
+        "best_day_pnl": 77.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -11.616,
+          -1.585
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -828.4,
+        "net_sum_without_best_three_days_usd": -939.8,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -11.309,
+          -0.98
+        ]
+      }
+    },
+    "opening_pause_reclaim_efficiency55": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": 5.1,
+          "closed_trade_additive_drawdown_not_account_usd": 28.3,
+          "hypothetical_net_one_contract_sum_usd": 11.1,
+          "mean_option_premium_return_pct": 8.424,
+          "negative_days": 1,
+          "positive_days": 2,
+          "sessions": 128,
+          "trades": 3,
+          "win_rate_pct": 66.67,
+          "wins": 2,
+          "zero_or_no_trade_days": 125
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": 19.7,
+          "closed_trade_additive_drawdown_not_account_usd": 0,
+          "hypothetical_net_one_contract_sum_usd": 21.7,
+          "mean_option_premium_return_pct": 31.156,
+          "negative_days": 0,
+          "positive_days": 1,
+          "sessions": 82,
+          "trades": 1,
+          "win_rate_pct": 100,
+          "wins": 1,
+          "zero_or_no_trade_days": 81
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 15.7,
+          "closed_trade_additive_drawdown_not_account_usd": 0,
+          "hypothetical_net_one_contract_sum_usd": 17.7,
+          "mean_option_premium_return_pct": 23.397,
+          "negative_days": 0,
+          "positive_days": 1,
+          "sessions": 21,
+          "trades": 1,
+          "win_rate_pct": 100,
+          "wins": 1,
+          "zero_or_no_trade_days": 20
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -30.3,
+          "closed_trade_additive_drawdown_not_account_usd": 28.3,
+          "hypothetical_net_one_contract_sum_usd": -28.3,
+          "mean_option_premium_return_pct": -29.281,
+          "negative_days": 1,
+          "positive_days": 0,
+          "sessions": 25,
+          "trades": 1,
+          "win_rate_pct": 0,
+          "wins": 0,
+          "zero_or_no_trade_days": 24
+        }
+      },
+      "robustness": {
+        "best_day": "2026-06-02",
+        "best_day_pnl": 21.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -0.71,
+          0.584
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -10.6,
+        "net_sum_without_best_three_days_usd": -28.3,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -0.525,
+          0.671
+        ]
+      }
+    },
+    "opening_rvol_accelerating": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -774.9,
+          "closed_trade_additive_drawdown_not_account_usd": 955.1,
+          "hypothetical_net_one_contract_sum_usd": -468.9,
+          "mean_option_premium_return_pct": -0.692,
+          "negative_days": 61,
+          "positive_days": 40,
+          "sessions": 128,
+          "trades": 153,
+          "win_rate_pct": 39.22,
+          "wins": 60,
+          "zero_or_no_trade_days": 27
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -712.2,
+          "closed_trade_additive_drawdown_not_account_usd": 868.3,
+          "hypothetical_net_one_contract_sum_usd": -504.2,
+          "mean_option_premium_return_pct": -1.961,
+          "negative_days": 43,
+          "positive_days": 25,
+          "sessions": 82,
+          "trades": 104,
+          "win_rate_pct": 34.62,
+          "wins": 36,
+          "zero_or_no_trade_days": 14
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 59.2,
+          "closed_trade_additive_drawdown_not_account_usd": 119.8,
+          "hypothetical_net_one_contract_sum_usd": 111.2,
+          "mean_option_premium_return_pct": 4.866,
+          "negative_days": 9,
+          "positive_days": 6,
+          "sessions": 21,
+          "trades": 26,
+          "win_rate_pct": 46.15,
+          "wins": 12,
+          "zero_or_no_trade_days": 6
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -121.9,
+          "closed_trade_additive_drawdown_not_account_usd": 189.3,
+          "hypothetical_net_one_contract_sum_usd": -75.9,
+          "mean_option_premium_return_pct": -1.238,
+          "negative_days": 9,
+          "positive_days": 9,
+          "sessions": 25,
+          "trades": 23,
+          "win_rate_pct": 52.17,
+          "wins": 12,
+          "zero_or_no_trade_days": 7
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 166.4,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -13.843,
+          1.668
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -635.3,
+        "net_sum_without_best_three_days_usd": -900.1,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -11.43,
+          4.314
+        ]
+      }
+    },
+    "opening_spread_08": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -884.9,
+          "closed_trade_additive_drawdown_not_account_usd": 1037.6,
+          "hypothetical_net_one_contract_sum_usd": -558.9,
+          "mean_option_premium_return_pct": -0.943,
+          "negative_days": 64,
+          "positive_days": 42,
+          "sessions": 128,
+          "trades": 163,
+          "win_rate_pct": 39.26,
+          "wins": 64,
+          "zero_or_no_trade_days": 22
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -795,
+          "closed_trade_additive_drawdown_not_account_usd": 869.6,
+          "hypothetical_net_one_contract_sum_usd": -575,
+          "mean_option_premium_return_pct": -2.088,
+          "negative_days": 44,
+          "positive_days": 27,
+          "sessions": 82,
+          "trades": 110,
+          "win_rate_pct": 35.45,
+          "wins": 39,
+          "zero_or_no_trade_days": 11
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": 26.6,
+          "closed_trade_additive_drawdown_not_account_usd": 128.1,
+          "hypothetical_net_one_contract_sum_usd": 82.6,
+          "mean_option_premium_return_pct": 3.546,
+          "negative_days": 11,
+          "positive_days": 6,
+          "sessions": 21,
+          "trades": 28,
+          "win_rate_pct": 42.86,
+          "wins": 12,
+          "zero_or_no_trade_days": 4
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -116.5,
+          "closed_trade_additive_drawdown_not_account_usd": 183.6,
+          "hypothetical_net_one_contract_sum_usd": -66.5,
+          "mean_option_premium_return_pct": -0.934,
+          "negative_days": 9,
+          "positive_days": 9,
+          "sessions": 25,
+          "trades": 25,
+          "win_rate_pct": 52,
+          "wins": 13,
+          "zero_or_no_trade_days": 7
+        }
+      },
+      "robustness": {
+        "best_day": "2026-09-28",
+        "best_day_pnl": 166.4,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -14.716,
+          1.059
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -725.3,
+        "net_sum_without_best_three_days_usd": -990.1,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -12.158,
+          3.66
+        ]
+      }
+    },
+    "opening_volume200_efficiency55": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -119.8,
+          "closed_trade_additive_drawdown_not_account_usd": 258,
+          "hypothetical_net_one_contract_sum_usd": -87.8,
+          "mean_option_premium_return_pct": -0.04,
+          "negative_days": 10,
+          "positive_days": 6,
+          "sessions": 128,
+          "trades": 16,
+          "win_rate_pct": 37.5,
+          "wins": 6,
+          "zero_or_no_trade_days": 112
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -85.6,
+          "closed_trade_additive_drawdown_not_account_usd": 258,
+          "hypothetical_net_one_contract_sum_usd": -61.6,
+          "mean_option_premium_return_pct": -1.664,
+          "negative_days": 8,
+          "positive_days": 4,
+          "sessions": 82,
+          "trades": 12,
+          "win_rate_pct": 33.33,
+          "wins": 4,
+          "zero_or_no_trade_days": 70
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": -7.6,
+          "closed_trade_additive_drawdown_not_account_usd": 21.3,
+          "hypothetical_net_one_contract_sum_usd": -3.6,
+          "mean_option_premium_return_pct": 5.028,
+          "negative_days": 1,
+          "positive_days": 1,
+          "sessions": 21,
+          "trades": 2,
+          "win_rate_pct": 50,
+          "wins": 1,
+          "zero_or_no_trade_days": 19
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -26.6,
+          "closed_trade_additive_drawdown_not_account_usd": 51.3,
+          "hypothetical_net_one_contract_sum_usd": -22.6,
+          "mean_option_premium_return_pct": 4.637,
+          "negative_days": 1,
+          "positive_days": 1,
+          "sessions": 25,
+          "trades": 2,
+          "win_rate_pct": 50,
+          "wins": 1,
+          "zero_or_no_trade_days": 23
+        }
+      },
+      "robustness": {
+        "best_day": "2026-04-02",
+        "best_day_pnl": 123.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -4.43,
+          2.53
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -211.5,
+        "net_sum_without_best_three_days_usd": -327.9,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -4.095,
+          2.98
+        ]
+      }
+    },
+    "opening_volume200_spread08": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -503.5,
+          "closed_trade_additive_drawdown_not_account_usd": 636.4,
+          "hypothetical_net_one_contract_sum_usd": -353.5,
+          "mean_option_premium_return_pct": -2.118,
+          "negative_days": 37,
+          "positive_days": 25,
+          "sessions": 128,
+          "trades": 75,
+          "win_rate_pct": 38.67,
+          "wins": 29,
+          "zero_or_no_trade_days": 66
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -220,
+          "closed_trade_additive_drawdown_not_account_usd": 458.3,
+          "hypothetical_net_one_contract_sum_usd": -120,
+          "mean_option_premium_return_pct": -0.546,
+          "negative_days": 24,
+          "positive_days": 17,
+          "sessions": 82,
+          "trades": 50,
+          "win_rate_pct": 40,
+          "wins": 20,
+          "zero_or_no_trade_days": 41
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": -137.2,
+          "closed_trade_additive_drawdown_not_account_usd": 118.4,
+          "hypothetical_net_one_contract_sum_usd": -109.2,
+          "mean_option_premium_return_pct": -6.211,
+          "negative_days": 7,
+          "positive_days": 4,
+          "sessions": 21,
+          "trades": 14,
+          "win_rate_pct": 35.71,
+          "wins": 5,
+          "zero_or_no_trade_days": 10
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -146.3,
+          "closed_trade_additive_drawdown_not_account_usd": 208.8,
+          "hypothetical_net_one_contract_sum_usd": -124.3,
+          "mean_option_premium_return_pct": -4.048,
+          "negative_days": 6,
+          "positive_days": 4,
+          "sessions": 25,
+          "trades": 11,
+          "win_rate_pct": 36.36,
+          "wins": 4,
+          "zero_or_no_trade_days": 15
+        }
+      },
+      "robustness": {
+        "best_day": "2026-07-09",
+        "best_day_pnl": 129.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -8.812,
+          1.479
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -483.2,
+        "net_sum_without_best_three_days_usd": -721.6,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -8.252,
+          2.727
+        ]
+      }
+    },
+    "opening_volume_200": {
+      "by_period": {
+        "all_inspected": {
+          "additional_friction_stressed_sum_usd": -503.5,
+          "closed_trade_additive_drawdown_not_account_usd": 636.4,
+          "hypothetical_net_one_contract_sum_usd": -353.5,
+          "mean_option_premium_return_pct": -2.118,
+          "negative_days": 37,
+          "positive_days": 25,
+          "sessions": 128,
+          "trades": 75,
+          "win_rate_pct": 38.67,
+          "wins": 29,
+          "zero_or_no_trade_days": 66
+        },
+        "development": {
+          "additional_friction_stressed_sum_usd": -220,
+          "closed_trade_additive_drawdown_not_account_usd": 458.3,
+          "hypothetical_net_one_contract_sum_usd": -120,
+          "mean_option_premium_return_pct": -0.546,
+          "negative_days": 24,
+          "positive_days": 17,
+          "sessions": 82,
+          "trades": 50,
+          "win_rate_pct": 40,
+          "wins": 20,
+          "zero_or_no_trade_days": 41
+        },
+        "previously_studied_diagnostic": {
+          "additional_friction_stressed_sum_usd": -137.2,
+          "closed_trade_additive_drawdown_not_account_usd": 118.4,
+          "hypothetical_net_one_contract_sum_usd": -109.2,
+          "mean_option_premium_return_pct": -6.211,
+          "negative_days": 7,
+          "positive_days": 4,
+          "sessions": 21,
+          "trades": 14,
+          "win_rate_pct": 35.71,
+          "wins": 5,
+          "zero_or_no_trade_days": 10
+        },
+        "validation": {
+          "additional_friction_stressed_sum_usd": -146.3,
+          "closed_trade_additive_drawdown_not_account_usd": 208.8,
+          "hypothetical_net_one_contract_sum_usd": -124.3,
+          "mean_option_premium_return_pct": -4.048,
+          "negative_days": 6,
+          "positive_days": 4,
+          "sessions": 25,
+          "trades": 11,
+          "win_rate_pct": 36.36,
+          "wins": 4,
+          "zero_or_no_trade_days": 15
+        }
+      },
+      "robustness": {
+        "best_day": "2026-07-09",
+        "best_day_pnl": 129.7,
+        "exploratory_multiple_comparison_corrected": false,
+        "friction_stressed_block_bootstrap_95pct_usd_per_session": [
+          -8.812,
+          1.479
+        ],
+        "genuinely_unseen_sessions": false,
+        "net_sum_without_best_day_usd": -483.2,
+        "net_sum_without_best_three_days_usd": -721.6,
+        "raw_block_bootstrap_95pct_usd_per_session": [
+          -8.252,
+          2.727
+        ]
+      }
+    }
+  },
+  "study": "NO_FIXED_PROFIT_TARGET_0930_1100_SPY_OPTION_ENTRY_COMBINATIONS",
+  "time_window_ET": "09:30–11:00 inclusive opening, exclusive closing time",
+  "warnings": [
+    "All strategies were explored on data already inspected in earlier studies.",
+    "Multiple combinations tested. Strongest apparent result may be selection noise.",
+    "Percent premium return is not the same as one-contract net dollar P&L.",
+    "Sampled CBBO minute quotes and prices may not reflect executable fills.",
+    "Full-chain put/call volume at the signal time is not present.",
+    "These are individual simulated one-contract returns, not a funded account simulation."
+  ]
+}
