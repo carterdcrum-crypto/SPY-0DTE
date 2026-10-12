@@ -5,7 +5,7 @@ import pytest
 
 from engine.cost_aware_entry_edge import (
     VARIANTS, WINDOW, TRAIL_PERCENT, EXTRA_SLIPPAGE_USD_ROUNDTRIP,
-    quote_eligible, signal_eligible, conservative_prior_gate,
+    quote_eligible, signal_eligible, conservative_prior_gate, robustness,
 )
 
 def row(volume=1.55,setup="close_breakout_baseline",at="2026-07-07T10:45:00-04:00",
@@ -73,3 +73,18 @@ def test_quote_spread_gate_and_bad_variant():
         conservative_prior_gate([],"infinite_money")
     with pytest.raises(ValueError):
         signal_eligible(row(),"invented_policy")
+
+
+def test_robustness_loses_outlier_and_reports_breakeven_payoff():
+    days=[]
+    for i in range(10):
+        pnl=100. if i==0 else (-10. if i<6 else 8.)
+        days.append({"day":f"2026-04-{i+1:02d}",
+                     "cases":{v:([{"net_pnl_usd":pnl}]
+                         if v=="volume_150_early" else []) for v in VARIANTS}})
+    result=robustness(days,"volume_150_early",reps=100)
+    assert result["raw_pnl_total_usd"]==82
+    assert result["minus_best_1_day_sum_usd"]==-18
+    assert result["stress_pnl_total_usd"]==62
+    assert result["breakeven_win_rate_at_observed_payoff_ratio_pct"] is not None
+    assert len(result["bootstrap_5session_day_blocks_95pct_usd_per_calendar_day"])==2
