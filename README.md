@@ -6,6 +6,34 @@
 
 Simulation-first SPY 0DTE research, paper-trading, and guarded execution platform with an Android control app.
 
+## Forward-test primary strategy (paper only)
+
+`PAPER_STRATEGY=combined_regime_reclaim_v1` is the default for both PAPER and
+SHADOW. It uses a newly specified **combined Regime Reclaim** signal:
+12/36 observation EMA trend-pullback reclaim OR a 40-observation z-score
+stretch reversal (excursion at least 1.6 sigma, recovery past 0.9 sigma).
+Only current and earlier source-stamped SPY observations are used; 45+
+observations spanning at least 60 seconds are required on one market day.
+Contract spreads must be <=3.5% of mid; model-implied IV / spot-quadratic-
+variation RV must be <=1.5 with enough recent observations. Existing scenario
+EV, settled-cash and dynamic sizing gates still apply. There is no fixed
+profit target or partial runner; exits are 35% loss, 30% trailing drawdown after
+a positive peak, 10-minute maximum hold, and existing session-close guard.
+The trial is marked `combined_regime_reclaim_v1` in paper entry records.
+Old positions retain their original exit logic. `PAPER_STRATEGY=legacy_ai`
+restores the previous ensemble+AI PAPER/SHADOW strategy without touching LIVE.
+Do not turn on LIVE to trial this strategy: the Webull live entry brain is
+independent and unchanged. No live orders are enabled by this switch.
+
+**Research limitation:** the earlier $1,000 Regime Reclaim proxy backtest
+(146 trades, 52.05% win rate, +$1,942.20, max EOD drawdown $165) was
+minute-quote-approximated and does not establish profitability. Its exact
+entry-bar parameters were not captured in this repository; the thresholds above
+are versioned *forward-test specifications*, not a claim of exact backtest
+replication. Delayed-snapshot PAPER is simulated on a shifted clock, not an
+executable realtime paper-trading performance estimate. Run genuinely new
+sessions before judging net edge after spread, fees, slip, and downtime.
+
 ## Current state
 
 The system has three distinct operating layers:

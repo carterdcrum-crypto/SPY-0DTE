@@ -70,6 +70,7 @@ def test_recovery_after_committed_entry_does_not_buy_twice(monkeypatch, tmp_path
 
 @pytest.mark.parametrize("delayed", [False, True])
 def test_both_data_modes_use_latest_exit_and_validation(monkeypatch, tmp_path, delayed):
+    monkeypatch.setenv("PAPER_STRATEGY", "legacy_ai")
     monkeypatch.setenv("PAPER_DB_PATH", str(tmp_path / "paper.sqlite"))
     trader = paper_runner.create_trader(lambda: "SHADOW", delayed=delayed)
     assert isinstance(trader, HoldValueExitPolicyMixin)
