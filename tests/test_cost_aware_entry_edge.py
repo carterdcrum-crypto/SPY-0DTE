@@ -88,3 +88,13 @@ def test_robustness_loses_outlier_and_reports_breakeven_payoff():
     assert result["stress_pnl_total_usd"]==62
     assert result["breakeven_win_rate_at_observed_payoff_ratio_pct"] is not None
     assert len(result["bootstrap_5session_day_blocks_95pct_usd_per_calendar_day"])==2
+
+
+def test_morning_research_entry_was_shifted_to_0930_1100_eastern():
+    for clock,expected in (("09:30",True),("09:59",True),
+                           ("10:59",True),("11:00",False),
+                           ("11:30",False),("12:00",False)):
+        candidate=row(at=f"2026-07-07T{clock}:00-04:00")
+        assert signal_eligible(candidate,"volume_150_early")==expected
+    assert signal_eligible(row(at="2026-07-07T09:45:00-04:00",volume=1.0),
+                           "volume_150_early") is False
