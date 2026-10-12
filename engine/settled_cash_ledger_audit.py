@@ -4,7 +4,7 @@ A POST-HOC screen of ALREADY SELECTED candidate trades. Does not reconstruct
 additional signals that a cash-aware scheduler might choose if an earlier
 hypothetical position were skipped for insufficient settled cash.
 No buying-power leverage, no same-day recycling of sales proceeds.
-Starting $115 is an ILLUSTRATIVE research input, NOT verified account balance.
+Starting $1,000 is an ILLUSTRATIVE research input, NOT verified account balance.
 Not a broker execution simulator or advice to trade more frequently.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-HYPOTHETICAL_STARTING_SETTLED_CASH_USD=115.0
+HYPOTHETICAL_STARTING_SETTLED_CASH_USD=1000.0
 STRESS_MORE_PER_TRADE_USD=2.0
 
 
@@ -43,7 +43,7 @@ def process_one(rows:list[dict],dates:list[str],starting_cash:float)->dict:
         settled+=prior_sale_proceeds
         prior_sale_proceeds=0.
         n_today=0
-        for case in sorted(perday.get(day,[]),key=lambda x:x["entry_observation_at"]):
+        for case in sorted(perday.get(day,[]),key=lambda x:x.get("entry_observation_at") or x["entry_at"]):
             price=float(case["entry_debit_usd"])
             pnl=float(case["pnl_usd"])
             if price<=settled+1e-9:
@@ -94,10 +94,15 @@ def process_one(rows:list[dict],dates:list[str],starting_cash:float)->dict:
     }
 
 
-def audit(ledger:Path,output:Path,starting_cash:float)->dict:
+def audit(ledger:Path,output:Path,starting_cash:float,calendar_dir:Path|None=None)->dict:
     with ledger.open(newline="") as f:
         raw=list(csv.DictReader(f))
     days=sorted({row["day"] for row in raw})
+    if calendar_dir is not None:
+        # Include all archived trading sessions, including zero-signal days.
+        from .burst_research import _research_files
+        archive_days={item.name[9:19] for item in _research_files(calendar_dir)}
+        days=sorted(set(days) | archive_days)
     arms=sorted({row["arm"] for row in raw})
     res={arm:process_one(
         [r for r in raw if r["arm"]==arm],days,starting_cash)
@@ -106,12 +111,14 @@ def audit(ledger:Path,output:Path,starting_cash:float)->dict:
         "status":"RESEARCH_ONLY_HYPOTHETICAL_CASH_SETTLEMENT_POST_FILTER",
         "source":str(ledger),"settlement":"T+1 model; no same-day proceeds recycling",
         "starting_cash_is_illustrative_not_user_actual_balance":True,
-        "missing_no_trade_sessions_from_csv":True,
+        "missing_no_trade_sessions_from_csv":calendar_dir is None,
+        "market_calendar_sessions_used":len(days),
+        "hypothetical_default_starting_cash_usd":HYPOTHETICAL_STARTING_SETTLED_CASH_USD,
         "results":res,
         "warnings":[
             "Applied AFTER trade candidate path selection, so a cash-aware alternative-entry schedule is NOT reconstructed.",
             "Prices & exits come from archived CBBO-1m sampled bid/ask, not actual orders, NBBO or proven fills.",
-            "Input ledger omits days with no matched trades; weekly statistics not a full continuous market-calendar backtest.",
+            "Market-calendar completeness depends on supplying --calendar-dir with archived trading sessions.",
             "No automatic option exercises/assignment, margin, leverage, external deposits, tax, or account fees modeled.",
             "Different strategy arms have independent artificial initial cash; do not sum balances across arms.",
             "All source calendar sessions were previously inspected and are not prospective out of sample.",
@@ -129,10 +136,12 @@ def main():
       default=Path("/data/research/or_retest_frequency/simulated_trades.csv"))
     p.add_argument("--output",type=Path,
       default=Path("/data/research/or_retest_frequency/cash_account_audit.json"))
+    p.add_argument("--calendar-dir",type=Path,default=None,
+      help="Archived spy_0dte session files; include no-trade days in equity calendar")
     p.add_argument("--starting-cash",type=float,
       default=HYPOTHETICAL_STARTING_SETTLED_CASH_USD)
     a=p.parse_args()
-    audit(a.ledger,a.output,a.starting_cash)
+    audit(a.ledger,a.output,a.starting_cash,calendar_dir=a.calendar_dir)
 
 
 if __name__=="__main__":
