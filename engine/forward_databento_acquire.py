@@ -17,8 +17,8 @@ from datetime import date, datetime, timedelta, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .forward_event_ingest import ingest, _bars, _quote_rows, MAX_EVENT_ROWS
-from .providers.databento_history import _definition_contract, _rows, _timestamp
+from .forward_event_ingest import ingest, _bars, _quote_rows, _timestamp, MAX_EVENT_ROWS
+from .providers.databento_history import _definition_contract, _rows
 from .session_calendar import session_close
 
 NY=ZoneInfo("America/New_York")
