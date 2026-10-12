@@ -26,7 +26,7 @@ from .regime_reclaim_v2 import (
     FEE_PER_SIDE, SLIP_PER_SHARE, FEE_STRESS_PER_TRADE, session_plan_v2, metrics,
 )
 from .regime_reclaim_v3 import run_v3_comparison
-from .frozen_regime_forward import START_CASH
+from .frozen_regime_forward import START_CASH, latest_legacy_day
 from .weekly_options_data import load_session
 
 ARMS=("v4_conditional_hold","v4_1_equity_guard")
@@ -197,7 +197,7 @@ def compare_v4(event_dir:Path,legacy_dir:Path,output_dir:Path)->dict:
         "note":"V4 historical CBBO-minute winning numbers are NOT this V2-entry event-time forward experiment.",
         "processed":earlier["processed"],"new_event_sessions":earlier["new_event_sessions"],
         "start_cash_usd":START_CASH,"no_real_orders":True,"data_purchases":0,
-        "last_inspected_legacy_date":earlier["last_inspected_legacy_date"],
+        "last_inspected_legacy_date":str(latest_legacy_day(legacy_dir)),
         "outcomes":{**earlier["results"],**estimates},
         "v4_equity_guard":"extension off if preceding session's EOD equity below its prior running max",
         "v4_rules":"10min default, 10% positive premium, SPY 3-bar directional momentum >=3bps, 20-bar relative volume >=0.9, <=3.5% spread, >=90% peak, EMA8, 20% extended trail",
