@@ -184,8 +184,6 @@ def group_statistics(entries:list[dict])->dict:
             label:{"trades":len(cases),"net_pnl_usd":round(sum(x["pnl_usd"] for x in cases),2)}
             for label,cases in sorted(groups.items())},
         "exit_reason_counts":dict(Counter(e["historical_exit_reason"] for e in entries)),
-        "winning_bid_runup_before_exit_but_exit_loss_count":sum(
-            e["pnl_usd"]<=0 and (e["mfe_in_bid_usd_before_exit"] or -1)<=0 for e in []), # computed below
     }
 
 
