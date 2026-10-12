@@ -80,3 +80,17 @@ def test_status_exposes_second_resolution_cadence(monkeypatch, tmp_path):
         assert cadence["sandbox_active_option_refresh_seconds"] == 2.0
     finally:
         app.dependency_overrides.clear()
+
+def test_ready_is_api_liveness_not_a_market_feed_greenlight(monkeypatch, tmp_path):
+    from engine import api as mod
+    monkeypatch.setenv("START_COLLECTOR_IN_API", "false")
+    monkeypatch.setenv("CONTROL_DB_PATH", str(tmp_path / "control.sqlite"))
+    broken = {"healthy": False, "workers": {"collector": {"healthy": False, "state": "RECOVERING"}}}
+    monkeypatch.setattr(mod, "runtime_status", lambda: broken)
+    with TestClient(app) as client:
+        ready = client.get("/ready")
+        health = client.get("/health")
+    assert ready.status_code == 200
+    assert ready.json() == {"status": "serving"}
+    assert health.status_code == 503
+    assert health.json() == {"status": "recovering"}

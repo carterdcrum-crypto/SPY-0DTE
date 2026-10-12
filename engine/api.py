@@ -337,6 +337,12 @@ app = FastAPI(
 )
 
 
+@app.get("/ready")
+def ready():
+    """Railway startup/liveness only; never describes the market feed as healthy."""
+    return {"status": "serving"}
+
+
 @app.get("/health")
 def health():
     runtime = runtime_status()
