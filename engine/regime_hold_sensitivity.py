@@ -243,13 +243,17 @@ def backtest(data_dir:Path, output:Path):
         peak=START_CASH
         dd=0.0
         dd_peak=None
+        dd_peak_equity=START_CASH
         dd_trough=None
+        peak_day="initial_capital"
         for datevalue,equity in zip(["start"]+[d["date"] for d in s["days"]],eq):
             if equity>peak:
                 peak=equity
-                dd_peak=datevalue
+                peak_day=datevalue
             if peak-equity>dd:
                 dd=peak-equity
+                dd_peak_equity=peak
+                dd_peak=peak_day
                 dd_trough=datevalue
         trades=[t for t in s["trades"] if t["pnl_usd"] is not None]
         pnls=[t["pnl_usd"] for t in trades]
@@ -260,7 +264,8 @@ def backtest(data_dir:Path, output:Path):
             "modeled_cash_equity_usd":final,
             "modeled_cash_profit_vs_1000_usd":round(final-START_CASH,2),
             "maximum_end_of_day_cash_drawdown_usd":round(dd,2),
-            "maximum_end_of_day_cash_drawdown_pct_of_peak":round(100*dd/(dd+0 if not eq else max(eq)),2) if max(eq)>0 else None,
+            "maximum_end_of_day_cash_drawdown_pct_of_peak":round(100*dd/dd_peak_equity,2) if dd_peak_equity>0 else None,
+            "drawdown_peak_day":dd_peak,
             "drawdown_trough_day":dd_trough,
             "total_entry_positions":s["entries"],"scored_trades":len(pnls),
             "unscorable_positions":s["unscored"],

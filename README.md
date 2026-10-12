@@ -56,6 +56,27 @@ V2 is **not yet proven better than V1**. Results are blocked when true
 event-time quotes/complete SPY bars are unavailable. See
 [the V2 experiment definition](docs/regime_reclaim_v2_forward_challenger.md).
 
+## V3: removal of maximum holding-time timer
+
+**Research variant only:** V3 uses the same V2 regime-aware signals,
+entry cost screens, delta ranking and adaptive 30%-to-20% trailing rule,
+but **does not force an exit after 10 minutes**. It exits on observed
+premium/trailing loss or requires liquidation at least 15 minutes before
+the verified session end (15:45 ET on normal days; earlier on early closes).
+An unknown or missing liquidation quote is explicitly unscorable, not
+a fabricated winner. V1/V2 remain unchanged controls; existing live broker
+or paper workers have not been switched.
+
+The historical exit-only research module can calculate cash-account
+end-of-day maximum drawdown using the previously inspected 128-session
+CBBO-minute archive, while the true V2+V3 forward comparison requires new
+real event-observed OPRA data. Legacy close-only snapshots cannot backtest
+V2 VWAP/candlestick entries or claim actual fill P&L.
+
+Run: `python -m engine.regime_hold_sensitivity` (historical proxy) or
+`python -m engine.regime_reclaim_v3` (event-data V1/V2/V3 comparator).
+Neither performs broker orders or market-data purchases.
+
 ## Current state
 
 The system has three distinct operating layers:
