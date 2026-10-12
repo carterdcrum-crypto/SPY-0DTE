@@ -1,0 +1,243 @@
+{
+  "30pct_trailing_stop": true,
+  "assessment": "Exploratory repair only; no production promotion based on these results.",
+  "counts": {
+    "base_accepted": 562,
+    "base_plus_confirmed_reversal_accepted": 752,
+    "base_plus_confirmed_reversal_unpriced_entry": 27,
+    "base_unpriced_entry": 25,
+    "deferred_reversal_price_rsi_accepted": 812,
+    "deferred_reversal_price_rsi_macd_volume_accepted": 314,
+    "deferred_reversal_price_rsi_macd_volume_unpriced_entry": 6,
+    "deferred_reversal_price_rsi_unpriced_entry": 15,
+    "delayed_full_confirmations": 314,
+    "delayed_price_rsi_confirmations": 819,
+    "original_reversal_trigger_candidates": 1294
+  },
+  "full_chain_PCR_missing": true,
+  "n_sessions": 128,
+  "no_external_data_or_broker_calls": true,
+  "not_execution_accuracy": true,
+  "previously_inspected_data": true,
+  "results": {
+    "base": {
+      "all_inspected": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3609.2,
+        "flat_or_no_trade_sessions": 2,
+        "matched_trades": 537,
+        "mean_option_return_pct": -6.027,
+        "mean_pnl_per_trade_usd": -6.1678,
+        "negative_sessions": 87,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -3312.1,
+        "positive_sessions": 39,
+        "sessions": 128,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -25.876,
+        "winning_trades_pct": 33.89
+      },
+      "development": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 2737,
+        "flat_or_no_trade_sessions": 0,
+        "matched_trades": 352,
+        "mean_option_return_pct": -5.594,
+        "mean_pnl_per_trade_usd": -6.6324,
+        "negative_sessions": 57,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -2334.6,
+        "positive_sessions": 25,
+        "sessions": 82,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -28.471,
+        "winning_trades_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 630.2,
+        "flat_or_no_trade_sessions": 0,
+        "matched_trades": 95,
+        "mean_option_return_pct": -7.175,
+        "mean_pnl_per_trade_usd": -5.6579,
+        "negative_sessions": 16,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -537.5,
+        "positive_sessions": 5,
+        "sessions": 21,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -25.595,
+        "winning_trades_pct": 30.53
+      },
+      "validation": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 583.1,
+        "flat_or_no_trade_sessions": 2,
+        "matched_trades": 90,
+        "mean_option_return_pct": -6.512,
+        "mean_pnl_per_trade_usd": -4.8889,
+        "negative_sessions": 14,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -440,
+        "positive_sessions": 9,
+        "sessions": 25,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -17.6,
+        "winning_trades_pct": 34.44
+      }
+    },
+    "base_plus_confirmed_reversal": {
+      "all_inspected": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 4548,
+        "flat_or_no_trade_sessions": 1,
+        "matched_trades": 725,
+        "mean_option_return_pct": -5.735,
+        "mean_pnl_per_trade_usd": -5.9524,
+        "negative_sessions": 96,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -4315.5,
+        "positive_sessions": 31,
+        "sessions": 128,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -33.715,
+        "winning_trades_pct": 35.45
+      },
+      "development": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3338.4,
+        "flat_or_no_trade_sessions": 0,
+        "matched_trades": 485,
+        "mean_option_return_pct": -4.973,
+        "mean_pnl_per_trade_usd": -6.2072,
+        "negative_sessions": 61,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -3010.5,
+        "positive_sessions": 21,
+        "sessions": 82,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -36.713,
+        "winning_trades_pct": 37.53
+      },
+      "previously_studied_diagnostic": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 611.6,
+        "flat_or_no_trade_sessions": 0,
+        "matched_trades": 122,
+        "mean_option_return_pct": -6.383,
+        "mean_pnl_per_trade_usd": -4.4967,
+        "negative_sessions": 17,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -548.6,
+        "positive_sessions": 4,
+        "sessions": 21,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -26.124,
+        "winning_trades_pct": 31.97
+      },
+      "validation": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 883.3,
+        "flat_or_no_trade_sessions": 1,
+        "matched_trades": 118,
+        "mean_option_return_pct": -8.196,
+        "mean_pnl_per_trade_usd": -6.4102,
+        "negative_sessions": 18,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -756.4,
+        "positive_sessions": 6,
+        "sessions": 25,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -30.256,
+        "winning_trades_pct": 30.51
+      }
+    },
+    "deferred_reversal_price_rsi": {
+      "all_inspected": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 4395.8,
+        "flat_or_no_trade_sessions": 3,
+        "matched_trades": 797,
+        "mean_option_return_pct": -5.154,
+        "mean_pnl_per_trade_usd": -5.4443,
+        "negative_sessions": 93,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -4339.1,
+        "positive_sessions": 32,
+        "sessions": 128,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -33.899,
+        "winning_trades_pct": 34.38
+      },
+      "development": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 3195.8,
+        "flat_or_no_trade_sessions": 2,
+        "matched_trades": 577,
+        "mean_option_return_pct": -4.641,
+        "mean_pnl_per_trade_usd": -5.5132,
+        "negative_sessions": 61,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -3181.1,
+        "positive_sessions": 19,
+        "sessions": 82,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -38.794,
+        "winning_trades_pct": 36.4
+      },
+      "previously_studied_diagnostic": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 520.5,
+        "flat_or_no_trade_sessions": 0,
+        "matched_trades": 111,
+        "mean_option_return_pct": -2.028,
+        "mean_pnl_per_trade_usd": -0.9937,
+        "negative_sessions": 13,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -110.3,
+        "positive_sessions": 8,
+        "sessions": 21,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -5.252,
+        "winning_trades_pct": 35.14
+      },
+      "validation": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 1048.1,
+        "flat_or_no_trade_sessions": 1,
+        "matched_trades": 109,
+        "mean_option_return_pct": -11.048,
+        "mean_pnl_per_trade_usd": -9.6119,
+        "negative_sessions": 19,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -1047.7,
+        "positive_sessions": 5,
+        "sessions": 25,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -41.908,
+        "winning_trades_pct": 22.94
+      }
+    },
+    "deferred_reversal_price_rsi_macd_volume": {
+      "all_inspected": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 1962.6,
+        "flat_or_no_trade_sessions": 10,
+        "matched_trades": 308,
+        "mean_option_return_pct": -5.168,
+        "mean_pnl_per_trade_usd": -5.7805,
+        "negative_sessions": 85,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -1780.4,
+        "positive_sessions": 33,
+        "sessions": 128,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -13.909,
+        "winning_trades_pct": 35.39
+      },
+      "development": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 1518.8,
+        "flat_or_no_trade_sessions": 4,
+        "matched_trades": 220,
+        "mean_option_return_pct": -5.487,
+        "mean_pnl_per_trade_usd": -6.6909,
+        "negative_sessions": 56,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -1472,
+        "positive_sessions": 22,
+        "sessions": 82,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -17.951,
+        "winning_trades_pct": 39.09
+      },
+      "previously_studied_diagnostic": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 325.8,
+        "flat_or_no_trade_sessions": 2,
+        "matched_trades": 45,
+        "mean_option_return_pct": 3.091,
+        "mean_pnl_per_trade_usd": 2.6556,
+        "negative_sessions": 11,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": 119.5,
+        "positive_sessions": 8,
+        "sessions": 21,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": 5.69,
+        "winning_trades_pct": 33.33
+      },
+      "validation": {
+        "cumulative_closed_trade_pnl_drawdown_usd_NOT_ACCOUNT": 427.9,
+        "flat_or_no_trade_sessions": 4,
+        "matched_trades": 43,
+        "mean_option_return_pct": -12.175,
+        "mean_pnl_per_trade_usd": -9.9512,
+        "negative_sessions": 18,
+        "one_contract_additive_pnl_usd_NOT_ACCOUNT": -427.9,
+        "positive_sessions": 3,
+        "sessions": 25,
+        "sum_pnl_per_calendar_session_usd_NOT_ACCOUNT": -17.116,
+        "winning_trades_pct": 18.6
+      }
+    }
+  },
+  "stop_pct": 30,
+  "study": "FIX_ZERO_REVERSAL_CONTRADICTION_DEFERRED_CAUSAL_CONFIRMATION",
+  "zero_profit_targets_or_partial_exits": true
+}
