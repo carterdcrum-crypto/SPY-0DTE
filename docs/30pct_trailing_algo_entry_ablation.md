@@ -58,13 +58,39 @@ requirement resulted in **zero accepted reversal trades** across all
 128 archival sessions. It was not truly a combined momentum/reversal
 options strategy.
 
-A separate research-only implementation is now testing a causal
+A separate research-only implementation **completed testing** a causal
 repair: accept the excursion as an alert, and wait for a subsequent
 completed-bar turn within a fixed three-minute window. If a turn
 never arrives, skip the trade. Assess optional MACD improvement,
 observed volume and RSI extreme using only data known at the later
 confirmation time. This fixes an entry-construction issue, not
 automatically its expected profitability.
+
+### Executed deferred-reversal repair: still not profitable
+
+The historical archive contained **1,294 original reversal excursion
+triggers**. The repaired strategy confirmed a later completed-minute
+reversal in **819** cases using price-turn + RSI and in **314** cases
+when also requiring improving MACD histogram and adequate observed
+volume. 308 strict reversal cases had matched option price paths.
+
+All use the SAME 30% no-target full-position trailing exit:
+
+| Research variant | Matched trades | Win rate | Average option return | Summed hypothetical P&L |
+|---|---:|---:|---:|---:|
+| Original momentum-only baseline | 537 | 33.89% | -6.027% | -$3,312.10 |
+| Delayed reversal price turn + RSI | 797 | 34.38% | -5.154% | -$4,339.10 |
+| Delayed reversal + MACD + volume | 308 | 35.39% | -5.168% | -$1,780.40 |
+| Original baseline plus confirmed reversals | 725 | 35.45% | -5.735% | -$4,315.50 |
+
+Combining repaired reversals with the original strategy increased
+summed losses. The strict reversal-only variant was negative in both
+development (-$1,472.00) and validation (-$427.90); a +$119.50
+positive previously inspected diagnostic group is not independent
+evidence of profitability. No profit claim or live promotion.
+
+Detailed results:
+`research/results/deferred_reversal_30pct_2026_10_11.json`.
 
 ### What we should change to develop a real edge
 
@@ -89,7 +115,7 @@ automatically its expected profitability.
 - `research/results/entry_filter_30pct_ablation_2026_10_11.json`
 - `engine/trailing_only_sweep.py`
 - `engine/entry_filter_30pct_study.py`
-- `engine/deferred_reversal_30pct_study.py` (separate causal repair)
+- `engine/deferred_reversal_30pct_study.py` (executed causal repair)
 - GitHub Actions test workflow `exit-policy-research-tests`.
 
 **No change to live strategy, live authorization, target logic, paper
