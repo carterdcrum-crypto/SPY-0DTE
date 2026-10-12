@@ -237,7 +237,7 @@ def run(root:Path,output:Path)->dict:
         for event in events:
             t=datetime.fromisoformat(event["signal_at"])
             at_idx=by_completed.get(t)
-            if at_idx is None or at_idx<20:
+            if at_idx is None or at_idx<15:
                 diagnostics["invalid_asof_signal"]+=1
                 continue
             entry=_select_entry(frames,t,event["right"])
