@@ -1,0 +1,550 @@
+{
+  "account_return_not_tested": true,
+  "archive_previously_inspected_no_untouched_holdout": true,
+  "complete_pcr_missing": true,
+  "conclusion_rule": "If no strategy has strictly positive PRIOR stressed confidence lower-bound then NO_TRADE.",
+  "coverage": {
+    "baseline_missing_entry": 25,
+    "baseline_signals": 562,
+    "candidate_frames": 49792,
+    "classified_opportunities": 4232,
+    "pullback_only_missing_entry": 2,
+    "pullback_only_signals": 84,
+    "pullback_volume_150_missing_entry": 1,
+    "pullback_volume_150_signals": 59,
+    "tight_spread_080_missing_entry": 25,
+    "tight_spread_080_signals": 562,
+    "volume_150_early_signals": 81,
+    "volume_150_macd_price_missing_entry": 16,
+    "volume_150_macd_price_signals": 335,
+    "volume_150_missing_entry": 18,
+    "volume_150_signals": 399,
+    "volume_150_spread_080_missing_entry": 18,
+    "volume_150_spread_080_rejected_spread": 1,
+    "volume_150_spread_080_signals": 399,
+    "volume_200_missing_entry": 10,
+    "volume_200_signals": 210
+  },
+  "data_sessions": 128,
+  "estimated_extra_execution_stress_usd_per_one_contract_roundtrip": 2,
+  "exit_policy": "fixed_30pct_trailing_full_exit_no_target_no_runner",
+  "independent_hard_loss_pct": 35,
+  "maximum_hold_minutes": 10,
+  "min_prior_matched_trades": 30,
+  "not_true_event_NBBO": true,
+  "prior_day_window": 30,
+  "prior_lcb_z_multiple_rule_heuristic": 2.58,
+  "robustness_baseline": {
+    "biggest_winning_day": "2026-04-07",
+    "biggest_winning_day_usd": 151.2,
+    "bootstrap_5session_day_blocks_95pct_usd_per_calendar_day": [
+      -36.1125,
+      -15.5133
+    ],
+    "breakeven_win_rate_at_observed_payoff_ratio_pct": 45.367,
+    "candidate": "baseline",
+    "days": 128,
+    "days_negative": 87,
+    "days_positive": 39,
+    "losses": 355,
+    "mean_losing_trade_usd": -24.385,
+    "mean_winning_trade_usd": 29.365,
+    "minus_best_1_day_sum_usd": -3463.3,
+    "minus_best_3_days_sum_usd": -3728.5,
+    "minus_best_5_days_sum_usd": -3924.5,
+    "raw_pnl_total_usd": -3312.1,
+    "stress_pnl_total_usd": -4386.1,
+    "stressed_bootstrap_5session_95pct_usd_per_calendar_day": [
+      -44.1828,
+      -23.8375
+    ],
+    "trades": 537,
+    "uncertainty_note": "Descriptive only; parameters were compared on previously inspected data. No multiplicity correction or untouched holdout. Percentile block bootstrap is not a strategy-discovery adjusted p-value.",
+    "wins": 182
+  },
+  "robustness_morning_volume": {
+    "biggest_winning_day": "2026-06-09",
+    "biggest_winning_day_usd": 273.7,
+    "bootstrap_5session_day_blocks_95pct_usd_per_calendar_day": [
+      -3.75,
+      8.6937
+    ],
+    "breakeven_win_rate_at_observed_payoff_ratio_pct": 37.421,
+    "candidate": "volume_150_early",
+    "days": 128,
+    "days_negative": 35,
+    "days_positive": 30,
+    "losses": 47,
+    "mean_losing_trade_usd": -29.491,
+    "mean_winning_trade_usd": 49.318,
+    "minus_best_1_day_sum_usd": 17,
+    "minus_best_3_days_sum_usd": -346.1,
+    "minus_best_5_days_sum_usd": -565.5,
+    "raw_pnl_total_usd": 290.7,
+    "stress_pnl_total_usd": 128.7,
+    "stressed_bootstrap_5session_95pct_usd_per_calendar_day": [
+      -5.5547,
+      7.4141
+    ],
+    "trades": 81,
+    "uncertainty_note": "Descriptive only; parameters were compared on previously inspected data. No multiplicity correction or untouched holdout. Percentile block bootstrap is not a strategy-discovery adjusted p-value.",
+    "wins": 34
+  },
+  "rule_count": 9,
+  "rule_metrics": {
+    "baseline": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 3609.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -4386.1,
+        "mean_premium_return_pct": -6.027,
+        "negative_days": 87,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -3312.1,
+        "positive_days": 39,
+        "sessions": 128,
+        "trades": 537,
+        "win_rate_pct": 33.89
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 2737,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -3038.6,
+        "mean_premium_return_pct": -5.594,
+        "negative_days": 57,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -2334.6,
+        "positive_days": 25,
+        "sessions": 82,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 630.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -727.5,
+        "mean_premium_return_pct": -7.175,
+        "negative_days": 16,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -537.5,
+        "positive_days": 5,
+        "sessions": 21,
+        "trades": 95,
+        "win_rate_pct": 30.53
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 583.1,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -620,
+        "mean_premium_return_pct": -6.512,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -440,
+        "positive_days": 9,
+        "sessions": 25,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "pullback_only": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 414.5,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -414.6,
+        "mean_premium_return_pct": -1.682,
+        "negative_days": 36,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -250.6,
+        "positive_days": 19,
+        "sessions": 128,
+        "trades": 82,
+        "win_rate_pct": 41.46
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 414.5,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -298.7,
+        "mean_premium_return_pct": -2.336,
+        "negative_days": 24,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -180.7,
+        "positive_days": 14,
+        "sessions": 82,
+        "trades": 59,
+        "win_rate_pct": 44.07
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 323.6,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -119.3,
+        "mean_premium_return_pct": -0.339,
+        "negative_days": 11,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -77.3,
+        "positive_days": 4,
+        "sessions": 21,
+        "trades": 21,
+        "win_rate_pct": 33.33
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 3.3,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": 3.4,
+        "mean_premium_return_pct": 3.498,
+        "negative_days": 1,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": 7.4,
+        "positive_days": 1,
+        "sessions": 25,
+        "trades": 2,
+        "win_rate_pct": 50
+      }
+    },
+    "pullback_volume_150": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 438,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -318.4,
+        "mean_premium_return_pct": -1.517,
+        "negative_days": 25,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -202.4,
+        "positive_days": 13,
+        "sessions": 128,
+        "trades": 58,
+        "win_rate_pct": 39.66
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 438,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -263.6,
+        "mean_premium_return_pct": -3.032,
+        "negative_days": 17,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -179.6,
+        "positive_days": 10,
+        "sessions": 82,
+        "trades": 42,
+        "win_rate_pct": 40.48
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 133.6,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -49.5,
+        "mean_premium_return_pct": 3.075,
+        "negative_days": 7,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -19.5,
+        "positive_days": 3,
+        "sessions": 21,
+        "trades": 15,
+        "win_rate_pct": 40
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 3.3,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -5.3,
+        "mean_premium_return_pct": -6.783,
+        "negative_days": 1,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -3.3,
+        "positive_days": 0,
+        "sessions": 25,
+        "trades": 1,
+        "win_rate_pct": 0
+      }
+    },
+    "tight_spread_080": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 3609.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -4386.1,
+        "mean_premium_return_pct": -6.027,
+        "negative_days": 87,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -3312.1,
+        "positive_days": 39,
+        "sessions": 128,
+        "trades": 537,
+        "win_rate_pct": 33.89
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 2737,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -3038.6,
+        "mean_premium_return_pct": -5.594,
+        "negative_days": 57,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -2334.6,
+        "positive_days": 25,
+        "sessions": 82,
+        "trades": 352,
+        "win_rate_pct": 34.66
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 630.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -727.5,
+        "mean_premium_return_pct": -7.175,
+        "negative_days": 16,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -537.5,
+        "positive_days": 5,
+        "sessions": 21,
+        "trades": 95,
+        "win_rate_pct": 30.53
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 583.1,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -620,
+        "mean_premium_return_pct": -6.512,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -440,
+        "positive_days": 9,
+        "sessions": 25,
+        "trades": 90,
+        "win_rate_pct": 34.44
+      }
+    },
+    "volume_150": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 2251.1,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -2682.3,
+        "mean_premium_return_pct": -4.811,
+        "negative_days": 75,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1920.3,
+        "positive_days": 46,
+        "sessions": 128,
+        "trades": 381,
+        "win_rate_pct": 34.38
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 1790.9,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -1967.6,
+        "mean_premium_return_pct": -5.043,
+        "negative_days": 47,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1483.6,
+        "positive_days": 32,
+        "sessions": 82,
+        "trades": 242,
+        "win_rate_pct": 34.3
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 407.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -284.8,
+        "mean_premium_return_pct": -2.468,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -132.8,
+        "positive_days": 7,
+        "sessions": 21,
+        "trades": 76,
+        "win_rate_pct": 34.21
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 431.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -429.9,
+        "mean_premium_return_pct": -6.745,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -303.9,
+        "positive_days": 7,
+        "sessions": 25,
+        "trades": 63,
+        "win_rate_pct": 34.92
+      }
+    },
+    "volume_150_early": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 369,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": 128.7,
+        "mean_premium_return_pct": 5.438,
+        "negative_days": 35,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": 290.7,
+        "positive_days": 30,
+        "sessions": 128,
+        "trades": 81,
+        "win_rate_pct": 41.98
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 369,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -310.2,
+        "mean_premium_return_pct": -3.456,
+        "negative_days": 26,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -202.2,
+        "positive_days": 17,
+        "sessions": 82,
+        "trades": 54,
+        "win_rate_pct": 33.33
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 42.6,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": 356.2,
+        "mean_premium_return_pct": 31.084,
+        "negative_days": 4,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": 388.2,
+        "positive_days": 8,
+        "sessions": 21,
+        "trades": 16,
+        "win_rate_pct": 62.5
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 54.5,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": 82.7,
+        "mean_premium_return_pct": 11.792,
+        "negative_days": 5,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": 104.7,
+        "positive_days": 5,
+        "sessions": 25,
+        "trades": 11,
+        "win_rate_pct": 54.55
+      }
+    },
+    "volume_150_macd_price": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 1592.8,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -1861.7,
+        "mean_premium_return_pct": -3.451,
+        "negative_days": 69,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1223.7,
+        "positive_days": 48,
+        "sessions": 128,
+        "trades": 319,
+        "win_rate_pct": 34.48
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 1423.8,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -1541.5,
+        "mean_premium_return_pct": -4.688,
+        "negative_days": 46,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1131.5,
+        "positive_days": 31,
+        "sessions": 82,
+        "trades": 205,
+        "win_rate_pct": 33.17
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 212.8,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": 11.4,
+        "mean_premium_return_pct": 2.511,
+        "negative_days": 11,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": 135.4,
+        "positive_days": 10,
+        "sessions": 21,
+        "trades": 62,
+        "win_rate_pct": 38.71
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 321.1,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -331.6,
+        "mean_premium_return_pct": -5.684,
+        "negative_days": 12,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -227.6,
+        "positive_days": 7,
+        "sessions": 25,
+        "trades": 52,
+        "win_rate_pct": 34.62
+      }
+    },
+    "volume_150_spread_080": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 2208.8,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -2638,
+        "mean_premium_return_pct": -4.744,
+        "negative_days": 75,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1878,
+        "positive_days": 46,
+        "sessions": 128,
+        "trades": 380,
+        "win_rate_pct": 34.47
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 1748.6,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -1923.3,
+        "mean_premium_return_pct": -4.938,
+        "negative_days": 47,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -1441.3,
+        "positive_days": 32,
+        "sessions": 82,
+        "trades": 241,
+        "win_rate_pct": 34.44
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 407.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -284.8,
+        "mean_premium_return_pct": -2.468,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -132.8,
+        "positive_days": 7,
+        "sessions": 21,
+        "trades": 76,
+        "win_rate_pct": 34.21
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 431.2,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -429.9,
+        "mean_premium_return_pct": -6.745,
+        "negative_days": 14,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -303.9,
+        "positive_days": 7,
+        "sessions": 25,
+        "trades": 63,
+        "win_rate_pct": 34.92
+      }
+    },
+    "volume_200": {
+      "all_inspected": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 810.4,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -893,
+        "mean_premium_return_pct": -2.362,
+        "negative_days": 66,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -493,
+        "positive_days": 34,
+        "sessions": 128,
+        "trades": 200,
+        "win_rate_pct": 36.5
+      },
+      "development": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 343.7,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -356.2,
+        "mean_premium_return_pct": -0.58,
+        "negative_days": 42,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -108.2,
+        "positive_days": 22,
+        "sessions": 82,
+        "trades": 124,
+        "win_rate_pct": 40.32
+      },
+      "previously_studied_diagnostic": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 357.9,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -180.8,
+        "mean_premium_return_pct": -0.586,
+        "negative_days": 13,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -88.8,
+        "positive_days": 6,
+        "sessions": 21,
+        "trades": 46,
+        "win_rate_pct": 30.43
+      },
+      "validation": {
+        "closed_trade_additive_drawdown_NOT_ACCOUNT_USD": 318.1,
+        "gross_stressed_pnl_usd_NOT_ACCOUNT": -356,
+        "mean_premium_return_pct": -12.451,
+        "negative_days": 11,
+        "net_hypothetical_pnl_usd_NOT_ACCOUNT": -296,
+        "positive_days": 6,
+        "sessions": 25,
+        "trades": 30,
+        "win_rate_pct": 30
+      }
+    }
+  },
+  "study": "SPY_ENTRY_EDGE_ABLATIONS_PLUS_ROLLING_PAST_ONLY_COST_AWARE_ABSTENTION",
+  "walkforward": {
+    "all_inspected": {
+      "negative_sessions": 0,
+      "no_trade_or_zero_pnl_sessions": 128,
+      "positive_sessions": 0,
+      "sessions": 128,
+      "sum_net_hypothetical_pnl_usd": 0,
+      "trade_count": 0,
+      "traded_sessions": 0
+    },
+    "development": {
+      "negative_sessions": 0,
+      "no_trade_or_zero_pnl_sessions": 82,
+      "positive_sessions": 0,
+      "sessions": 82,
+      "sum_net_hypothetical_pnl_usd": 0,
+      "trade_count": 0,
+      "traded_sessions": 0
+    },
+    "previously_studied_diagnostic": {
+      "negative_sessions": 0,
+      "no_trade_or_zero_pnl_sessions": 21,
+      "positive_sessions": 0,
+      "sessions": 21,
+      "sum_net_hypothetical_pnl_usd": 0,
+      "trade_count": 0,
+      "traded_sessions": 0
+    },
+    "validation": {
+      "negative_sessions": 0,
+      "no_trade_or_zero_pnl_sessions": 25,
+      "positive_sessions": 0,
+      "sessions": 25,
+      "sum_net_hypothetical_pnl_usd": 0,
+      "trade_count": 0,
+      "traded_sessions": 0
+    }
+  },
+  "zero_new_market_data_spend": true
+}
