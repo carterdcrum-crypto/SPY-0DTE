@@ -41,6 +41,21 @@ these observations with assumptions or use a different EMA signal under the
 same name. This code places **zero broker orders**; new event feed acquisition
 must be confirmed before ongoing forward performance can be measured.
 
+## V2: market-regime forward-test challenger (research only)
+
+An isolated V2 experiment compares the unchanged frozen V1 with a
+regime-aware router, VWAP and candle/momentum confirmation,
+liquidity-aware 0DTE contract ranking and an optional tighter trailing
+exit on structural deterioration. All arms replay **identical, genuinely
+new event-observed sessions**; no existing SHADOW/PAPER/LIVE worker
+or broker behavior is changed.
+
+Run: python -m engine.regime_reclaim_v2 --event-dir /data/research/forward_events --legacy-dir /data/research --output-dir /data/research/regime_v2_comparison
+
+V2 is **not yet proven better than V1**. Results are blocked when true
+event-time quotes/complete SPY bars are unavailable. See
+[the V2 experiment definition](docs/regime_reclaim_v2_forward_challenger.md).
+
 ## Current state
 
 The system has three distinct operating layers:
