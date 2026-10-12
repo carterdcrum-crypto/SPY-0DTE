@@ -10,6 +10,7 @@ import argparse
 import csv
 import json
 import math
+import random
 import statistics
 from collections import defaultdict
 from datetime import date, datetime
@@ -125,6 +126,74 @@ def report_group(daily:list[dict],variant:str,group:str)->dict:
             "closed_trade_additive_drawdown_NOT_ACCOUNT_USD":round(dd,2)}
 
 
+
+def robustness(daily:list[dict],candidate:str,*,window_length:int=5,reps:int=2000)->dict:
+    """Descriptive serial-dependence and single-lucky-day sensitivity.
+
+    Already-inspected days and nine screened hypotheses make these intervals
+    optimistic for the final selected winner. They are NOT new OOS evidence.
+    """
+    if candidate not in VARIANTS:
+        raise ValueError("unknown candidate")
+    per_day=[
+        {"day":d["day"],
+         "trades":len(d["cases"][candidate]),
+         "net":sum(c["net_pnl_usd"] for c in d["cases"][candidate])}
+        for d in daily
+    ]
+    if not per_day:
+        return {"status":"missing_days"}
+    gross=[x["net"] for x in per_day]
+    stressed=[x["net"]-x["trades"]*EXTRA_SLIPPAGE_USD_ROUNDTRIP for x in per_day]
+    ordered=sorted(per_day,key=lambda x:x["net"],reverse=True)
+    rand=random.Random(20261011)
+    def interval(seq):
+        trials=[]
+        for _ in range(reps):
+            sample=[]
+            while len(sample)<len(seq):
+                i=rand.randrange(len(seq))
+                sample.extend(seq[(i+j)%len(seq)]
+                              for j in range(window_length))
+            trials.append(sum(sample[:len(seq)])/len(seq))
+        trials.sort()
+        return [round(trials[int(.025*reps)],4),
+                round(trials[int(.975*reps)-1],4)]
+    profits=[c["net_pnl_usd"] for d in daily for c in d["cases"][candidate]]
+    wins=[p for p in profits if p>0]
+    losses=[p for p in profits if p<0]
+    avg_win=statistics.fmean(wins) if wins else None
+    avg_loss=statistics.fmean(losses) if losses else None
+    breakeven=(100*abs(avg_loss)/(avg_win+abs(avg_loss))
+               if avg_win is not None and avg_loss is not None
+               else None)
+    return {
+        "candidate":candidate,"days":len(per_day),"trades":len(profits),
+        "raw_pnl_total_usd":round(sum(gross),2),
+        "stress_pnl_total_usd":round(sum(stressed),2),
+        "days_positive":sum(x>0 for x in gross),
+        "days_negative":sum(x<0 for x in gross),
+        "biggest_winning_day_usd":round(ordered[0]["net"],2),
+        "biggest_winning_day":ordered[0]["day"],
+        "minus_best_1_day_sum_usd":round(sum(d["net"] for d in ordered[1:]),2),
+        "minus_best_3_days_sum_usd":round(sum(d["net"] for d in ordered[3:]),2),
+        "minus_best_5_days_sum_usd":round(sum(d["net"] for d in ordered[5:]),2),
+        "wins":len(wins),"losses":len(losses),
+        "mean_winning_trade_usd":round(avg_win,3) if avg_win is not None else None,
+        "mean_losing_trade_usd":round(avg_loss,3) if avg_loss is not None else None,
+        "breakeven_win_rate_at_observed_payoff_ratio_pct":
+            round(breakeven,3) if breakeven is not None else None,
+        "bootstrap_5session_day_blocks_95pct_usd_per_calendar_day":
+            interval(gross),
+        "stressed_bootstrap_5session_95pct_usd_per_calendar_day":
+            interval(stressed),
+        "uncertainty_note":
+            "Descriptive only; parameters were compared on previously inspected data. "
+            "No multiplicity correction or untouched holdout. Percentile block bootstrap "
+            "is not a strategy-discovery adjusted p-value.",
+    }
+
+
 def run(root:Path,out:Path)->dict:
     days=[]
     diagnostic=defaultdict(int)
@@ -203,6 +272,8 @@ def run(root:Path,out:Path)->dict:
         "prior_day_window":WINDOW,"min_prior_matched_trades":MIN_PRIOR_TRADES,
         "prior_lcb_z_multiple_rule_heuristic":CONSERVATIVE_Z,
         "coverage":dict(diagnostic),"rule_metrics":table,"walkforward":wf,
+        "robustness_morning_volume":robustness(days,"volume_150_early"),
+        "robustness_baseline":robustness(days,"baseline"),
         "walkforward_decisions":walkforward,
         "zero_new_market_data_spend":True,"not_true_event_NBBO":True,
         "complete_pcr_missing":True,"account_return_not_tested":True,
