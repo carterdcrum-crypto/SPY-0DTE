@@ -68,7 +68,7 @@ def _hold_gate(frames, times, at, side, credit, debit, peak, symbol):
         return False
     return True
 
-def simulate_conditional(entry_ask,path,frames,*,entry_at,side,symbol,cutoff):
+def simulate_conditional(entry_ask,path,frames,*,entry_at,side,symbol,cutoff,allow_extension=True):
     """Return realized quote-sample exit; None if terminal mark cannot be verified.
 
     The V1 10-minute test is preserved for non-qualifying positions;
@@ -100,10 +100,12 @@ def simulate_conditional(entry_ask,path,frames,*,entry_at,side,symbol,cutoff):
             if (at-due).total_seconds()>BAR_TOLERANCE_SECONDS:
                 return None
             gate_seen=True
-            if not _hold_gate(frames,times,at,side,credit,debit,peak,symbol):
+            if not allow_extension or not _hold_gate(frames,times,at,side,credit,debit,peak,symbol):
                 return _outcome(credit,debit,at,"standard_10min_exit",False)
             extended=True
             trail=min(trail,EXTEND_TRAIL)
+            if credit<=peak*(1-trail)+1e-9:
+                return _outcome(credit,debit,at,"trailing_stop_20pct_extended",True)
             continue
         if extended:
             if not _hold_gate(frames,times,at,side,credit,debit,peak,symbol):

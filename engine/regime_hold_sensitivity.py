@@ -36,7 +36,7 @@ HARD_STOP=.35
 MAX_FIXED_MIN=10
 CUTOFF_BUFFER_MIN=15
 BAR_TOLERANCE_SECONDS=60
-ARMS=("frozen_10min","no_max_30pct_trail","no_max_adaptive20pct","conditional_extend_v4")
+ARMS=("frozen_10min","no_max_30pct_trail","no_max_adaptive20pct","conditional_extend_v4","conditional_extend_v4_equity_guard")
 
 
 def liquidation_cutoff(day):
@@ -178,6 +178,11 @@ def backtest(data_dir:Path, output:Path):
               close=f.market.spot) for f in frames]
         for arm in ARMS:
             state=states[arm]
+            # This gate sees ONLY the prior completed session's EOD account equity.
+            # It cannot know current-day winners, exits or tomorrow's balances.
+            last_eod_equity=(state["days"][-1]["equity"] if state["days"] else START_CASH)
+            historical_peak=max([START_CASH]+[d["equity"] for d in state["days"]])
+            allow_equity_extension=last_eod_equity >= historical_peak-1e-8
             state["settled"]+=state["pending"]
             state["pending"]=0.0
             busy_until=None
@@ -208,11 +213,12 @@ def backtest(data_dir:Path, output:Path):
                     outcome={"pnl_usd":res["pnl_usd"],
                              "exit_at":datetime.fromisoformat(res["exit_time"]),
                              "exit_reason":res["exit_reason"]}
-                elif arm=="conditional_extend_v4":
+                elif arm in ("conditional_extend_v4","conditional_extend_v4_equity_guard"):
                     from .regime_hold_conditional import simulate_conditional
                     trace=quote_path(frames,idx,q.symbol,cutoff)
                     outcome=simulate_conditional(q.ask,trace,frames,entry_at=at,
-                        side=entry["signal"]["side"],symbol=q.symbol,cutoff=cutoff)
+                        side=entry["signal"]["side"],symbol=q.symbol,cutoff=cutoff,
+                        allow_extension=(allow_equity_extension or arm=="conditional_extend_v4"))
                 else:
                     trace=quote_path(frames,idx,q.symbol,cutoff)
                     outcome=simulate_unlimited(
@@ -291,6 +297,7 @@ def backtest(data_dir:Path, output:Path):
         "comparability":"Identical original frozen entry/cost rules; exit policies varied. V4 momentum confirmation is strictly causal close/volume-ratio proxy.",
         "v2_not_backtested":"Legacy data lacks true SPY OHLCV/VWAP needed for V2 regime router",
         "no_max_hold_until":"verified-session-close minus 15 minutes; at latest 15:45 ET normal day",
+        "v4_equity_guard_predeclared":"disable only the optional 10-minute extension whenever prior session EOD cash-equity is below its previously observed peak; existing stops and first ten minutes unchanged",
         "fees_per_side_usd":PREMIUM_FEE_PER_SIDE,
         "slippage_per_option_share":SLIP_PER_SHARE,
         "trailing_original_pct":TRAIL_PCT,
