@@ -1,0 +1,643 @@
+{
+  "hypothetical_default_starting_cash_usd": 1000,
+  "market_calendar_sessions_used": 128,
+  "missing_no_trade_sessions_from_csv": false,
+  "results": {
+    "all_setups_one_at_a_time": {
+      "actual_modeled_entries_affordable": 244,
+      "days_with_at_least_three_affordable_contract_entries": 37,
+      "days_with_at_least_two_affordable_contract_entries": 52,
+      "entries_skipped_insufficient_same_day_settled_cash": 457,
+      "extra_2usd_per_trade_stressed_equity_pnl_USD_DIAGNOSTIC": -1455.2,
+      "max_cash_account_closed_day_drawdown_usd": 1041.6,
+      "modeled_equity_pnl_usd": -967.2,
+      "post_hoc_selection_diagnostic_only": true,
+      "realized_equity_end_usd": 32.8,
+      "starting_settled_cash_usd": 1000,
+      "week_records": {
+        "(2026, 14)": {
+          "end_equity_usd": 978.7,
+          "start_equity_usd": 1000,
+          "trades": 11
+        },
+        "(2026, 15)": {
+          "end_equity_usd": 926.4,
+          "start_equity_usd": 978.7,
+          "trades": 31
+        },
+        "(2026, 16)": {
+          "end_equity_usd": 668.7,
+          "start_equity_usd": 926.4,
+          "trades": 29
+        },
+        "(2026, 17)": {
+          "end_equity_usd": 917.9,
+          "start_equity_usd": 668.7,
+          "trades": 26
+        },
+        "(2026, 18)": {
+          "end_equity_usd": 1052,
+          "start_equity_usd": 917.9,
+          "trades": 23
+        },
+        "(2026, 19)": {
+          "end_equity_usd": 735.8,
+          "start_equity_usd": 1052,
+          "trades": 24
+        },
+        "(2026, 20)": {
+          "end_equity_usd": 432.1,
+          "start_equity_usd": 735.8,
+          "trades": 19
+        },
+        "(2026, 21)": {
+          "end_equity_usd": 172,
+          "start_equity_usd": 432.1,
+          "trades": 7
+        },
+        "(2026, 22)": {
+          "end_equity_usd": 198.2,
+          "start_equity_usd": 172,
+          "trades": 6
+        },
+        "(2026, 23)": {
+          "end_equity_usd": 105.4,
+          "start_equity_usd": 198.2,
+          "trades": 6
+        },
+        "(2026, 24)": {
+          "end_equity_usd": 221.8,
+          "start_equity_usd": 105.4,
+          "trades": 2
+        },
+        "(2026, 25)": {
+          "end_equity_usd": 121.6,
+          "start_equity_usd": 221.8,
+          "trades": 4
+        },
+        "(2026, 26)": {
+          "end_equity_usd": 413.5,
+          "start_equity_usd": 121.6,
+          "trades": 7
+        },
+        "(2026, 27)": {
+          "end_equity_usd": 534.7,
+          "start_equity_usd": 413.5,
+          "trades": 6
+        },
+        "(2026, 28)": {
+          "end_equity_usd": 350.2,
+          "start_equity_usd": 534.7,
+          "trades": 15
+        },
+        "(2026, 29)": {
+          "end_equity_usd": 253.8,
+          "start_equity_usd": 350.2,
+          "trades": 8
+        },
+        "(2026, 30)": {
+          "end_equity_usd": 97,
+          "start_equity_usd": 253.8,
+          "trades": 6
+        },
+        "(2026, 31)": {
+          "end_equity_usd": 99.4,
+          "start_equity_usd": 97,
+          "trades": 2
+        },
+        "(2026, 32)": {
+          "end_equity_usd": 96.9,
+          "start_equity_usd": 99.4,
+          "trades": 5
+        },
+        "(2026, 33)": {
+          "end_equity_usd": 36.7,
+          "start_equity_usd": 96.9,
+          "trades": 4
+        },
+        "(2026, 34)": {
+          "end_equity_usd": 36.7,
+          "start_equity_usd": 36.7,
+          "trades": 0
+        },
+        "(2026, 35)": {
+          "end_equity_usd": 36.7,
+          "start_equity_usd": 36.7,
+          "trades": 0
+        },
+        "(2026, 36)": {
+          "end_equity_usd": 36.7,
+          "start_equity_usd": 36.7,
+          "trades": 0
+        },
+        "(2026, 37)": {
+          "end_equity_usd": 41.4,
+          "start_equity_usd": 36.7,
+          "trades": 1
+        },
+        "(2026, 38)": {
+          "end_equity_usd": 32.8,
+          "start_equity_usd": 41.4,
+          "trades": 2
+        },
+        "(2026, 39)": {
+          "end_equity_usd": 32.8,
+          "start_equity_usd": 32.8,
+          "trades": 0
+        },
+        "(2026, 40)": {
+          "end_equity_usd": 32.8,
+          "start_equity_usd": 32.8,
+          "trades": 0
+        },
+        "(2026, 41)": {
+          "end_equity_usd": 32.8,
+          "start_equity_usd": 32.8,
+          "trades": 0
+        }
+      },
+      "weeks_observed": 28,
+      "weeks_returning_100pct_or_more": 2
+    },
+    "option_friction_only": {
+      "actual_modeled_entries_affordable": 302,
+      "days_with_at_least_three_affordable_contract_entries": 59,
+      "days_with_at_least_two_affordable_contract_entries": 69,
+      "entries_skipped_insufficient_same_day_settled_cash": 284,
+      "extra_2usd_per_trade_stressed_equity_pnl_USD_DIAGNOSTIC": -1571.6,
+      "max_cash_account_closed_day_drawdown_usd": 1155.3,
+      "modeled_equity_pnl_usd": -967.6,
+      "post_hoc_selection_diagnostic_only": true,
+      "realized_equity_end_usd": 32.4,
+      "starting_settled_cash_usd": 1000,
+      "week_records": {
+        "(2026, 14)": {
+          "end_equity_usd": 978.7,
+          "start_equity_usd": 1000,
+          "trades": 11
+        },
+        "(2026, 15)": {
+          "end_equity_usd": 915.7,
+          "start_equity_usd": 978.7,
+          "trades": 30
+        },
+        "(2026, 16)": {
+          "end_equity_usd": 688.2,
+          "start_equity_usd": 915.7,
+          "trades": 25
+        },
+        "(2026, 17)": {
+          "end_equity_usd": 1011.2,
+          "start_equity_usd": 688.2,
+          "trades": 20
+        },
+        "(2026, 18)": {
+          "end_equity_usd": 1187.7,
+          "start_equity_usd": 1011.2,
+          "trades": 25
+        },
+        "(2026, 19)": {
+          "end_equity_usd": 865.7,
+          "start_equity_usd": 1187.7,
+          "trades": 20
+        },
+        "(2026, 20)": {
+          "end_equity_usd": 692.5,
+          "start_equity_usd": 865.7,
+          "trades": 14
+        },
+        "(2026, 21)": {
+          "end_equity_usd": 724.1,
+          "start_equity_usd": 692.5,
+          "trades": 18
+        },
+        "(2026, 22)": {
+          "end_equity_usd": 512.5,
+          "start_equity_usd": 724.1,
+          "trades": 12
+        },
+        "(2026, 23)": {
+          "end_equity_usd": 319.3,
+          "start_equity_usd": 512.5,
+          "trades": 14
+        },
+        "(2026, 24)": {
+          "end_equity_usd": 872.3,
+          "start_equity_usd": 319.3,
+          "trades": 10
+        },
+        "(2026, 25)": {
+          "end_equity_usd": 803.5,
+          "start_equity_usd": 872.3,
+          "trades": 16
+        },
+        "(2026, 26)": {
+          "end_equity_usd": 827.9,
+          "start_equity_usd": 803.5,
+          "trades": 22
+        },
+        "(2026, 27)": {
+          "end_equity_usd": 925.8,
+          "start_equity_usd": 827.9,
+          "trades": 7
+        },
+        "(2026, 28)": {
+          "end_equity_usd": 566.5,
+          "start_equity_usd": 925.8,
+          "trades": 21
+        },
+        "(2026, 29)": {
+          "end_equity_usd": 387.7,
+          "start_equity_usd": 566.5,
+          "trades": 16
+        },
+        "(2026, 30)": {
+          "end_equity_usd": 128.3,
+          "start_equity_usd": 387.7,
+          "trades": 8
+        },
+        "(2026, 31)": {
+          "end_equity_usd": 102.4,
+          "start_equity_usd": 128.3,
+          "trades": 3
+        },
+        "(2026, 32)": {
+          "end_equity_usd": 99.9,
+          "start_equity_usd": 102.4,
+          "trades": 5
+        },
+        "(2026, 33)": {
+          "end_equity_usd": 49,
+          "start_equity_usd": 99.9,
+          "trades": 3
+        },
+        "(2026, 34)": {
+          "end_equity_usd": 49,
+          "start_equity_usd": 49,
+          "trades": 0
+        },
+        "(2026, 35)": {
+          "end_equity_usd": 49,
+          "start_equity_usd": 49,
+          "trades": 0
+        },
+        "(2026, 36)": {
+          "end_equity_usd": 45.7,
+          "start_equity_usd": 49,
+          "trades": 1
+        },
+        "(2026, 37)": {
+          "end_equity_usd": 32.4,
+          "start_equity_usd": 45.7,
+          "trades": 1
+        },
+        "(2026, 38)": {
+          "end_equity_usd": 32.4,
+          "start_equity_usd": 32.4,
+          "trades": 0
+        },
+        "(2026, 39)": {
+          "end_equity_usd": 32.4,
+          "start_equity_usd": 32.4,
+          "trades": 0
+        },
+        "(2026, 40)": {
+          "end_equity_usd": 32.4,
+          "start_equity_usd": 32.4,
+          "trades": 0
+        },
+        "(2026, 41)": {
+          "end_equity_usd": 32.4,
+          "start_equity_usd": 32.4,
+          "trades": 0
+        }
+      },
+      "weeks_observed": 28,
+      "weeks_returning_100pct_or_more": 1
+    },
+    "prior_analog_net_plus_friction": {
+      "actual_modeled_entries_affordable": 101,
+      "days_with_at_least_three_affordable_contract_entries": 13,
+      "days_with_at_least_two_affordable_contract_entries": 25,
+      "entries_skipped_insufficient_same_day_settled_cash": 1,
+      "extra_2usd_per_trade_stressed_equity_pnl_USD_DIAGNOSTIC": -459.3,
+      "max_cash_account_closed_day_drawdown_usd": 579.6,
+      "modeled_equity_pnl_usd": -257.3,
+      "post_hoc_selection_diagnostic_only": true,
+      "realized_equity_end_usd": 742.7,
+      "starting_settled_cash_usd": 1000,
+      "week_records": {
+        "(2026, 14)": {
+          "end_equity_usd": 1000,
+          "start_equity_usd": 1000,
+          "trades": 0
+        },
+        "(2026, 15)": {
+          "end_equity_usd": 995.5,
+          "start_equity_usd": 1000,
+          "trades": 5
+        },
+        "(2026, 16)": {
+          "end_equity_usd": 865.8,
+          "start_equity_usd": 995.5,
+          "trades": 9
+        },
+        "(2026, 17)": {
+          "end_equity_usd": 1187.7,
+          "start_equity_usd": 865.8,
+          "trades": 7
+        },
+        "(2026, 18)": {
+          "end_equity_usd": 1322.3,
+          "start_equity_usd": 1187.7,
+          "trades": 18
+        },
+        "(2026, 19)": {
+          "end_equity_usd": 1165.6,
+          "start_equity_usd": 1322.3,
+          "trades": 9
+        },
+        "(2026, 20)": {
+          "end_equity_usd": 1013.6,
+          "start_equity_usd": 1165.6,
+          "trades": 10
+        },
+        "(2026, 21)": {
+          "end_equity_usd": 979.2,
+          "start_equity_usd": 1013.6,
+          "trades": 8
+        },
+        "(2026, 22)": {
+          "end_equity_usd": 950.6,
+          "start_equity_usd": 979.2,
+          "trades": 2
+        },
+        "(2026, 23)": {
+          "end_equity_usd": 950.6,
+          "start_equity_usd": 950.6,
+          "trades": 0
+        },
+        "(2026, 24)": {
+          "end_equity_usd": 1048.7,
+          "start_equity_usd": 950.6,
+          "trades": 3
+        },
+        "(2026, 25)": {
+          "end_equity_usd": 1003.5,
+          "start_equity_usd": 1048.7,
+          "trades": 4
+        },
+        "(2026, 26)": {
+          "end_equity_usd": 1035.9,
+          "start_equity_usd": 1003.5,
+          "trades": 2
+        },
+        "(2026, 27)": {
+          "end_equity_usd": 1197,
+          "start_equity_usd": 1035.9,
+          "trades": 3
+        },
+        "(2026, 28)": {
+          "end_equity_usd": 911.7,
+          "start_equity_usd": 1197,
+          "trades": 11
+        },
+        "(2026, 29)": {
+          "end_equity_usd": 871.1,
+          "start_equity_usd": 911.7,
+          "trades": 2
+        },
+        "(2026, 30)": {
+          "end_equity_usd": 871.1,
+          "start_equity_usd": 871.1,
+          "trades": 0
+        },
+        "(2026, 31)": {
+          "end_equity_usd": 871.5,
+          "start_equity_usd": 871.1,
+          "trades": 2
+        },
+        "(2026, 32)": {
+          "end_equity_usd": 805.9,
+          "start_equity_usd": 871.5,
+          "trades": 2
+        },
+        "(2026, 33)": {
+          "end_equity_usd": 765.6,
+          "start_equity_usd": 805.9,
+          "trades": 1
+        },
+        "(2026, 34)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 765.6,
+          "trades": 3
+        },
+        "(2026, 35)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 36)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 37)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 38)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 39)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 40)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        },
+        "(2026, 41)": {
+          "end_equity_usd": 742.7,
+          "start_equity_usd": 742.7,
+          "trades": 0
+        }
+      },
+      "weeks_observed": 28,
+      "weeks_returning_100pct_or_more": 0
+    },
+    "prior_analog_positive_net": {
+      "actual_modeled_entries_affordable": 116,
+      "days_with_at_least_three_affordable_contract_entries": 16,
+      "days_with_at_least_two_affordable_contract_entries": 29,
+      "entries_skipped_insufficient_same_day_settled_cash": 1,
+      "extra_2usd_per_trade_stressed_equity_pnl_USD_DIAGNOSTIC": -640.8,
+      "max_cash_account_closed_day_drawdown_usd": 734,
+      "modeled_equity_pnl_usd": -408.8,
+      "post_hoc_selection_diagnostic_only": true,
+      "realized_equity_end_usd": 591.2,
+      "starting_settled_cash_usd": 1000,
+      "week_records": {
+        "(2026, 14)": {
+          "end_equity_usd": 1000,
+          "start_equity_usd": 1000,
+          "trades": 0
+        },
+        "(2026, 15)": {
+          "end_equity_usd": 977.2,
+          "start_equity_usd": 1000,
+          "trades": 6
+        },
+        "(2026, 16)": {
+          "end_equity_usd": 890.9,
+          "start_equity_usd": 977.2,
+          "trades": 11
+        },
+        "(2026, 17)": {
+          "end_equity_usd": 1231.9,
+          "start_equity_usd": 890.9,
+          "trades": 10
+        },
+        "(2026, 18)": {
+          "end_equity_usd": 1325.2,
+          "start_equity_usd": 1231.9,
+          "trades": 19
+        },
+        "(2026, 19)": {
+          "end_equity_usd": 1182.6,
+          "start_equity_usd": 1325.2,
+          "trades": 12
+        },
+        "(2026, 20)": {
+          "end_equity_usd": 956.4,
+          "start_equity_usd": 1182.6,
+          "trades": 14
+        },
+        "(2026, 21)": {
+          "end_equity_usd": 848.7,
+          "start_equity_usd": 956.4,
+          "trades": 9
+        },
+        "(2026, 22)": {
+          "end_equity_usd": 820.1,
+          "start_equity_usd": 848.7,
+          "trades": 2
+        },
+        "(2026, 23)": {
+          "end_equity_usd": 820.1,
+          "start_equity_usd": 820.1,
+          "trades": 0
+        },
+        "(2026, 24)": {
+          "end_equity_usd": 918.2,
+          "start_equity_usd": 820.1,
+          "trades": 3
+        },
+        "(2026, 25)": {
+          "end_equity_usd": 873,
+          "start_equity_usd": 918.2,
+          "trades": 4
+        },
+        "(2026, 26)": {
+          "end_equity_usd": 905.4,
+          "start_equity_usd": 873,
+          "trades": 2
+        },
+        "(2026, 27)": {
+          "end_equity_usd": 1066.5,
+          "start_equity_usd": 905.4,
+          "trades": 3
+        },
+        "(2026, 28)": {
+          "end_equity_usd": 781.2,
+          "start_equity_usd": 1066.5,
+          "trades": 11
+        },
+        "(2026, 29)": {
+          "end_equity_usd": 740.6,
+          "start_equity_usd": 781.2,
+          "trades": 2
+        },
+        "(2026, 30)": {
+          "end_equity_usd": 740.6,
+          "start_equity_usd": 740.6,
+          "trades": 0
+        },
+        "(2026, 31)": {
+          "end_equity_usd": 741,
+          "start_equity_usd": 740.6,
+          "trades": 2
+        },
+        "(2026, 32)": {
+          "end_equity_usd": 654.4,
+          "start_equity_usd": 741,
+          "trades": 2
+        },
+        "(2026, 33)": {
+          "end_equity_usd": 614.1,
+          "start_equity_usd": 654.4,
+          "trades": 1
+        },
+        "(2026, 34)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 614.1,
+          "trades": 3
+        },
+        "(2026, 35)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 36)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 37)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 38)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 39)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 40)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        },
+        "(2026, 41)": {
+          "end_equity_usd": 591.2,
+          "start_equity_usd": 591.2,
+          "trades": 0
+        }
+      },
+      "weeks_observed": 28,
+      "weeks_returning_100pct_or_more": 0
+    }
+  },
+  "settlement": "T+1 model; no same-day proceeds recycling",
+  "source": "/data/research/option_net_edge/trades.csv",
+  "starting_cash_is_illustrative_not_user_actual_balance": true,
+  "status": "RESEARCH_ONLY_HYPOTHETICAL_CASH_SETTLEMENT_POST_FILTER",
+  "warnings": [
+    "Applied AFTER trade candidate path selection, so a cash-aware alternative-entry schedule is NOT reconstructed.",
+    "Prices & exits come from archived CBBO-1m sampled bid/ask, not actual orders, NBBO or proven fills.",
+    "Market-calendar completeness depends on supplying --calendar-dir with archived trading sessions.",
+    "No automatic option exercises/assignment, margin, leverage, external deposits, tax, or account fees modeled.",
+    "Different strategy arms have independent artificial initial cash; do not sum balances across arms.",
+    "All source calendar sessions were previously inspected and are not prospective out of sample."
+  ]
+}
