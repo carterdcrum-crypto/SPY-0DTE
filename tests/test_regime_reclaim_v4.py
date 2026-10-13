@@ -9,6 +9,7 @@ from engine.regime_reclaim_v4 import (
 
 T=datetime(2026,10,12,14,10,tzinfo=timezone.utc)
 Q="SPY261012C00600000"
+D=date(2026,10,12)
 
 def bars(rise=.12,volume=150):
     out=[]
