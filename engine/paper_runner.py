@@ -35,7 +35,7 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
     from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
 
-    if os.environ.get("SPY_STRATEGY_PROFILE","v4_quality_3x").strip().lower()=="v4_quality_3x":
+    if os.environ.get("SPY_STRATEGY_PROFILE","legacy").strip().lower()=="v4_quality_3x":
         from dataclasses import replace
         from .v4_paper_trader import V4QualityPaperTrader
         from .live_market import LiveDataProvider

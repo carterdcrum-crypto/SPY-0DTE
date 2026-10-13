@@ -378,7 +378,7 @@ def run_forever(mode_getter, context):
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
                             strategy=(__import__("engine.v4_live_strategy",fromlist=["V4QualityLiveStrategy"]).V4QualityLiveStrategy(market,path+".research")
-                                      if os.environ.get("SPY_STRATEGY_PROFILE","v4_quality_3x").lower()=="v4_quality_3x"
+                                      if os.environ.get("SPY_STRATEGY_PROFILE","legacy").lower()=="v4_quality_3x"
                                       else LiveStrategy(market,path+".research")),
                             mode_getter=mode_getter)
                         active_credentials = credentials
