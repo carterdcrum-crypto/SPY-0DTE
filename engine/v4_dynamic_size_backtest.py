@@ -5,7 +5,9 @@ THEN-AVAILABLE settled cash, earlier-session modeled returns and drawdown.
 The source remains pre-inspected SPY close + OPRA CBBO-1m minute buckets,
 NOT timestamped executable NBBO and NOT a live-trading sizing policy.
 
-Several deterministic PREDECLARED sizing modes are compared with the
+Several deterministic sizing modes, including extra MICRO-ACCOUNT variants
+    added after seeing that integer target-budget rounding prevented most entries,
+    are compared with the
 identical one-contract V4 baseline:
   * compound: 25% unreserved account premium budget, up to five contracts;
   * vault: as compound with 50% realized-profit reserve after +10% equity;
@@ -42,7 +44,9 @@ from .regime_hold_sensitivity import (
 from .weekly_options_data import NY
 
 ARMS=("v4_fixed_one_contract","v4_dynamic_compound",
-      "v4_dynamic_profit_vault","v4_dynamic_fractional_kelly")
+      "v4_dynamic_profit_vault","v4_dynamic_fractional_kelly",
+      "v4_dynamic_compound_micro","v4_dynamic_vault_micro",
+      "v4_dynamic_kelly_micro")
 MAX_CONTRACTS=5
 CAPITAL_FRACTION=.25
 DRAWDOWN_SOFT=.04
@@ -87,7 +91,7 @@ def choose_size(
                                          soft_start=DRAWDOWN_SOFT,
                                          zero_level=DRAWDOWN_HALT)
     reserve=0.0
-    if arm=="v4_dynamic_profit_vault" and equity>=START_CASH*1.10:
+    if arm in ("v4_dynamic_profit_vault","v4_dynamic_vault_micro") and equity>=START_CASH*1.10:
         reserve=max(0.0,.50*(equity-START_CASH))
     usable_cash=max(0.0,settled-reserve)
     if usable_cash<debit:
@@ -98,17 +102,29 @@ def choose_size(
     volume_quality=max(.70,min(1.,relative_volume/1.5))
     liquidity_quality=max(.60,min(1.,(.035-spread)/.035+.60))
     quality=min(volume_quality,liquidity_quality)
-    if arm in ("v4_dynamic_compound","v4_dynamic_profit_vault"):
+    if arm in ("v4_dynamic_compound","v4_dynamic_profit_vault",
+               "v4_dynamic_compound_micro","v4_dynamic_vault_micro"):
         risk_budget=min(usable_cash,equity*CAPITAL_FRACTION)
         risk_budget*=multiplier*quality
         qty=min(MAX_CONTRACTS,
                 math.floor((risk_budget+1e-9)/debit),
                 math.floor((usable_cash+1e-9)/debit))
+        if (not qty and arm.endswith("_micro") and
+                debit<=.35*equity and multiplier>=.60):
+            # Integer micro-account granularity: 1 contract can exceed a
+            # 25% *target* but never the explicit 35% premium hard rail.
+            qty=1
+            return PositionDecision(qty,"MINIMUM_VIABLE_ONE_CONTRACT",
+                                    debit/equity,reserve)
         return PositionDecision(max(0,qty),
                  "APPROVED_COMPOUND" if qty else "RISK_BUDGET_BELOW_ONE_CONTRACT",
                  risk_budget/equity,reserve)
 
     if len(previous_returns)<MIN_KELLY_PREVIOUS_TRADES:
+        if (arm=="v4_dynamic_kelly_micro" and debit<=.35*equity and multiplier>=.60):
+            # Explicit paper-research bootstrap: 1-contract probation, no
+            # unearned Kelly edge inference before 25 observed prior trades.
+            return PositionDecision(1,"ONE_CONTRACT_KELLY_LEARNING",debit/equity,0)
         return PositionDecision(0,"INSUFFICIENT_PREVIOUS_DAYS_FOR_KELLY",0,0)
     values=tuple(previous_returns[-KELLY_HISTORY_WINDOW:])
     weights=(TAIL_PREMIUM_LOSS_PROB,)+( (1-TAIL_PREMIUM_LOSS_PROB)/len(values), )*len(values)
@@ -141,6 +157,13 @@ def choose_size(
     ))
     qty=min(decision.contracts,
             math.floor((usable_cash+1e-9)/debit)) if decision.allowed else 0
+    if (not qty and arm=="v4_dynamic_kelly_micro" and
+            decision.reason=="fractional_kelly_below_one_contract" and
+            decision.hard_limited_contracts>=1 and
+            decision.expected_net_return>0 and
+            decision.adaptive_multiplier>=.60 and debit<=.35*equity):
+        return PositionDecision(1,"MINIMUM_VIABLE_EMPIRICAL_KELLY",
+                                debit/equity,reserve,decision.raw_kelly_fraction)
     return PositionDecision(qty,decision.reason,
                             qty*debit/equity,reserve,
                             decision.raw_kelly_fraction)
@@ -301,6 +324,9 @@ def run(data_dir:Path,output_dir:Path)->dict:
             "v4_dynamic_compound":"25% equity budget multiplied by causal volume/liquidity quality and drawdown throttle; max 5 contracts",
             "v4_dynamic_profit_vault":"compound plus 50% equity gains reserved after at least 10% profit",
             "v4_dynamic_fractional_kelly":"previous-session trailing 50 realized option net returns, require 25 known trades, 2% total-loss stress, empirical Kelly x25%, ES99/cash/premium bounds; 0 contracts if no measured positive edge",
+            "v4_dynamic_compound_micro":"compound with an explicit one-contract learning-floor allowed only when contract debit<=35% equity and drawdown multiplier>=60%",
+            "v4_dynamic_vault_micro":"vault with the same one-contract micro floor after preserving reserved gains",
+            "v4_dynamic_kelly_micro":"1-contract research learning phase until 25 prior realized trades; thereafter empirical fractional Kelly+ES99, with one-contract floor only if risk/edge rails passed",
         },
         "risk_rails":{"max_contracts":MAX_CONTRACTS,"capital_budget_fraction":CAPITAL_FRACTION,
                       "drawdown_soft_fraction":DRAWDOWN_SOFT,
