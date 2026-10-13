@@ -66,3 +66,85 @@ def test_v4_no_event_sessions_has_no_invented_win_rate(tmp_path):
     assert report["outcomes"]["v4_conditional_hold"]["win_rate_pct"] is None
     assert report["outcomes"]["v4_1_equity_guard"]["win_rate_pct"] is None
     assert report["no_real_orders"]
+
+
+def test_quality_3x_paper_counts_real_contracts_and_reserves_cash(monkeypatch):
+    from engine import regime_reclaim_v4 as v4
+    from types import SimpleNamespace
+    session=SimpleNamespace(day=D,bars=[],quotes=[])
+    selected=SimpleNamespace(observed_at=T,symbol=Q,right="call",
+                             ask=1.0,bid=.99,bid_size=10,ask_size=10)
+    one={"signal":{"at":T-timedelta(minutes=1),"setup":"trend_reclaim"},
+         "option":selected,"debit":101.65,"quality_score":5}
+    session.quotes=[selected]
+    monkeypatch.setattr(v4,"exit_event_v4",lambda *args,**kw: {
+        "pnl_usd":20.0,"exit_at":T+timedelta(minutes=11),
+        "exit_reason":"standard_exit","extended":True})
+    trades,settled,pending,decisions=v4.replay_v4(
+        [one],session,1000.,allow_extension=True,
+        quality_3x=True,open_equity=1000.,prior_peak=1000.)
+    assert not decisions
+    assert len(trades)==1 and trades[0]["contracts"]==3
+    assert trades[0]["pnl_usd"]==60.
+    assert trades[0]["after_extra_2usd_friction_usd"]==54.
+    assert settled==1000-3*101.65
+    assert pending==3*101.65+60.
+    # No intraday recycling: 3 contracts require funds settled before entry.
+
+def test_quality_3x_is_throttled_on_drawdown_and_limited_by_depth(monkeypatch):
+    from engine import regime_reclaim_v4 as v4
+    from types import SimpleNamespace
+    selected=SimpleNamespace(observed_at=T,symbol=Q,right="call",
+                             ask=1.0,bid=.99,bid_size=2,ask_size=3)
+    entry={"signal":{"at":T-timedelta(minutes=1),"setup":"trend_reclaim"},
+           "option":selected,"debit":101.65,"quality_score":6}
+    session=SimpleNamespace(day=D,bars=[],quotes=[selected])
+    monkeypatch.setattr(v4,"exit_event_v4",lambda *args,**kw: {
+        "pnl_usd":0.0,"exit_at":T+timedelta(minutes=10),
+        "exit_reason":"ten_min","extended":False})
+    strong,*_=v4.replay_v4([entry],session,1000.,allow_extension=True,
+                           quality_3x=True,open_equity=1000.,prior_peak=1000.)
+    assert strong[0]["contracts"]==2  # observed bid depth is 2
+    weak,*_=v4.replay_v4([entry],session,940.,allow_extension=True,
+                         quality_3x=True,open_equity=940.,prior_peak=1000.)
+    assert weak[0]["contracts"]==1   # prior day EOD drawdown 6%
+
+def test_quality_3x_refuses_to_invent_missing_score():
+    from engine import regime_reclaim_v4 as v4
+    from types import SimpleNamespace
+    import pytest
+    selected=SimpleNamespace(observed_at=T,symbol=Q,right="call",
+                             ask=1.0,bid=.99,bid_size=5,ask_size=5)
+    item={"signal":{"at":T-timedelta(minutes=1),"setup":"trend_reclaim"},
+          "option":selected,"debit":101.65}
+    session=SimpleNamespace(day=D,bars=[],quotes=[selected])
+    with pytest.raises(ValueError,match="missing pre-entry quality"):
+        v4.replay_v4([item],session,1000.,allow_extension=True,
+                     quality_3x=True,open_equity=1000.,prior_peak=1000.)
+
+def test_scorer_rejects_missing_option_volatility_and_uses_asof_bar(monkeypatch):
+    from engine import regime_reclaim_v4 as v4
+    from types import SimpleNamespace
+    import pytest
+    earlier=SimpleNamespace(start=T-timedelta(minutes=2),
+                            available_at=T-timedelta(minutes=1))
+    late=SimpleNamespace(start=T+timedelta(minutes=1),
+                         available_at=T+timedelta(minutes=2))
+    q=SimpleNamespace(observed_at=T,symbol=Q,right="call",
+                      ask=1.02,bid=1.00,delta=.50)
+    signal={"at":earlier.available_at,"setup":"trend_reclaim",
+            "trend_bps":5.0,"efficiency":.40,"volume_ratio":1.3}
+    session=SimpleNamespace(day=D,bars=[earlier,late],quotes=[q])
+    info={
+        f"spy_bars_{D}":{earlier.start:{"realized_volatility":.22},
+                          late.start:{"realized_volatility":.001}},
+        f"spy_option_quotes_{D}":{(T,Q):{"implied_volatility":.23}},
+    }
+    monkeypatch.setattr(v4,"_extra",lambda root,stem,*args:info[stem])
+    scored=v4.asof_quality_candidates(Path("."),session,
+        [{"signal":signal,"option":q,"debit":100.}])
+    assert scored[0]["quality_score"]==6
+    del info[f"spy_option_quotes_{D}"][(T,Q)]
+    with pytest.raises(KeyError):
+        v4.asof_quality_candidates(Path("."),session,
+            [{"signal":signal,"option":q,"debit":100.}])
