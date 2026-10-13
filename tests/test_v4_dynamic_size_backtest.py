@@ -66,3 +66,32 @@ def test_kelly_micro_learns_first_instead_of_silently_never_trading():
     y=decision("v4_dynamic_kelly_micro",previous_returns=(-.3,)*30)
     assert y.contracts==0
     assert y.reason != "ONE_CONTRACT_KELLY_LEARNING"
+
+def test_streak_scaling_never_uses_same_day_undisclosed_wins():
+    baseline=decision("v4_dynamic_streak_compound",
+        equity=3000.,settled=3000.,peak=3000.,debit=100.)
+    assert baseline.contracts==1
+    two_prior=decision("v4_dynamic_streak_compound",
+        equity=3000.,settled=3000.,peak=3000.,debit=100.,
+        previous_returns=(.20,.10))
+    assert two_prior.contracts==3
+    lost=decision("v4_dynamic_streak_compound",
+        equity=3000.,settled=3000.,peak=3000.,debit=100.,
+        previous_returns=(.20,-.10))
+    assert lost.contracts==1
+
+def test_streak_drawdown_reverts_size_to_one_not_zero():
+    x=decision("v4_dynamic_streak_compound",
+        equity=2700.,settled=2700.,peak=3000.,debit=100.,
+        previous_returns=(.4,.1))
+    assert x.contracts==1
+
+def test_streak_vault_has_reserved_profits_without_reallocating_them():
+    raw=decision("v4_dynamic_streak_compound",
+        equity=3000.,settled=3000.,peak=3000.,debit=100.,
+        previous_returns=(.4,.1))
+    vault=decision("v4_dynamic_streak_vault",
+        equity=3000.,settled=3000.,peak=3000.,debit=100.,
+        previous_returns=(.4,.1))
+    assert vault.contracts<=raw.contracts
+    assert vault.reserve==1000.
