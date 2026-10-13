@@ -1,0 +1,287 @@
+{
+  "caveats": [
+    "Strategy and dynamic arm selection are being compared on already inspected data; NOT out-of-sample proof.",
+    "Minute-bucket option quotes cannot establish executable stops or intraminute tail losses.",
+    "Return outcomes for same-day trades are only added after day close; no lookahead Kelly.",
+    "Integer contracts can exceed a desired fractional risk; no minimum-size override for Kelly.",
+    "Intraday path/margin/exercise risk not measured; EOD drawdown can understate losses."
+  ],
+  "contract_premium_at_risk": "100% per long contract can be lost; 35% modeled stop is not guaranteed",
+  "data": "prior inspected minute CBBO buckets/close-only SPY, not event NBBO",
+  "entry_and_exit": "unchanged V4 frozen signal, IV-spread gate and conditional extension",
+  "first_day": "2026-04-01",
+  "initial_cash_usd": 1000,
+  "last_day": "2026-10-06",
+  "max_drawdown_is_end_of_day_only": true,
+  "paid_data_purchases": 0,
+  "previously_inspected_data": true,
+  "real_orders": 0,
+  "results": {
+    "v4_dynamic_compound": {
+      "contracts_traded": 27,
+      "drawdown_peak_day": "2026-04-23",
+      "drawdown_trough_day": "2026-05-18",
+      "ending_equity_usd": 1108.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 1,
+        "independent_hard_stop_35pct": 2,
+        "standard_10min_exit": 11,
+        "trailing_stop": 7
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 14.01,
+      "max_end_of_day_drawdown_usd": 180.6,
+      "mean_contracts_per_scored_trade": 1.286,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 54.9,
+      "net_profit_usd": 108.9,
+      "profit_factor": 1.255,
+      "return_pct": 10.89,
+      "scored_positions": 21,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 3,
+        "RISK_BUDGET_BELOW_ONE_CONTRACT": 156
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 38.1
+    },
+    "v4_dynamic_compound_micro": {
+      "contracts_traded": 27,
+      "drawdown_peak_day": "2026-04-23",
+      "drawdown_trough_day": "2026-05-18",
+      "ending_equity_usd": 1088.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 1,
+        "independent_hard_stop_35pct": 2,
+        "standard_10min_exit": 11,
+        "trailing_stop": 8
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 15.08,
+      "max_end_of_day_drawdown_usd": 193.3,
+      "mean_contracts_per_scored_trade": 1.227,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 34.9,
+      "net_profit_usd": 88.9,
+      "profit_factor": 1.194,
+      "return_pct": 8.89,
+      "scored_positions": 22,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 2,
+        "RISK_BUDGET_BELOW_ONE_CONTRACT": 156
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 36.36
+    },
+    "v4_dynamic_fractional_kelly": {
+      "contracts_traded": 0,
+      "drawdown_peak_day": null,
+      "drawdown_trough_day": null,
+      "ending_equity_usd": 1000,
+      "exit_reasons": {},
+      "max_contracts_in_one_trade": 0,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 0,
+      "max_end_of_day_drawdown_usd": 0,
+      "mean_contracts_per_scored_trade": null,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 0,
+      "net_profit_usd": 0,
+      "profit_factor": null,
+      "return_pct": 0,
+      "scored_positions": 0,
+      "skipped_entries_by_reason": {
+        "INSUFFICIENT_PREVIOUS_DAYS_FOR_KELLY": 180
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": null
+    },
+    "v4_dynamic_kelly_micro": {
+      "contracts_traded": 27,
+      "drawdown_peak_day": "initial_capital",
+      "drawdown_trough_day": "2026-04-17",
+      "ending_equity_usd": 1324.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 3,
+        "independent_hard_stop_35pct": 2,
+        "standard_10min_exit": 13,
+        "trailing_stop": 9
+      },
+      "max_contracts_in_one_trade": 1,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 7.2,
+      "max_end_of_day_drawdown_usd": 72,
+      "mean_contracts_per_scored_trade": 1,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 270.9,
+      "net_profit_usd": 324.9,
+      "profit_factor": 1.811,
+      "return_pct": 32.49,
+      "scored_positions": 27,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 4,
+        "insufficient_edge_probability": 149
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 44.44
+    },
+    "v4_dynamic_profit_vault": {
+      "contracts_traded": 27,
+      "drawdown_peak_day": "2026-04-23",
+      "drawdown_trough_day": "2026-05-18",
+      "ending_equity_usd": 1108.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 1,
+        "independent_hard_stop_35pct": 2,
+        "standard_10min_exit": 11,
+        "trailing_stop": 7
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 14.01,
+      "max_end_of_day_drawdown_usd": 180.6,
+      "mean_contracts_per_scored_trade": 1.286,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 54.9,
+      "net_profit_usd": 108.9,
+      "profit_factor": 1.255,
+      "return_pct": 10.89,
+      "scored_positions": 21,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 3,
+        "RISK_BUDGET_BELOW_ONE_CONTRACT": 156
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 38.1
+    },
+    "v4_dynamic_streak_compound": {
+      "contracts_traded": 167,
+      "drawdown_peak_day": "2026-09-25",
+      "drawdown_trough_day": "2026-09-30",
+      "ending_equity_usd": 3205.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 3,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 6.23,
+      "max_end_of_day_drawdown_usd": 207.7,
+      "mean_contracts_per_scored_trade": 1.144,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 1871.9,
+      "net_profit_usd": 2205.9,
+      "profit_factor": 2.206,
+      "return_pct": 220.59,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v4_dynamic_streak_vault": {
+      "contracts_traded": 167,
+      "drawdown_peak_day": "2026-09-25",
+      "drawdown_trough_day": "2026-09-30",
+      "ending_equity_usd": 3205.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 3,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 6.23,
+      "max_end_of_day_drawdown_usd": 207.7,
+      "mean_contracts_per_scored_trade": 1.144,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 1871.9,
+      "net_profit_usd": 2205.9,
+      "profit_factor": 2.206,
+      "return_pct": 220.59,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v4_dynamic_vault_micro": {
+      "contracts_traded": 27,
+      "drawdown_peak_day": "2026-04-23",
+      "drawdown_trough_day": "2026-05-18",
+      "ending_equity_usd": 1088.9,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 1,
+        "independent_hard_stop_35pct": 2,
+        "standard_10min_exit": 11,
+        "trailing_stop": 8
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 15.08,
+      "max_end_of_day_drawdown_usd": 193.3,
+      "mean_contracts_per_scored_trade": 1.227,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 34.9,
+      "net_profit_usd": 88.9,
+      "profit_factor": 1.194,
+      "return_pct": 8.89,
+      "scored_positions": 22,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 2,
+        "RISK_BUDGET_BELOW_ONE_CONTRACT": 156
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 36.36
+    },
+    "v4_fixed_one_contract": {
+      "contracts_traded": 146,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 3173.2,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 1,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 5.71,
+      "max_end_of_day_drawdown_usd": 177,
+      "mean_contracts_per_scored_trade": 1,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 1881.2,
+      "net_profit_usd": 2173.2,
+      "profit_factor": 2.336,
+      "return_pct": 217.32,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "ONE_POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    }
+  },
+  "risk_rails": {
+    "capital_budget_fraction": 0.25,
+    "drawdown_halt_fraction": 0.18,
+    "drawdown_soft_fraction": 0.04,
+    "max_contracts": 5,
+    "minimum_kelly_previous_trades": 25,
+    "scenario_stress_full_premium_loss_probability": 0.02
+  },
+  "sessions": 128,
+  "settlement": "T+1; sales not recycled intraday, no borrowing or negative cash",
+  "sizing_arms": {
+    "v4_dynamic_compound": "25% equity budget multiplied by causal volume/liquidity quality and drawdown throttle; max 5 contracts",
+    "v4_dynamic_compound_micro": "compound with an explicit one-contract learning-floor allowed only when contract debit<=35% equity and drawdown multiplier>=60%",
+    "v4_dynamic_fractional_kelly": "previous-session trailing 50 realized option net returns, require 25 known trades, 2% total-loss stress, empirical Kelly x25%, ES99/cash/premium bounds; 0 contracts if no measured positive edge",
+    "v4_dynamic_kelly_micro": "1-contract research learning phase until 25 prior realized trades; thereafter empirical fractional Kelly+ES99, with one-contract floor only if risk/edge rails passed",
+    "v4_dynamic_profit_vault": "compound plus 50% equity gains reserved after at least 10% profit",
+    "v4_dynamic_streak_compound": "1 contract baseline, upsize from earlier session winning streak of at least 2, RVOL>=1.2, spread<=2.5%, prior-day cash drawdown<=4%, equity/1000 tier and 35% discretionary equity cap; after losses revert to 1 contract",
+    "v4_dynamic_streak_vault": "streak compound with 50% of positive profits reserved after 10% account growth",
+    "v4_dynamic_vault_micro": "vault with the same one-contract micro floor after preserving reserved gains",
+    "v4_fixed_one_contract": "V4 original frozen research reference; 1 contract if affordable"
+  },
+  "status": "HISTORICAL_PROXY_PREVIOUSLY_INSPECTED_NOT_FORWARD_VALIDATED",
+  "title": "V4 frozen conditional hold, dynamic sizing only"
+}
