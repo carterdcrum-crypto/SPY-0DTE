@@ -37,3 +37,15 @@ different strategy and cannot be renamed or considered equivalent to V4.
 The future paper-replay metrics must be reviewed separately from these
 already-inspected historical results, including trade-count statistics
 and risk. Owner limit changes alone do not make V4 3x live.
+
+## Operational routing added October 12, 2026
+
+`engine/v4_operational.py` implements a separate live-market-data adaptation,
+`engine/v4_paper_trader.py` runs it against the persistent T+1 paper ledger,
+and `engine/v4_live_strategy.py` supplies V4 entries/exits to the existing
+owner-gated autonomous Webull executor. The collector Railway service selects
+this profile via `SPY_STRATEGY_PROFILE=v4_quality_3x`. Authentic completed
+Webull M1 SPY bars and fresh timestamped option prices, greeks and depth
+are mandatory. Failure to obtain entitlements blocks orders; old preview
+snapshots are never substituted. The backtest and OPRA-event forward tester
+are separate components, not a claim of validated live execution.

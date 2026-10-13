@@ -91,6 +91,10 @@ class V4QualityPaperTrader(PaperAutoTrader):
         self.bar_cache=WebullMinuteBarCache()
         self.last_data_error=None
 
+    @staticmethod
+    def _finish(now,values):
+        return PaperAutoTrader._finish(now,{**values,"strategy":IDENTIFIER})
+
     def _quotes(self,now,position=None):
         if self.production_provider is not None:
             if position:

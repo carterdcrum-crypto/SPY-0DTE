@@ -77,29 +77,54 @@ Run: `python -m engine.regime_hold_sensitivity` (historical proxy) or
 `python -m engine.regime_reclaim_v3` (event-data V1/V2/V3 comparator).
 Neither performs broker orders or market-data purchases.
 
-## Selected V4 entry-quality 3x paper challenger
+## Selected and deployed: V4 Entry Quality 3x in PAPER and guarded LIVE
 
-**Selected for the forward research comparison:** `v4_quality_3x_paper`.
-This is **up to three contracts per qualifying setup**, not three contracts
-on every signal. Six as-of input tests assess the frozen setup's directional
-trend, efficiency, relative volume, observed option spread, delta and
-observed IV versus SPY realized volatility. Score below 4 = one contract;
-score 4 = up to two; score 5–6 = up to three, subject to **settled cash,
-35% of starting-session equity in premium exposure for the added contracts,
-4% preceding-session EOD drawdown gate, and actual bid/ask displayed depth**.
-The V4 10-minute conditional extension/trailing exits remain unchanged.
+**Operational strategy:** `v4_quality_3x` selected on the Railway
+`spy-0dte-collector` service via `SPY_STRATEGY_PROFILE=v4_quality_3x`.
+The PAPER ledger and guarded LIVE Webull executor now use the same
+`engine.v4_operational` frozen SPY trend/stretch signal, option-quality
+score, cash/depth-based 1–3 contract sizing and V4 whole-position
+trailing/conditional exits. They remain separate ledgers; **paper never
+submits orders** and **live never uses delayed paper snapshots**.
 
-The historical $1,000 → $5,109.50 modeled balance, 53.42% win rate,
-and $238.90 maximum *end-of-day* drawdown came from **128 previously
-inspected minute-bucket SPY 0DTE sessions**. It is a retrospective proxy,
-not independent executable OPRA market fills; more contracts increase
-unmodeled quote-depth, slippage, and total-premium-loss exposure. This variant
-is **not active on the Webull LIVE order executor**. The separate live
-strategy is not this V4 implementation. The Railway forward worker scores
-the selected 3x arm when *genuinely new* event-time OHLCV/OPRA data arrives
-and otherwise blocks without fabricating trades. The Auto Trade toggle,
-broker order policy, and existing live authorization remain unchanged.
-See [V4 3x research backtest](docs/v4_quality_sizing_backtest_2026_10_12.md).
+New entries require **real, completed Webull SPY 1-minute OHLCV bars**
+(`market_data.get_history_bar("SPY","US_STOCK","M1")`),
+a **fresh independently timestamped production SPY 0DTE option quote**,
+valid modeled IV/delta and displayed depth. No data or subscription
+entitlement means `WAITING_V4_BARS` / `WAITING_V4_QUOTES` / `NO_SIGNAL`,
+not fabricated trades. Paper will use the same production quote feed if
+configured, otherwise it may use explicitly provenance-bearing verified
+collector data; sandbox-delayed data cannot qualify.
+
+- Score **0–3**: 1 contract if affordable.
+- Score **4**: up to 2 contracts.
+- Score **5–6**: up to 3 contracts.
+- Exposures are restricted by settled cash, max **35% whole-position
+  premium-at-risk**, owner-set LIVE account/daily loss limits, displayed
+  bid/ask depth, and 4% prior-account drawdown gate for *extra* size.
+  The owner may limit contracts to 1 or 2, regardless of score.
+- Whole-position exits: independent **35% loss stop**, initial **30%
+  trailing stop**, default **10-minute close** unless momentum/profit/
+  liquidity/volume justify continuation with **20% extended trail**;
+  close ahead of expiration. No fixed profit target in the V4 path.
+  Actual gaps/fills can exceed any modeled stop.
+
+**Real Webull LIVE BUY/SELL is still independently gated** by owner
+authentication, saved production credentials, option/data entitlements,
+broker inventory reconciliation, the standing owner Auto Trade toggle,
+daily loss/exposure settings, and the existing `ALLOW_LIVE_ORDERS` /
+`LIVE_ORDER_EXECUTOR_READY` switches. This implementation **does not
+turn on previously disabled real-money authorization**.
+
+The historical `$1,000 → $5,109.50` and `53.42%` win rate belonged
+to 128 heavily inspected **CBBO-minute** research sessions, NOT the
+production-snapshot execution adapter. Those historical figures are
+**not live performance evidence**. Genuine OPRA/event-time replay is
+still blocked without new eligible data, and Webull OpenAPI snapshots
+are **not identical** to the original event-level OPRA source.
+See [backtest](docs/v4_quality_sizing_backtest_2026_10_12.md) and
+[forward research selection](docs/v4_3x_forward_selection.md).
+
 
 ## Current state
 
