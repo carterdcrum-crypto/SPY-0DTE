@@ -46,7 +46,8 @@ from .weekly_options_data import NY
 ARMS=("v4_fixed_one_contract","v4_dynamic_compound",
       "v4_dynamic_profit_vault","v4_dynamic_fractional_kelly",
       "v4_dynamic_compound_micro","v4_dynamic_vault_micro",
-      "v4_dynamic_kelly_micro")
+      "v4_dynamic_kelly_micro","v4_dynamic_streak_compound",
+      "v4_dynamic_streak_vault")
 MAX_CONTRACTS=5
 CAPITAL_FRACTION=.25
 DRAWDOWN_SOFT=.04
@@ -87,6 +88,27 @@ def choose_size(
         return PositionDecision(1,"FROZEN_V4_ONE_CONTRACT",debit/equity,0)
 
     dd=_fraction_of_drawdown(equity,peak)
+    if arm in ("v4_dynamic_streak_compound","v4_dynamic_streak_vault"):
+        # Preserve V4's one-contract trade participation. Only ADD integer
+        # contracts when prior-session winning evidence AND healthy cash
+        # permit it. Prior failures scale down to 1, rather than halt.
+        reserve=0.
+        if arm=="v4_dynamic_streak_vault" and equity>=START_CASH*1.10:
+            reserve=max(0.,.50*(equity-START_CASH))
+        available_cash=max(0.,settled-reserve)
+        if available_cash<debit:
+            return PositionDecision(0,"PROTECTED_CASH_BELOW_ONE_CONTRACT",0,reserve)
+        recent_two=previous_returns[-2:]
+        profitable_streak=len(recent_two)==2 and all(x>0 for x in recent_two)
+        healthy=dd<=.04 and profitable_streak and spread<=.025 and relative_volume>=1.2
+        if not healthy:
+            return PositionDecision(1,"BASELINE_ONE_UNLESS_TWO_PRIOR_WINS",debit/equity,reserve)
+        tier=max(1,math.floor(equity/START_CASH))
+        discretionary_budget=min(available_cash,.35*equity)
+        qty=min(MAX_CONTRACTS,tier,
+                max(1,math.floor((discretionary_budget+1e-9)/debit)))
+        return PositionDecision(qty,"HISTORICAL_PERFORMANCE_SCALED",
+                                qty*debit/equity,reserve)
     multiplier=smooth_drawdown_multiplier(dd,
                                          soft_start=DRAWDOWN_SOFT,
                                          zero_level=DRAWDOWN_HALT)
@@ -327,6 +349,8 @@ def run(data_dir:Path,output_dir:Path)->dict:
             "v4_dynamic_compound_micro":"compound with an explicit one-contract learning-floor allowed only when contract debit<=35% equity and drawdown multiplier>=60%",
             "v4_dynamic_vault_micro":"vault with the same one-contract micro floor after preserving reserved gains",
             "v4_dynamic_kelly_micro":"1-contract research learning phase until 25 prior realized trades; thereafter empirical fractional Kelly+ES99, with one-contract floor only if risk/edge rails passed",
+            "v4_dynamic_streak_compound":"1 contract baseline, upsize from earlier session winning streak of at least 2, RVOL>=1.2, spread<=2.5%, prior-day cash drawdown<=4%, equity/1000 tier and 35% discretionary equity cap; after losses revert to 1 contract",
+            "v4_dynamic_streak_vault":"streak compound with 50% of positive profits reserved after 10% account growth",
         },
         "risk_rails":{"max_contracts":MAX_CONTRACTS,"capital_budget_fraction":CAPITAL_FRACTION,
                       "drawdown_soft_fraction":DRAWDOWN_SOFT,
