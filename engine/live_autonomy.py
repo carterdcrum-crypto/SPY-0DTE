@@ -345,6 +345,20 @@ class LiveExecutor:
         per_contract = premium*100 + 1.0
         budget = min(account["settled_cash"], account["equity"]*limits.max_account_exposure_pct,
                      max(0.0, limits.daily_loss_limit+account["daily_pnl"]))
+        if str(candidate.get("reason","")).startswith("v4_quality_3x;"):
+            # The model's earlier 35% cap is rechecked at executable quote
+            # prices; an ask jump cannot evade it. Revalidate options NBBO
+            # liquidity and displayed depth immediately before reserving.
+            snapshot = self.market.quotes.get(candidate["symbol"])
+            mid=(q.ask+q.bid)/2
+            if (snapshot is None or snapshot.source!="webull_production"
+                    or snapshot.timestamp_quality!="option_quote_timestamp"
+                    or mid<=0 or (q.ask-q.bid)/mid>.035
+                    or int(snapshot.bid_size)<int(candidate["quantity"])
+                    or int(snapshot.ask_size)<int(candidate["quantity"])):
+                return {**common,"state":"RISK_BLOCKED",
+                        "reason":"V4 3x final quote spread/provenance/depth changed; no order"}
+            budget=min(budget,account["equity"]*.35)
         quantity = min(int(candidate["quantity"]), limits.max_contracts, int(budget//per_contract))
         if quantity < 1:
             return {**common, "state": "RISK_BLOCKED", "reason": "one contract exceeds settled cash or remaining loss/exposure allowance"}
