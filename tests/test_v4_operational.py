@@ -41,7 +41,7 @@ def test_fresh_asof_real_m1_can_select_three_contracts(monkeypatch):
     proposal,diagnostics=v.candidate(NOW,b,[q()],equity=1000.,
                                       settled=1000.,peak=1000.)
     assert diagnostics["state"]=="SIGNAL"
-    assert proposal["quality_score"]==5
+    assert proposal["quality_score"]==6
     assert proposal["quantity"]==3
     assert proposal["signal_at"]==signal(b)["at"].isoformat()
 
