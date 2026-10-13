@@ -50,3 +50,19 @@ def test_no_archive_does_not_invent_a_model_backtest(tmp_path):
 def test_unrecognized_arm_fails_closed():
     with pytest.raises(ValueError,match="unknown sizing arm"):
         decision("other")
+
+def test_micro_compound_one_contract_preserves_cash_and_premium_hard_ceiling():
+    strict=decision("v4_dynamic_compound",equity=500.,settled=500.,peak=500.,debit=150.)
+    micro=decision("v4_dynamic_compound_micro",equity=500.,settled=500.,peak=500.,debit=150.)
+    assert strict.contracts==0
+    assert micro.contracts==1
+    assert micro.reason=="MINIMUM_VIABLE_ONE_CONTRACT"
+    assert decision("v4_dynamic_compound_micro",equity=500.,settled=500.,peak=500.,debit=180.).contracts==0
+
+def test_kelly_micro_learns_first_instead_of_silently_never_trading():
+    x=decision("v4_dynamic_kelly_micro")
+    assert x.contracts==1
+    assert x.reason=="ONE_CONTRACT_KELLY_LEARNING"
+    y=decision("v4_dynamic_kelly_micro",previous_returns=(-.3,)*30)
+    assert y.contracts==0
+    assert y.reason != "ONE_CONTRACT_KELLY_LEARNING"
