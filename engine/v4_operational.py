@@ -19,6 +19,7 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from .regime_reclaim_frozen_signal import identify_setups
+from .regime_reclaim_v2 import route_candidate
 from .regime_hold_conditional import (
     EXTEND_MIN_RETURN, EXTEND_MIN_RVOL, EXTEND_MIN_SPY_MOMENTUM_BPS,
     EXTEND_MIN_PREMIUM_PEAK_FRACTION, MAX_QUOTE_SPREAD,
@@ -167,6 +168,12 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
             continue
         i=next((n for n,b in enumerate(bars) if b.available_at==signal["at"]),None)
         if i is None:continue
+        # V4 archived regime entries start with V2's completed-bar router:
+        # trend vs range, directional candle, RVOL and as-of VWAP confirmation.
+        # A raw V1 reclaim alone must never qualify as a V4 order.
+        routed=route_candidate(signal,bars,i)
+        if not routed["selected"]:
+            continue
         rv=_rv(bars,i)
         if rv<=0:continue
         for q in quotes:
@@ -213,8 +220,14 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
                         int(q.bid_size),int(q.ask_size),hard)
                 if qty<=0:
                     continue
-                possible.append((abs(abs(delta)-.5),spread,q.option_symbol,
-                    signal,q,quality,qty,debit,rv))
+                # Mirror V2's regime-specific *as-of* option ranking:
+                # trend delta target .55; range-reversal target .45, with
+                # spread and bid/ask depth penalty. Do not peek at exit.
+                target=.55 if signal["setup"]=="trend_reclaim" else .45
+                depth=min(q.bid_size,q.ask_size)
+                rank=10*spread+.6*abs(abs(delta)-target)+.08/math.sqrt(depth)
+                possible.append((rank,spread,q.option_symbol,
+                    routed,q,quality,qty,debit,rv))
             except (ValueError,TypeError,ZeroDivisionError,AttributeError,OverflowError):
                 continue
     if not possible:
@@ -228,7 +241,8 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
         "cycle":sig["at"].isoformat(),"debit_per_contract":debit,
         "underlying_spot":q.underlying_price,
         "side":sig["side"],"rv":rv,
-    },{"state":"SIGNAL","reason":"V4 quality 3x candidate meets as-of gates",
+        "regime":sig["regime"],"signal_vwap":sig["vwap_asof"],
+    },{"state":"SIGNAL","reason":"V4 V2 regime/VWAP-confirmed quality 3x candidate meets as-of gates",
         "strategy":IDENTIFIER,"quality_score":quality,
         "contracts":qty,"signal":sig,"account_equity":equity}
 
