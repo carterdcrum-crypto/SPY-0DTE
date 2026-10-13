@@ -296,7 +296,8 @@ class LiveExecutor:
             position["peak_exit_value"] = peak
             reason = "automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None
             reason = reason or ("daily_stop" if daily and daily["halt_reason"] else None)
-            reason = reason or ("session_close" if minutes_left <= 10 else None)
+            close_buffer = 15 if str(position.get("entry_reason","")).startswith("v4_quality_3x;") else 10
+            reason = reason or ("session_close" if minutes_left <= close_buffer else None)
             reason = reason or ("continue_exit" if position["exit_requested"] else None)
             target_remaining = profit_exit_quantity(
                 position["entry_quantity"], position["quantity"], position["target_filled"]
