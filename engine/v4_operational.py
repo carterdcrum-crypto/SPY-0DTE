@@ -1,0 +1,289 @@
+"""V4 entry-quality-3x operational adapter shared by PAPER and guarded LIVE.
+
+Unlike the archived CBBO one-minute proxy, this module REQUIRES completed
+real SPY OHLCV minute bars and fresh timestamped 0DTE option bid/ask quotes.
+Missing market-data entitlements, old or delayed options, missing volume,
+greeks or depth -> no entry. No invented substitute observations.
+
+V4 *entry setup*, 6-point quality rubric, 1/2/3 quantity choice, and
+conditional hold exits are reused; production snapshots are not OPRA event
+NBBO, so this is a separately identified, unvalidated live execution adapter.
+"""
+from __future__ import annotations
+
+import math
+import statistics
+from datetime import date, datetime, timedelta, time, timezone
+from pathlib import Path
+from types import SimpleNamespace
+from zoneinfo import ZoneInfo
+
+from .regime_reclaim_frozen_signal import identify_setups
+from .regime_hold_conditional import (
+    EXTEND_MIN_RETURN, EXTEND_MIN_RVOL, EXTEND_MIN_SPY_MOMENTUM_BPS,
+    EXTEND_MIN_PREMIUM_PEAK_FRACTION, MAX_QUOTE_SPREAD,
+)
+from .regime_reclaim_frozen_signal import ema
+from .v4_quality_sizing import score_at_entry, size as quality_size
+from .weekly_options_data import Bar
+from .session_calendar import session_close
+
+ET=ZoneInfo("America/New_York")
+IDENTIFIER="v4_quality_3x"
+FEE=0.65
+SLIPPAGE_PER_SHARE=.01
+MAX_SOURCE_DELAY_SECONDS=3
+MAX_SPREAD=.035
+MAX_IV_RV=1.5
+MAX_CONTRACTS=3
+
+
+def _time(raw):
+    if isinstance(raw,datetime):
+        t=raw
+    elif isinstance(raw,(int,float)):
+        t=datetime.fromtimestamp(raw/(1000 if abs(raw)>1e11 else 1),timezone.utc)
+    else:
+        value=str(raw).strip().replace("Z","+00:00")
+        t=datetime.fromisoformat(value)
+    if t.tzinfo is None:
+        raise ValueError("bar timestamps must include timezone")
+    return t.astimezone(timezone.utc)
+
+
+def parse_webull_bars(payload, now:datetime)->list[Bar]:
+    """Strictly accept completed RTH M1 OHLCV, never running bars/synthetic ticks.
+
+    Webull bars are timestamped with a period start (examples sometimes carry
+    nonzero seconds). Coerce within a minute to that period and reject
+    duplicates/out-of-session/future or untrusted incomplete observations.
+    """
+    if now.tzinfo is None:
+        raise ValueError("aware clock required")
+    if hasattr(payload,"status_code") and payload.status_code != 200:
+        raise ValueError("Webull SPY M1 market data denied/unavailable")
+    if hasattr(payload,"json"):
+        payload=payload.json()
+    if isinstance(payload,dict) and isinstance(payload.get("data"),dict):
+        payload=payload["data"]
+    if not isinstance(payload,dict):
+        raise ValueError("Webull M1 response not structured")
+    rows=payload.get("result")
+    if not isinstance(rows,list):
+        raise ValueError("Webull M1 bars missing result array")
+    if payload.get("symbol") not in (None,"SPY"):
+        raise ValueError("underlying is not SPY")
+    today=now.astimezone(ET).date()
+    checked=[]
+    for row in rows:
+        if not isinstance(row,dict) or row.get("trading_sessions","RTH")!="RTH":
+            continue
+        at=_time(row["time"])
+        start=at.replace(second=0,microsecond=0)
+        local=start.astimezone(ET)
+        if local.date()!=today or not time(9,30)<=local.time()<time(16,0):
+            continue
+        if start+timedelta(minutes=1)>now.astimezone(timezone.utc)-timedelta(seconds=2):
+            continue
+        values=[float(row[k]) for k in ("open","high","low","close")]
+        volume=int(float(row["volume"]))
+        if not all(math.isfinite(v) and v>0 for v in values) or volume<=0:
+            raise ValueError("SPY completed bar has invalid OHLCV")
+        o,h,l,c=values
+        if h<max(o,c,l) or l>min(o,c,h):
+            raise ValueError("SPY completed bar high/low inconsistent")
+        checked.append(Bar(start,o,h,l,c,volume))
+    dedup={}
+    for bar in checked:
+        if bar.start in dedup:
+            previous=dedup[bar.start]
+            if bar!=previous:
+                raise ValueError("conflicting SPY minute bar")
+        dedup[bar.start]=bar
+    return [dedup[t] for t in sorted(dedup)]
+
+
+def last_spy_bar_is_fresh(bars:list[Bar],now:datetime)->bool:
+    return bool(bars and 0<=(now-bars[-1].available_at).total_seconds()<=90)
+
+
+def _underlying_frame(bars:list[Bar],i:int):
+    if i<20:
+        return None
+    volume=[b.volume for b in bars[i-20:i]]
+    if min(volume)<=0:
+        return None
+    ratio=bars[i].volume/statistics.fmean(volume)
+    return SimpleNamespace(timestamp=bars[i].start,
+        market=SimpleNamespace(spot=bars[i].close,volume_ratio=ratio))
+
+
+def _rv(bars:list[Bar],last:int)->float:
+    if last<30:
+        return 0.
+    values=[b.close for b in bars[last-30:last+1]]
+    ratios=[math.log(x/y) for y,x in zip(values,values[1:])]
+    return statistics.stdev(ratios)*math.sqrt(252*390)
+
+
+def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
+              peak:float,max_contracts:int=3,exposure:float=.35):
+    """Return (order proposal or None, diagnostic) with causal sizing.
+
+    *Only* evaluate fresh selected option quotes in the 1–2min window
+    FOLLOWING a completed SPY signal; quotes must have time, sizes, greeks.
+    """
+    if now.tzinfo is None:
+        raise ValueError("aware now required")
+    if not last_spy_bar_is_fresh(bars,now):
+        return None,{"state":"WAITING_V4_BARS","reason":"SPY completed M1 OHLCV not fresh/available"}
+    if len(bars)<55:
+        return None,{"state":"WAITING_V4_BARS","reason":"at least 55 valid completed SPY M1 OHLCV bars required"}
+    if any((b.start-a.start).total_seconds()!=60 for a,b in zip(bars[-55:],bars[-54:])):
+        return None,{"state":"WAITING_V4_BARS","reason":"non-contiguous SPY completed M1 bars"}
+    if equity<=0 or settled<=0 or peak<=0:
+        return None,{"state":"RISK_BLOCKED","reason":"insufficient account capital"}
+    if not quotes:
+        return None,{"state":"WAITING_V4_QUOTES","reason":"no timestamped fresh SPY 0DTE production options"}
+    close=session_close(now.astimezone(ET).date())
+    if close is None or now.astimezone(ET).time()<time(9,52):
+        return None,{"state":"NO_SIGNAL","reason":"outside frozen V4 entry window"}
+    end=datetime.combine(now.astimezone(ET).date(),close,ET)
+    if (end-now.astimezone(ET)).total_seconds()<20*60:
+        return None,{"state":"ENTRY_WINDOW_CLOSED","reason":"do not enter 0DTE near expiry"}
+
+    frames=[_underlying_frame(bars,i) for i in range(len(bars))]
+    if any(x is None for x in frames[20:]):
+        return None,{"state":"WAITING_V4_BARS","reason":"missing authentic relative volume"}
+    # Identify_setups reads a contiguous 35-bar trailing window.
+    signals=identify_setups(frames)
+    possible=[]
+    for signal in signals:
+        if signal["setup"] not in ("trend_reclaim","stretch_reclaim"):
+            continue
+        if not (signal["at"]+timedelta(minutes=1) <= now
+                <= signal["at"]+timedelta(minutes=2)):
+            continue
+        i=next((n for n,b in enumerate(bars) if b.available_at==signal["at"]),None)
+        if i is None:continue
+        rv=_rv(bars,i)
+        if rv<=0:continue
+        for q in quotes:
+            try:
+                # Both paper collector records and live provider options supply
+                # OPTION market timestamps, no receive-time-only relaxation.
+                if q.source not in ("webull_production","tradier_production_realtime"):
+                    continue
+                if q.timestamp_quality!="option_quote_timestamp":
+                    continue
+                lag=(now-q.timestamp).total_seconds()
+                if not 0<=lag<=MAX_SOURCE_DELAY_SECONDS:
+                    continue
+                if (now-q.received_at).total_seconds()>MAX_SOURCE_DELAY_SECONDS:
+                    continue
+                if q.underlying_timestamp is None or not 0<=(now-q.underlying_timestamp).total_seconds()<=MAX_SOURCE_DELAY_SECONDS:
+                    continue
+                if q.expiration!=now.astimezone(ET).date() or q.right!=signal["side"]:
+                    continue
+                if q.greeks is None:continue
+                delta=float(q.greeks.delta)
+                iv=float(q.greeks.implied_volatility)
+                if not all(math.isfinite(v) for v in (delta,iv,q.ask,q.bid)):
+                    continue
+                if not .40<=abs(delta)<=.60 or not q.ask>q.bid>0:
+                    continue
+                if not q.bid_size or not q.ask_size:
+                    continue
+                spread=(q.ask-q.bid)/((q.ask+q.bid)/2)
+                if spread>MAX_SPREAD or iv<=0 or iv/rv>MAX_IV_RV:
+                    continue
+                scoring_quote=SimpleNamespace(spread_fraction=spread,
+                    delta=delta,implied_volatility=iv)
+                quality=score_at_entry({"signal":signal,
+                    "quote":scoring_quote,"entry_idx":0},
+                    [SimpleNamespace(market=SimpleNamespace(realized_volatility=rv))])
+                debit=round((q.ask+SLIPPAGE_PER_SHARE)*100+FEE,2)
+                # This is a long option. Even with a modeled stop, the full
+                # debit of EVERY contract is genuinely at risk.
+                qty=quality_size("v4_quality_3x",score=quality,
+                    equity=equity,settled=settled,peak=peak,debit=debit)
+                hard=int((min(settled,equity*min(.35,exposure))+1e-8)//debit)
+                qty=min(qty,MAX_CONTRACTS,max(0,int(max_contracts)),
+                        int(q.bid_size),int(q.ask_size),hard)
+                if qty<=0:
+                    continue
+                possible.append((abs(abs(delta)-.5),spread,q.symbol,
+                    signal,q,quality,qty,debit,rv))
+            except (ValueError,TypeError,ZeroDivisionError,AttributeError,OverflowError):
+                continue
+    if not possible:
+        return None,{"state":"NO_SIGNAL","reason":"no as-of V4 entry/IV/liquidity/affordability-qualified 0DTE"}
+    _,_,_,sig,q,quality,qty,debit,rv=min(possible,
+         key=lambda x:(x[3]["at"],x[0],x[1],x[2]))
+    return {
+        "symbol":q.option_symbol,"quantity":qty,
+        "quality_score":quality,"signal_at":sig["at"].isoformat(),
+        "reason":f"{IDENTIFIER}; setup={sig['setup']}; quality={quality}/6; qty={qty}; observed_m1_webull",
+        "cycle":sig["at"].isoformat(),"debit_per_contract":debit,
+        "underlying_spot":q.underlying_price,
+        "side":sig["side"],"rv":rv,
+    },{"state":"SIGNAL","reason":"V4 quality 3x candidate meets as-of gates",
+        "strategy":IDENTIFIER,"quality_score":quality,
+        "contracts":qty,"signal":sig,"account_equity":equity}
+
+
+def exit_reason(position, quote, bars:list[Bar], now:datetime, *, fee:float=FEE):
+    """V4 full-position stop / 30% trail / 10-minute conditional extension.
+
+    Never uses a quote to decide an exit if that quote's observation is stale.
+    Liveness-independent session-close / disable liquidation handled by caller.
+    """
+    if quote is None:
+        return None
+    if not 0<=(now-quote.timestamp).total_seconds()<=MAX_SOURCE_DELAY_SECONDS:
+        return None
+    opened=position["opened_at"]
+    opened=datetime.fromisoformat(opened) if isinstance(opened,str) else opened
+    if opened.tzinfo is None:
+        return "invalid_entry_clock_flatten"
+    cost=float(position.get("average_cost",position.get("average_price",0.)*100+fee))
+    peak=float(position.get("peak_exit_value",cost))
+    if cost<=0:
+        return "invalid_position_cost_flatten"
+    credit=max(0.,(quote.bid-SLIPPAGE_PER_SHARE)*100-fee)
+    if credit<=cost*.65:
+        return "v4_hard_35pct"
+    if credit<=max(peak,cost)*.70:
+        return "v4_trailing_30pct"
+    elapsed=(now-opened).total_seconds()
+    if elapsed<600:
+        return None
+    # A delayed 10min observation is not permission for optimistic extension.
+    if not last_spy_bar_is_fresh(bars,now) or elapsed>660:
+        return "v4_10min_or_stale_bars_flatten"
+    if credit<=max(peak,cost)*.80:
+        return "v4_extended_trail_20pct"
+    available=[b.available_at for b in bars]
+    import bisect
+    i=bisect.bisect_right(available,quote.timestamp)-1
+    if i<35 or len(bars)<36:
+        return "v4_10min_missing_momentum"
+    if quote.ask<=quote.bid or not quote.bid_size or not quote.ask_size:
+        return "v4_10min_untradeable_quote"
+    spread=(quote.ask-quote.bid)/((quote.ask+quote.bid)/2)
+    if spread>MAX_QUOTE_SPREAD or credit<cost*(1+EXTEND_MIN_RETURN):
+        return "v4_10min_extension_rejected"
+    if credit<peak*EXTEND_MIN_PREMIUM_PEAK_FRACTION:
+        return "v4_10min_from_peak"
+    prev_volume=[x.volume for x in bars[i-20:i]]
+    if len(prev_volume)<20 or min(prev_volume)<=0:
+        return "v4_10min_no_volume"
+    if bars[i].volume/statistics.fmean(prev_volume)<EXTEND_MIN_RVOL:
+        return "v4_10min_volume_faded"
+    closes=[b.close for b in bars[i-35:i+1]]
+    direction=1 if quote.right=="call" else -1
+    if direction*(closes[-1]/closes[-4]-1)*10000<EXTEND_MIN_SPY_MOMENTUM_BPS:
+        return "v4_10min_momentum_faded"
+    if direction*(closes[-1]-ema(closes,8))<=0:
+        return "v4_10min_ema_failed"
+    return None
