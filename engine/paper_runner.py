@@ -35,6 +35,36 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
     from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
 
+    if os.environ.get("SPY_STRATEGY_PROFILE","v4_quality_3x").strip().lower()=="v4_quality_3x":
+        from dataclasses import replace
+        from .v4_paper_trader import V4QualityPaperTrader
+        from .live_market import LiveDataProvider
+        from .webull_live import production_credentials
+        from .market_data_factory import provider_from_env
+        option_provider=None
+        bar_provider=None
+        try:
+            key,secret=production_credentials()
+            option_provider=LiveDataProvider(key,secret)
+            bar_provider=option_provider
+        except Exception:
+            # PAPER must stay operational but fail closed for V4 signals
+            # when the broker has not supplied valid market-data access.
+            try:
+                bar_provider=provider_from_env()
+            except Exception:
+                pass
+        settings=PaperAutoSettings.from_env()
+        if "PAPER_MAX_CONTRACTS" not in os.environ:
+            settings=replace(settings,maximum_contracts=3)
+        settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
+        return V4QualityPaperTrader(
+            mode_getter=mode_getter,
+            market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
+            account_store=PaperAccountStore(_paper_db_path(),default_starting_cash=_paper_starting_cash()),
+            settings=settings,production_provider=option_provider,
+            bar_provider=bar_provider,
+        )
     trader_class = AIDelayedSimulationPaperAutoTrader if delayed else SaferAIAugmentedDynamicExitTrader
     return trader_class(
         mode_getter=mode_getter,
