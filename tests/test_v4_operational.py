@@ -24,7 +24,7 @@ def q(**kw):
         option_symbol="SPY261012C00600000",expiration=NOW.date(),
         right="call",strike=600.,bid=.99,ask=1.,
         bid_size=10,ask_size=10,underlying_price=601.2,
-        greeks=SimpleNamespace(delta=.50,implied_volatility=.01))
+        greeks=SimpleNamespace(delta=.50,implied_volatility=.001))
     d.update(kw)
     return SimpleNamespace(**d)
 
