@@ -218,7 +218,7 @@ def run(data_dir:Path,output_dir:Path)->dict:
             open_equity=state["settled"]
             prior_high=max([START_CASH]+[x["equity_usd"] for x in state["daily"]])
             flat=None
-            today's_returns=[]
+            todays_returns=[]
             for item in entries:
                 at=item["entry_at"]
                 if at>=cutoff-timedelta(minutes=MAX_FIXED_MIN+1):
@@ -266,7 +266,7 @@ def run(data_dir:Path,output_dir:Path)->dict:
                 account_pnl=round(unit_pnl*qty,6)
                 proceeds=max(0.,qty*debit+account_pnl)
                 state["pending"]+=proceeds
-                today's_returns.append(max(-1.,unit_pnl/debit))
+                todays_returns.append(max(-1.,unit_pnl/debit))
                 state["exits"][outcome["exit_reason"]]+=1
                 state["trades"].append({
                     "day":str(day),"arm":arm,
@@ -284,7 +284,7 @@ def run(data_dir:Path,output_dir:Path)->dict:
                 "equity_usd":round(state["settled"]+state["pending"],4)})
             # Only the previous completed day's closed trades are available to
             # the next day's Kelly posterior; never today or future sessions.
-            state["realized_return_history"].extend(today's_returns)
+            state["realized_return_history"].extend(todays_returns)
     report={
         "title":"V4 frozen conditional hold, dynamic sizing only",
         "status":"HISTORICAL_PROXY_PREVIOUSLY_INSPECTED_NOT_FORWARD_VALIDATED",
