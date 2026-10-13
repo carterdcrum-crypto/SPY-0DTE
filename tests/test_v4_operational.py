@@ -109,3 +109,29 @@ def test_historical_rounding_does_not_override_live_hard_risk(monkeypatch):
     proposal,reasons=v.candidate(NOW,b,[q(ask=3.,bid=2.99)],
         equity=1000.,settled=1000.,peak=1000.,max_contracts=3,exposure=.10)
     assert proposal is None
+
+
+
+def test_v4_live_candidate_requires_real_v2_regime_router(monkeypatch):
+    """A raw V1 signal may not bypass V2 regime/candle/VWAP vetoes."""
+    b=bars()
+    monkeypatch.setattr(v,"identify_setups",lambda frames:[signal(b)])
+    rejected=[]
+    def denied(event,completed_bars,i):
+        rejected.append((event["at"],completed_bars[i].available_at))
+        return {"selected":False,"reason":"AGAINST_SESSION_VWAP"}
+    monkeypatch.setattr(v,"route_candidate",denied)
+    proposed,diag=v.candidate(NOW,b,[q()],equity=1000.,settled=1000.,peak=1000.)
+    assert proposed is None
+    assert rejected and rejected[0][0]==rejected[0][1]
+    assert diag["state"]=="NO_SIGNAL"
+
+
+def test_v4_proposal_surfaces_confirmed_regime_and_asof_vwap(monkeypatch):
+    b=bars()
+    monkeypatch.setattr(v,"identify_setups",lambda frames:[signal(b)])
+    proposed,diag=v.candidate(NOW,b,[q()],equity=1000.,settled=1000.,peak=1000.)
+    assert proposed is not None
+    assert proposed["regime"]=="trend_up"
+    assert proposed["signal_vwap"]>0
+    assert proposed["quality_score"]>=5
