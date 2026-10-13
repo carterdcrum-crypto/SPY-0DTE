@@ -33,8 +33,11 @@ def test_profit_vault_reduces_spendable_cash_without_fake_withdrawal():
     assert b.contracts<=a.contracts
 
 def test_drawdown_halt_applies_to_every_dynamic_arm_but_not_frozen():
-    for arm in ARMS[1:]:
+    for arm in ARMS[1:7]:
         assert decision(arm,equity=800.,settled=800.,peak=1000.).contracts==0
+    # Streak variants deliberately throttle extras but retain a base contract.
+    for arm in ARMS[7:]:
+        assert decision(arm,equity=800.,settled=800.,peak=1000.).contracts==1
     assert decision(ARMS[0],equity=800.,settled=800.,peak=1000.).contracts==1
 
 def test_kelly_requires_25_prior_closed_trades_and_allows_zero():
