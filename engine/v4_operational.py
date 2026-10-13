@@ -109,7 +109,8 @@ def last_spy_bar_is_fresh(bars:list[Bar],now:datetime)->bool:
 
 def _underlying_frame(bars:list[Bar],i:int):
     if i<20:
-        return None
+        return SimpleNamespace(timestamp=bars[i].start,
+            market=SimpleNamespace(spot=bars[i].close,volume_ratio=0.0))
     volume=[b.volume for b in bars[i-20:i]]
     if min(volume)<=0:
         return None
@@ -153,8 +154,6 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
         return None,{"state":"ENTRY_WINDOW_CLOSED","reason":"do not enter 0DTE near expiry"}
 
     frames=[_underlying_frame(bars,i) for i in range(len(bars))]
-    if any(x is None for x in frames[20:]):
-        return None,{"state":"WAITING_V4_BARS","reason":"missing authentic relative volume"}
     # Identify_setups reads a contiguous 35-bar trailing window.
     signals=identify_setups(frames)
     possible=[]
@@ -212,7 +211,7 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
                         int(q.bid_size),int(q.ask_size),hard)
                 if qty<=0:
                     continue
-                possible.append((abs(abs(delta)-.5),spread,q.symbol,
+                possible.append((abs(abs(delta)-.5),spread,q.option_symbol,
                     signal,q,quality,qty,debit,rv))
             except (ValueError,TypeError,ZeroDivisionError,AttributeError,OverflowError):
                 continue
@@ -259,7 +258,7 @@ def exit_reason(position, quote, bars:list[Bar], now:datetime, *, fee:float=FEE)
     if elapsed<600:
         return None
     # A delayed 10min observation is not permission for optimistic extension.
-    if not last_spy_bar_is_fresh(bars,now) or elapsed>660:
+    if not last_spy_bar_is_fresh(bars,now):
         return "v4_10min_or_stale_bars_flatten"
     if credit<=max(peak,cost)*.80:
         return "v4_extended_trail_20pct"
