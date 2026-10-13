@@ -1,0 +1,174 @@
+{
+  "costs": "$0.65 fee per side and $0.01/share slippage per contract side; +$2/contract stress in results",
+  "entry_exit_unchanged": true,
+  "extra_contracts_drawdown_soft_veto_at_pct": 4,
+  "extra_contracts_premium_cap_pct_of_open_equity": 35,
+  "extras_trigger": "quality>=4 for 2x, >=5 for 3x",
+  "first_day": "2026-04-01",
+  "fixed_one_score_buckets_exploratory": {
+    "0": {
+      "mean_pnl_usd": null,
+      "scored_trades": 0,
+      "sum_pnl_usd": 0,
+      "win_pct": null
+    },
+    "1": {
+      "mean_pnl_usd": null,
+      "scored_trades": 0,
+      "sum_pnl_usd": 0,
+      "win_pct": null
+    },
+    "2": {
+      "mean_pnl_usd": 0.59,
+      "scored_trades": 9,
+      "sum_pnl_usd": 5.3,
+      "win_pct": 44.44
+    },
+    "3": {
+      "mean_pnl_usd": 20.06,
+      "scored_trades": 33,
+      "sum_pnl_usd": 662.1,
+      "win_pct": 51.52
+    },
+    "4": {
+      "mean_pnl_usd": 10.77,
+      "scored_trades": 61,
+      "sum_pnl_usd": 656.7,
+      "win_pct": 49.18
+    },
+    "5": {
+      "mean_pnl_usd": 23.62,
+      "scored_trades": 37,
+      "sum_pnl_usd": 873.9,
+      "win_pct": 67.57
+    },
+    "6": {
+      "mean_pnl_usd": -4.13,
+      "scored_trades": 6,
+      "sum_pnl_usd": -24.8,
+      "win_pct": 33.33
+    }
+  },
+  "last_day": "2026-10-06",
+  "max_drawdown": "end-of-day modeled account equity, not intraday maximum",
+  "new_data_purchases": 0,
+  "no_broker_orders": true,
+  "one_open_position_at_a_time": true,
+  "results": {
+    "v4_fixed_one": {
+      "contracts_traded": 146,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 3173.2,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 1,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 5.71,
+      "max_end_of_day_drawdown_usd": 177,
+      "mean_contracts_per_scored_trade": 1,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 1881.2,
+      "net_profit_usd": 2173.2,
+      "profit_factor": 2.336,
+      "return_pct": 217.32,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v4_quality_2x": {
+      "contracts_traded": 231,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 4491.7,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 5.12,
+      "max_end_of_day_drawdown_usd": 227.6,
+      "mean_contracts_per_scored_trade": 1.582,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 3029.7,
+      "net_profit_usd": 3491.7,
+      "profit_factor": 2.438,
+      "return_pct": 349.17,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v4_quality_2x_no_4pct_dd_gate": {
+      "contracts_traded": 246,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 4692.2,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 2,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 5.61,
+      "max_end_of_day_drawdown_usd": 259.8,
+      "mean_contracts_per_scored_trade": 1.685,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 3200.2,
+      "net_profit_usd": 3692.2,
+      "profit_factor": 2.396,
+      "return_pct": 369.22,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v4_quality_3x": {
+      "contracts_traded": 265,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 5109.5,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "max_contracts_in_one_trade": 3,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 4.81,
+      "max_end_of_day_drawdown_usd": 238.9,
+      "mean_contracts_per_scored_trade": 1.815,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 3579.5,
+      "net_profit_usd": 4109.5,
+      "profit_factor": 2.544,
+      "return_pct": 410.95,
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "POSITION_BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    }
+  },
+  "score_rule": "six additive as-of attributes: setup direction trend, efficiency, RVOL>=1.2, spread<=2%, 0.45<=abs(delta)<=0.55, IV/RV<=1.25",
+  "sessions": 128,
+  "settlement": "T+1, no same-day proceeds reuse, independent cash accounts",
+  "start_cash_usd": 1000,
+  "status": "RETROSPECTIVE_INSPECTED_MINUTE_BUCKET_PROXY_NO_LIVE_PROMOTION",
+  "study": "V4 entry-quality-only integer sizing sensitivity",
+  "warning": "These same 128 sessions were inspected for prior V4 studies. The score rubric has NOT been calibrated or validated out of sample. OPRA CBBO-minute snapshots are NOT executable event-time NBBO. Higher position size can worsen fills and unmodeled intraday losses."
+}
