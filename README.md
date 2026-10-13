@@ -77,6 +77,30 @@ Run: `python -m engine.regime_hold_sensitivity` (historical proxy) or
 `python -m engine.regime_reclaim_v3` (event-data V1/V2/V3 comparator).
 Neither performs broker orders or market-data purchases.
 
+## Selected V4 entry-quality 3x paper challenger
+
+**Selected for the forward research comparison:** `v4_quality_3x_paper`.
+This is **up to three contracts per qualifying setup**, not three contracts
+on every signal. Six as-of input tests assess the frozen setup's directional
+trend, efficiency, relative volume, observed option spread, delta and
+observed IV versus SPY realized volatility. Score below 4 = one contract;
+score 4 = up to two; score 5–6 = up to three, subject to **settled cash,
+35% of starting-session equity in premium exposure for the added contracts,
+4% preceding-session EOD drawdown gate, and actual bid/ask displayed depth**.
+The V4 10-minute conditional extension/trailing exits remain unchanged.
+
+The historical $1,000 → $5,109.50 modeled balance, 53.42% win rate,
+and $238.90 maximum *end-of-day* drawdown came from **128 previously
+inspected minute-bucket SPY 0DTE sessions**. It is a retrospective proxy,
+not independent executable OPRA market fills; more contracts increase
+unmodeled quote-depth, slippage, and total-premium-loss exposure. This variant
+is **not active on the Webull LIVE order executor**. The separate live
+strategy is not this V4 implementation. The Railway forward worker scores
+the selected 3x arm when *genuinely new* event-time OHLCV/OPRA data arrives
+and otherwise blocks without fabricating trades. The Auto Trade toggle,
+broker order policy, and existing live authorization remain unchanged.
+See [V4 3x research backtest](docs/v4_quality_sizing_backtest_2026_10_12.md).
+
 ## Current state
 
 The system has three distinct operating layers:
