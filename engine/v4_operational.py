@@ -286,3 +286,42 @@ def exit_reason(position, quote, bars:list[Bar], now:datetime, *, fee:float=FEE)
     if direction*(closes[-1]-ema(closes,8))<=0:
         return "v4_10min_ema_failed"
     return None
+
+
+
+class WebullMinuteBarCache:
+    """Entitled Webull M1 OHLCV reader, checked at 20-second intervals.
+
+    No reconstructed OHLCV from 2-second option snapshots. Fail closed if
+    the broker's stock-minute bars subscription is denied or out of date.
+    """
+    def __init__(self):
+        self.bars=[]
+        self.last_attempt=None
+        self.error="SPY M1 bars not fetched"
+        self.source="Webull OpenAPI stock M1 OHLCV"
+
+    def refresh(self,provider,now:datetime):
+        if self.last_attempt is not None:
+            age=(now-self.last_attempt).total_seconds()
+            if 0<=age<20:
+                return self.bars
+        self.last_attempt=now
+        client=getattr(provider,"client",None)
+        try:
+            if client is None or not hasattr(client.market_data,"get_history_bar"):
+                raise ValueError("Webull M1 OHLCV entitlement/provider is unavailable")
+            response=client.market_data.get_history_bar(
+                "SPY","US_STOCK","M1",count="90",
+                real_time_required=True,trading_sessions="RTH",
+            )
+            fresh=parse_webull_bars(response,now)
+            if not last_spy_bar_is_fresh(fresh,now) or len(fresh)<55:
+                raise ValueError("Webull did not return 55 fresh completed SPY M1 RTH bars")
+            self.bars=fresh
+            self.error=None
+        except Exception as exc:
+            # Any uncertain history result is no permission to enter.
+            self.bars=[]
+            self.error=f"{type(exc).__name__}: no valid SPY M1 bar entitlement/data"
+        return self.bars
