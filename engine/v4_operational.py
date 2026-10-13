@@ -307,7 +307,7 @@ class WebullMinuteBarCache:
             if 0<=age<20:
                 return self.bars
         self.last_attempt=now
-        client=getattr(provider,"client",None)
+        client=getattr(provider,"client",None) or getattr(getattr(provider,"provider",None),"client",None)
         try:
             if client is None or not hasattr(client.market_data,"get_history_bar"):
                 raise ValueError("Webull M1 OHLCV entitlement/provider is unavailable")

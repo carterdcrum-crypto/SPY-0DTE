@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS option_snapshots (
     vega REAL,
     greek_model TEXT,
     source TEXT NOT NULL,
+    underlying_timestamp TEXT,
     PRIMARY KEY (timestamp, option_symbol)
 );
 """
@@ -46,6 +47,7 @@ _MIGRATIONS = {
     "feed_delay_seconds": "REAL",
     "bid_size": "INTEGER NOT NULL DEFAULT 0",
     "ask_size": "INTEGER NOT NULL DEFAULT 0",
+    "underlying_timestamp": "TEXT",
 }
 
 
@@ -107,6 +109,7 @@ class SnapshotStore:
                     None if g is None else g.vega_per_vol_point,
                     None if g is None else g.model,
                     item.source,
+                    None if item.underlying_timestamp is None else item.underlying_timestamp.isoformat(),
                 )
             )
         if not rows:
@@ -141,9 +144,10 @@ class SnapshotStore:
                 theta,
                 vega,
                 greek_model,
-                source
+                source,
+                underlying_timestamp
             ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             """,
             rows,
