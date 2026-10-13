@@ -149,7 +149,7 @@ class LiveAutonomyStore:
                 groups[row["position_id"]] = {
                     "position_id": row["position_id"], "symbol": row["symbol"],
                     "quantity": row["filled"], "average_price": row["average_price"],
-                    "opened_at": row["created_at"], "request": order,
+                    "opened_at": row["created_at"], "entry_reason": row["reason"], "request": order,
                     "exit_requested": False, "target_requested": False,
                     "target_filled": 0, "entry_quantity": row["filled"],
                 }

@@ -274,6 +274,10 @@ class LiveExecutor:
                     "reason": daily["halt_reason"] if daily else "settled cash and daily P&L must be verified"}
 
         self.provider.pinned_symbols = set(expected)
+        # Update the real (subscription-gated) SPY M1 feed BEFORE fresh option
+        # snapshots; never block owned-position exits on a denied bar feed.
+        if hasattr(self.strategy,"refresh_bars"):
+            self.strategy.refresh_bars(self.provider,now)
         snapshots = self.provider.collect_once(eastern.date())
         now = self.clock()
         self.market.ingest(snapshots, now)
@@ -373,7 +377,10 @@ def run_forever(mode_getter, context):
                         key, secret = credentials
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
-                            strategy=LiveStrategy(market, path+".research"), mode_getter=mode_getter)
+                            strategy=(__import__("engine.v4_live_strategy",fromlist=["V4QualityLiveStrategy"]).V4QualityLiveStrategy(market,path+".research")
+                                      if os.environ.get("SPY_STRATEGY_PROFILE","v4_quality_3x").lower()=="v4_quality_3x"
+                                      else LiveStrategy(market,path+".research")),
+                            mode_getter=mode_getter)
                         active_credentials = credentials
                     publish(**executor.telemetry(executor.tick()))
                 failures = 0
