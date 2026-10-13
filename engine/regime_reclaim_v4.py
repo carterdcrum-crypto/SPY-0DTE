@@ -14,6 +14,7 @@ import csv
 import json
 import math
 from datetime import date, timedelta
+from types import SimpleNamespace
 from pathlib import Path
 
 from .regime_hold_conditional import (
@@ -26,10 +27,14 @@ from .regime_reclaim_v2 import (
     FEE_PER_SIDE, SLIP_PER_SHARE, FEE_STRESS_PER_TRADE, session_plan_v2, metrics,
 )
 from .regime_reclaim_v3 import run_v3_comparison
-from .frozen_regime_forward import START_CASH, latest_legacy_day
+from .frozen_regime_forward import (
+    START_CASH, latest_legacy_day, _extra,
+    REQUIRED_BAR_EXTRA, REQUIRED_QUOTE_EXTRA,
+)
+from .v4_quality_sizing import score_at_entry, size as quality_size
 from .weekly_options_data import load_session
 
-ARMS=("v4_conditional_hold","v4_1_equity_guard")
+ARMS=("v4_conditional_hold","v4_1_equity_guard","v4_quality_3x_paper")
 BASE_TRAIL=.30
 HARD_STOP=.35
 TEN_MINUTES=timedelta(minutes=10)
@@ -119,7 +124,53 @@ def exit_event_v4(ask, quote_events, bars, *, entry_at, side, cutoff, allow_exte
     return None
 
 
-def replay_v4(possible,session,settled,*,allow_extension):
+
+def asof_quality_candidates(event_dir: Path, session, candidates):
+    """Use exactly the frozen six-feature rubric, NEVER future bar/quote inputs.
+
+    The V2 routing and option selection are held fixed. As-of RV is from
+    the completed signal bar, quote IV is observed no later than the
+    selected option event. Missing recorded provenance blocks the session
+    rather than manufacturing a three-contract approval.
+    """
+    day=session.day
+    bars=_extra(event_dir,f"spy_bars_{day}","ts_start",REQUIRED_BAR_EXTRA)
+    options=_extra(event_dir,f"spy_option_quotes_{day}","observed_at",
+                   REQUIRED_QUOTE_EXTRA,"symbol")
+    by_available={bar.available_at:bar for bar in session.bars}
+    mapped=[]
+    for item in candidates:
+        event=item["signal"]
+        q=item["option"]
+        bar=by_available.get(event["at"])
+        if bar is None or bar.available_at>q.observed_at:
+            raise ValueError("3x quality score requires as-of completed signal bar")
+        if q.observed_at<event["at"] or q.bid<=0 or q.ask<=q.bid:
+            raise ValueError("3x quality score requires an eligible timestamped quote")
+        bar_values=bars[bar.start]
+        opt_values=options[(q.observed_at,q.symbol)]
+        rv=bar_values["realized_volatility"]
+        iv=opt_values["implied_volatility"]
+        if not (rv>0 and iv>=0):
+            raise ValueError("3x quality score requires positive observed volatility values")
+        mid=(q.ask+q.bid)/2
+        at_quote=SimpleNamespace(
+            spread_fraction=(q.ask-q.bid)/mid,
+            delta=q.delta,implied_volatility=iv,
+        )
+        # Historical scorer consumes the selected signal and only the
+        # latest as-of market/option feature frame. The supplied frame is
+        # synthetic STRUCTURE, not synthetic PRICE OR VOLUME observations.
+        frame=SimpleNamespace(market=SimpleNamespace(realized_volatility=rv))
+        score=score_at_entry({
+            "signal":event, "quote":at_quote,"entry_idx":0,
+        },[frame])
+        mapped.append({**item,"quality_score":score})
+    return mapped
+
+
+def replay_v4(possible,session,settled,*,allow_extension,
+              quality_3x=False,open_equity=None,prior_peak=None):
     cutoff=liquidation_cutoff(session.day)
     positions,decisions=[],[]
     pending=0.0
@@ -141,7 +192,27 @@ def replay_v4(possible,session,settled,*,allow_extension):
         if debit>settled+1e-9:
             decisions.append({"entry_at":at.isoformat(),"reason":"INSUFFICIENT_T1_SETTLED_CASH"})
             continue
-        settled-=debit
+        qty=1
+        score=None
+        if quality_3x:
+            if open_equity is None or prior_peak is None:
+                raise ValueError("3x sizing requires preceding account-equity snapshot")
+            score=item.get("quality_score")
+            if not isinstance(score,int) or not 0<=score<=6:
+                raise ValueError("missing pre-entry quality score")
+            qty=quality_size("v4_quality_3x",score=score,
+                             equity=open_equity,settled=settled,
+                             peak=prior_peak,debit=debit)
+            # Cannot assume infinite executable size at a displayed quote:
+            # displayed bid/ask depth is an independent conservative cap.
+            qty=min(qty,quote.bid_size,quote.ask_size)
+            if qty<1:
+                decisions.append({"entry_at":at.isoformat(),
+                                  "reason":"NO_DISPLAYED_CONTRACT_DEPTH"})
+                continue
+        if qty*debit>settled+1e-8:
+            raise AssertionError("T+1 cash is required for all 3x contracts")
+        settled-=qty*debit
         event_quotes=[q for q in quotes_by_symbol.get(quote.symbol,[]) if
                       at<q.observed_at<=cutoff]
         outcome=exit_event_v4(
@@ -150,19 +221,22 @@ def replay_v4(possible,session,settled,*,allow_extension):
         if outcome is None:
             flat=cutoff
             positions.append({"entry_at":at.isoformat(),"symbol":quote.symbol,
-                              "pnl_usd":None,"entry_debit_usd":debit,
+                              "pnl_usd":None,"entry_debit_usd":qty*debit,
+                              "contracts":qty,"entry_quality_score":score,
                               "reason":"UNSCORABLE_STALE_OR_MISSING_EVENT_QUOTES"})
             continue
         flat=outcome["exit_at"]
-        pnl=outcome["pnl_usd"]
-        pending+=max(0.0,debit+pnl)
+        pnl=round(qty*outcome["pnl_usd"],6)
+        pending+=max(0.0,qty*debit+pnl)
         positions.append({
             "entry_at":at.isoformat(),"symbol":quote.symbol,"side":quote.right,
-            "setup":item["signal"]["setup"],"entry_debit_usd":debit,
+            "setup":item["signal"]["setup"],"entry_debit_usd":qty*debit,
+            "contracts":qty,"entry_quality_score":score,
+            "unit_pnl_usd":outcome["pnl_usd"],
             "pnl_usd":pnl,"exit_at":flat.isoformat(),
             "exit_reason":outcome["exit_reason"],
             "extended":outcome["extended"],
-            "after_extra_2usd_friction_usd":round(pnl-FEE_STRESS_PER_TRADE,2),
+            "after_extra_2usd_friction_usd":round(pnl-qty*FEE_STRESS_PER_TRADE,2),
         })
     return positions,settled,pending,decisions
 
@@ -176,14 +250,19 @@ def compare_v4(event_dir:Path,legacy_dir:Path,output_dir:Path)->dict:
     for day in days:
         _,candidates,_=session_plan_v2(event_dir,day)
         session=load_session(event_dir,day)
+        candidates_quality=asof_quality_candidates(event_dir,session,candidates)
         for name,state in ledgers.items():
             previous=state["days"][-1] if state["days"] else START_CASH
             prior_peak=max([START_CASH]+state["days"])
-            enable=(name=="v4_conditional_hold" or previous>=prior_peak-1e-8)
+            enable=(name!="v4_1_equity_guard" or previous>=prior_peak-1e-8)
             state["cash"]+=state["pending"]
             state["pending"]=0.0
+            paper_3x=(name=="v4_quality_3x_paper")
             rows,state["cash"],state["pending"],reject=replay_v4(
-                candidates,session,state["cash"],allow_extension=enable)
+                candidates_quality if paper_3x else candidates,session,
+                state["cash"],allow_extension=enable,
+                quality_3x=paper_3x,open_equity=state["cash"],
+                prior_peak=prior_peak)
             state["trades"] += [{"day":str(day),**r} for r in rows]
             state["decisions"] += [{"day":str(day),**r} for r in reject]
             state["days"].append(state["cash"]+state["pending"])
@@ -201,6 +280,9 @@ def compare_v4(event_dir:Path,legacy_dir:Path,output_dir:Path)->dict:
         "outcomes":{**earlier["results"],**estimates},
         "v4_equity_guard":"extension off if preceding session's EOD equity below its prior running max",
         "v4_rules":"10min default, 10% positive premium, SPY 3-bar directional momentum >=3bps, 20-bar relative volume >=0.9, <=3.5% spread, >=90% peak, EMA8, 20% extended trail",
+        "v4_quality_3x_status":"RESEARCH_PAPER_ONLY_NO_ORDERS",
+        "v4_quality_3x_rules":"historical six-component as-of rubric; 1 contract base, score>=4 up to 2, score>=5 up to 3; 35% equity premium budget for extras, 4% prior-EOD drawdown guard, observed bid/ask contract depth and T+1 settled cash. Sizing and every extra fee are per contract.",
+        "historical_3x_results_are_not_forward_proven":True,
         "max_end_of_day_drawdown_only":True,
     }
     output_dir.mkdir(parents=True,exist_ok=True)
