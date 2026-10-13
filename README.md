@@ -82,7 +82,8 @@ Neither performs broker orders or market-data purchases.
 **Operational strategy:** `v4_quality_3x` selected on the Railway
 `spy-0dte-collector` service via `SPY_STRATEGY_PROFILE=v4_quality_3x`.
 The PAPER ledger and guarded LIVE Webull executor now use the same
-`engine.v4_operational` frozen SPY trend/stretch signal, option-quality
+`engine.v4_operational` frozen SPY trend/stretch signal **with V2's
+trend/range regime router, candle/VWAP confirmation**, option-quality
 score, cash/depth-based 1–3 contract sizing and V4 whole-position
 trailing/conditional exits. They remain separate ledgers; **paper never
 submits orders** and **live never uses delayed paper snapshots**.

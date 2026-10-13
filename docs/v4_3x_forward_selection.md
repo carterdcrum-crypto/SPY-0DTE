@@ -49,3 +49,24 @@ Webull M1 SPY bars and fresh timestamped option prices, greeks and depth
 are mandatory. Failure to obtain entitlements blocks orders; old preview
 snapshots are never substituted. The backtest and OPRA-event forward tester
 are separate components, not a claim of validated live execution.
+
+## V4 regime-router parity correction (October 13, 2026)
+
+**Important correction:** the initial Oct. 12 PAPER/LIVE operational rollout
+used raw frozen `identify_setups` entries without the historical V4/V2
+regime router. That was **not fully the archived V4 strategy**. It has been
+corrected in `engine/v4_operational.py`: the same completed-minute
+`regime_reclaim_v2.route_candidate()` now gates *both* PAPER and guarded LIVE
+entries. This enforces the trend-up/down versus range routing, directional
+candle body and close location, relative volume, and **as-of session VWAP**
+confirmation before an option-quality score can permit 1–3 contracts.
+The option selection is ranked using the V2 regime-specific delta target,
+spread and observed quote depth. V4's conditional-hold exit logic and
+quality scoring remain active.
+
+This fixes the **missing regime decision component**; it does not imply exact
+historical replay/live-execution equivalence. The live/PAPER provider sees
+Webull production snapshots, different from independent OPRA event-time
+quotes in the historical forward-replay research, and the algorithm still
+fails closed without current entitled stock-minute and option data. No
+additional strategy profit or win rate is being claimed.
