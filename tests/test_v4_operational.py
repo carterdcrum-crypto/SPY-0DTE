@@ -90,11 +90,11 @@ def test_bar_parser_excludes_in_progress_no_fallback():
 
 def test_v4_exit_uses_full_position_stops_and_ten_min_gate():
     pos={"opened_at":(NOW-timedelta(minutes=9)).isoformat(),
-         "average_cost":101.65,"peak_exit_value":140.}
+         "average_cost":101.65,"peak_exit_value":132.}
     q1=q(bid=.96,ask=.97)
     assert v.exit_reason(pos,q1,bars(),NOW) is None
     q2=q(bid=.91,ask=.92)
-    # credit ~=89.35; 140*0.7 = 98, so trailing exit
+    # credit ~=89.35; 132*0.7 = 92.4, so trailing exit
     assert v.exit_reason(pos,q2,bars(),NOW)=="v4_trailing_30pct"
     pos["opened_at"]=(NOW-timedelta(minutes=11)).isoformat()
     pos["peak_exit_value"]=101.65

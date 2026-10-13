@@ -140,6 +140,8 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
         return None,{"state":"WAITING_V4_BARS","reason":"SPY completed M1 OHLCV not fresh/available"}
     if len(bars)<55:
         return None,{"state":"WAITING_V4_BARS","reason":"at least 55 valid completed SPY M1 OHLCV bars required"}
+    if any(b.volume<=0 for b in bars[-55:]):
+        return None,{"state":"WAITING_V4_BARS","reason":"missing SPY M1 volume observation"}
     if any((b.start-a.start).total_seconds()!=60 for a,b in zip(bars[-55:],bars[-54:])):
         return None,{"state":"WAITING_V4_BARS","reason":"non-contiguous SPY completed M1 bars"}
     if equity<=0 or settled<=0 or peak<=0:
