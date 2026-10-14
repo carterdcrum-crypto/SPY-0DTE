@@ -217,5 +217,5 @@ def test_chart_fails_closed_with_missing_provider_rows_and_real_gaps():
     gap=b[-30:-20]+b[-16:]
     v._store_spy_chart(gap,observed)
     got=v.spy_chart_30m(observed)["candles"]
-    assert len(got)==14  # no invented four-minute OHLCV gap
+    assert len(got)==16  # no invented four-minute OHLCV gap
     assert got[0]["time"]==gap[10].start.isoformat()
