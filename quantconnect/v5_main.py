@@ -26,8 +26,13 @@ class ExtraOptionSlippage:
 class Spy0DteV5Comparison(QCAlgorithm):
     def initialize(self):
         self.set_time_zone(TimeZones.NEW_YORK)
-        self.set_start_date(2024, 1, 2)
-        self.set_end_date(2025, 12, 31)
+        # Override dates for time-sequenced in-sample, holdout, and walk-forward.
+        first = datetime.strptime(self.get_parameter("start") or "2024-01-02", "%Y-%m-%d")
+        last = datetime.strptime(self.get_parameter("end") or "2025-12-31", "%Y-%m-%d")
+        if last <= first:
+            raise ValueError("end date must follow start date")
+        self.set_start_date(first.year,first.month,first.day)
+        self.set_end_date(last.year,last.month,last.day)
         self.set_cash(1000)
         self.set_brokerage_model(BrokerageName.QUANTCONNECT_BROKERAGE, AccountType.CASH)
         self.variant = self.get_parameter("variant") or "v5_current"
@@ -246,6 +251,14 @@ class Spy0DteV5Comparison(QCAlgorithm):
             self.signals += 1
 
     def on_order_event(self, event):
+        if event.status in (OrderStatus.INVALID, OrderStatus.CANCELED):
+            if self.symbol == event.symbol:
+                # Rejected buy must not leave a phantom active position.
+                if int(self.portfolio[self.symbol].quantity) == 0:
+                    self.symbol = None
+                    self.open_time = None
+                self.exiting = False
+            return
         if event.status not in (OrderStatus.FILLED,OrderStatus.PARTIALLY_FILLED):
             return
         if self.symbol is None or event.symbol != self.symbol:
@@ -282,5 +295,11 @@ class Spy0DteV5Comparison(QCAlgorithm):
             "win_pct":round(100*len(wins)/len(self.realized),2) if self.realized else None,
             "profit_factor":round(sum(wins)/abs(sum(losses)),3) if losses else None,
             "missing_or_rejected_quotes":self.no_quote,"closed_bar_signals":self.signals,
+            "no_executable_quote_or_no_data":len(self.realized)==0,
+            "net_profit_usd":round(sum(self.realized),2),
+            "median_daily_return_pct":(
+                round(100*sorted([self.daily[i]/self.daily[i-1]-1 for i in range(1,len(self.daily))
+                                  if self.daily[i-1]>0])[len(self.daily[1:])//2],4)
+                if len(self.daily)>=3 else None),
             "not_live_validated":True}
         self.log("V5_QC_RESEARCH_RESULT "+json.dumps(result,sort_keys=True))
