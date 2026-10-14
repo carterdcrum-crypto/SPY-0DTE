@@ -1083,25 +1083,41 @@ private fun GlassSettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 availableAccounts.forEach { account ->
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(account.label + if (account.selected) " ✓" else "",
-                            color = GlassColors.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                        GlassOutlineButton(
-                            text = if (account.selected) "Selected" else "Select",
-                            enabled = account.isCash && !account.selected &&
-                                !status.liveEnabled && !selectingAccount,
-                            modifier = Modifier.weight(0.45f),
-                            onClick = {
-                                selectingAccount = true
-                                scope.launch {
-                                    actions.selectCashAccount(account.accountId)
-                                        .onSuccess { accountMessage = it; refreshWebullAccounts() }
-                                        .onFailure { accountMessage = it.message ?: "Selection failed." }
-                                    selectingAccount = false
-                                }
-                            },
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            account.label,
+                            color = GlassColors.Text,
+                            fontSize = 11.sp,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2,
                         )
+                        when {
+                            account.selected -> Text(
+                                "✓ ACTIVE", color = GlassColors.Green,
+                                fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            )
+                            !account.isCash -> Text(
+                                "INELIGIBLE", color = GlassColors.TextMuted, fontSize = 9.sp,
+                            )
+                            else -> GlassOutlineButton(
+                                text = "Choose",
+                                enabled = !status.liveEnabled && !selectingAccount,
+                                modifier = Modifier.width(100.dp),
+                                onClick = {
+                                    selectingAccount = true
+                                    scope.launch {
+                                        actions.selectCashAccount(account.accountId)
+                                            .onSuccess { accountMessage = it; refreshWebullAccounts() }
+                                            .onFailure { accountMessage = it.message ?: "Selection failed." }
+                                        selectingAccount = false
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
                 accountMessage?.let { GlassNotice(it, danger = it.contains("failed", true) ||
