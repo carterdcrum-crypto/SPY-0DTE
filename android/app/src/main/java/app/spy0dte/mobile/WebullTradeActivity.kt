@@ -211,41 +211,9 @@ internal fun parseStatus(text: String): ScreenStatus {
         maxEntryDebit = number(guard, "max_entry_debit"),
     )
 
-    val aiDecision = automation.optJSONObject("ai_decision") ?: JSONObject()
-    val blend = aiDecision.optJSONObject("blend") ?: JSONObject()
-    val directConsensus = aiDecision.optJSONObject("consensus")
-    val advisoryConsensus = automation
-        .optJSONObject("ai_advisory")
-        ?.optJSONObject("latest")
-    val consensus = directConsensus ?: advisoryConsensus ?: JSONObject()
-
-    val providerStates = buildList {
-        consensus.optJSONArray("providers")?.let { values ->
-            for (index in 0 until values.length()) {
-                val provider = values.optJSONObject(index) ?: continue
-                val name = provider.optString("provider").trim()
-                if (name.isBlank()) continue
-                add(
-                    AiProviderState(
-                        provider = name,
-                        probabilityUp = number(provider, "probability_up"),
-                        confidence = number(provider, "confidence"),
-                    ),
-                )
-            }
-        }
-    }
-
-    val ai = AiDecisionState(
-        active = aiDecision.optBoolean("active", false),
-        quantProbabilityUp = number(blend, "quant_probability_up"),
-        aiProbabilityUp = number(blend, "ai_probability_up") ?: number(consensus, "probability_up"),
-        hybridProbabilityUp = number(blend, "hybrid_probability_up"),
-        effectiveWeight = number(blend, "effective_weight"),
-        consensusConfidence = number(consensus, "confidence"),
-        disagreement = number(consensus, "disagreement"),
-        providers = providerStates,
-    )
+    // Original V4 uses strict quantitative signals. LLM consensus/provider
+    // probabilities are intentionally excluded from this trading client.
+    val quant = AiDecisionState()
 
     val livePositions = buildList {
         liveAuto.optJSONArray("positions")?.let { rows ->
@@ -289,7 +257,7 @@ internal fun parseStatus(text: String): ScreenStatus {
             } else null,
         ),
         brokerState = brokerState,
-        ai = ai,
+        ai = quant,
         alert = alert,
         paperStartingCash = number(paper, "starting_cash"),
         paperCash = number(paper, "settled_cash"),
@@ -346,7 +314,7 @@ private fun WebullTradeApp(activity: Activity) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
-            Text("GLASS · V4 QUANT + WEBULL")
+            Text("SPY 0DTE · V4 QUANT")
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 scope.launch {
