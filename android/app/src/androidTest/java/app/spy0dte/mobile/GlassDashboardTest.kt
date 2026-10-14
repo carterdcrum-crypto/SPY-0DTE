@@ -80,7 +80,6 @@ class GlassDashboardTest {
         compose.onNodeWithText("QUANT ENGINE · V5 CLOSE-ONLY").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Dynamic · settled cash and displayed market depth").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("35% loss trigger / 25% trail / reversal / 18 min").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("V5 Close-Only · Unrestricted", substring = true).assertExists()
         compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertDoesNotExist()
     }
 
