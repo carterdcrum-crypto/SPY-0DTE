@@ -323,9 +323,12 @@ class WebullMinuteBarCache:
         try:
             if client is None or not hasattr(client.market_data,"get_history_bar"):
                 raise ValueError("Webull M1 OHLCV entitlement/provider is unavailable")
+            # Webull's latest-bars mode can contain an unfinished candle.
+            # Fetch it, then strictly exclude unfinished minutes before
+            # any quantitative signal can observe them.
             response=client.market_data.get_history_bar(
                 "SPY","US_STOCK","M1",count="90",
-                real_time_required=True,trading_sessions="RTH",
+                real_time_required=False,trading_sessions="RTH",
             )
             fresh=parse_webull_bars(response,now)
             if not last_spy_bar_is_fresh(fresh,now) or len(fresh)<55:
