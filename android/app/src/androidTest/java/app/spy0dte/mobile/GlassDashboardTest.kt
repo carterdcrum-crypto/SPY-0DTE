@@ -112,11 +112,11 @@ class GlassDashboardTest {
 
     @Test fun quantTabsNavigateWithoutAnyAiControl() {
         compose.setContent { GlassTheme { GlassDashboard(fixture, false, null, actions(), null) } }
-        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertIsDisplayed()
+        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
         compose.onNodeWithTag("insight_OPTIONS").performScrollTo().performClick()
         compose.onNodeWithTag("insight_QUANT").performScrollTo().performClick()
-        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertIsDisplayed()
+        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun settingsSaveAndPaperActivationCallTheirBackendActions() {

@@ -70,3 +70,27 @@ Webull production snapshots, different from independent OPRA event-time
 quotes in the historical forward-replay research, and the algorithm still
 fails closed without current entitled stock-minute and option data. No
 additional strategy profit or win rate is being claimed.
+
+## User-selected original V4 3x operational profile — October 14, 2026
+
+The user explicitly selected **the original $1,000→$5,109.50 strategy**
+over the separate V2 regime-filtered strategy. PAPER and guarded LIVE now
+route through `v4_original_3x`, restoring frozen raw trend/stretch
+`identify_setups()` and original score/sizing. The V2 regime/VWAP router
+mentioned in the October 13 correction above is **deliberately removed**
+from the operational route, because that additional filtering was NOT
+used in the original $5k historical backtest. The separate V2 forward
+research module remains unchanged.
+
+Operational guards for actual options quotes (production provenance,
+freshness, bid/ask depth, settled cash, max premium exposure and broker
+reconciliation) stay in place. Execution timestamps, fill prices and
+live tick-by-tick quality will not exactly reproduce archived CBBO-minute
+proxy outcomes. No independent forward performance claimed.
+
+**AI decommissioned from the active path:** V4 paper worker and V4 live
+strategy have no provider-LLM or blended model dependency; server chooses
+only original quant V4, and the active Android dashboard has no AI
+recommendations. Persistent live safety settings eliminate mandatory
+daily re-arm; automatic daily P&L stops and owner-controlled Auto Trade
+remain. Orders are never enabled by a source-code commit alone.

@@ -33,36 +33,35 @@ def execution_lock(account_path: str):
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()!="v4_original_3x":
         raise RuntimeError("Only the original V4 3x quantitative execution profile is supported")
-    if True:  # original quant V4 profile; intentionally no AI fallback
-        from dataclasses import replace
-        from .v4_paper_trader import V4QualityPaperTrader
-        from .live_market import LiveDataProvider
-        from .webull_live import production_credentials
-        from .market_data_factory import provider_from_env
-        option_provider=None
-        bar_provider=None
+    from dataclasses import replace
+    from .v4_paper_trader import V4QualityPaperTrader
+    from .live_market import LiveDataProvider
+    from .webull_live import production_credentials
+    from .market_data_factory import provider_from_env
+    option_provider=None
+    bar_provider=None
+    try:
+        key,secret=production_credentials()
+        option_provider=LiveDataProvider(key,secret)
+        bar_provider=option_provider
+    except Exception:
+        # PAPER must stay operational but fail closed for V4 signals
+        # when the broker has not supplied valid market-data access.
         try:
-            key,secret=production_credentials()
-            option_provider=LiveDataProvider(key,secret)
-            bar_provider=option_provider
+            bar_provider=provider_from_env()
         except Exception:
-            # PAPER must stay operational but fail closed for V4 signals
-            # when the broker has not supplied valid market-data access.
-            try:
-                bar_provider=provider_from_env()
-            except Exception:
-                pass
-        settings=PaperAutoSettings.from_env()
-        if "PAPER_MAX_CONTRACTS" not in os.environ:
-            settings=replace(settings,maximum_contracts=3)
-        settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
-        return V4QualityPaperTrader(
-            mode_getter=mode_getter,
-            market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
-            account_store=PaperAccountStore(_paper_db_path(),default_starting_cash=_paper_starting_cash()),
-            settings=settings,production_provider=option_provider,
-            bar_provider=bar_provider,
-        )
+            pass
+    settings=PaperAutoSettings.from_env()
+    if "PAPER_MAX_CONTRACTS" not in os.environ:
+        settings=replace(settings,maximum_contracts=3)
+    settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
+    return V4QualityPaperTrader(
+        mode_getter=mode_getter,
+        market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
+        account_store=PaperAccountStore(_paper_db_path(),default_starting_cash=_paper_starting_cash()),
+        settings=settings,production_provider=option_provider,
+        bar_provider=bar_provider,
+    )
 
 
 def run_forever(mode_getter: Callable[[], str], context: WorkerContext, *, delayed: bool) -> None:
