@@ -1,0 +1,152 @@
+"""Causal CLOSE-ONLY V5 challenger for real-time PAPER and LIVE observation.
+
+The $507k Railway arm was an illiquid, no-price-impact research hypothesis.
+Only PAPER research can request settled-cash sizing, bounded by authentic
+current NBBO displayed depths. LIVE can OBSERVE this signal but does not emit
+orders from this unvalidated policy. No lookahead, historical prices or AI.
+"""
+from __future__ import annotations
+
+import math
+import statistics
+from datetime import datetime, timedelta
+from types import SimpleNamespace
+
+from .regime_hold_sensitivity import MAX_FIXED_MIN
+from .v5_archive_proxy import close_proxy_signals
+from .v4_operational import (
+    ET, FEE, SLIPPAGE_PER_SHARE, MAX_SOURCE_DELAY_SECONDS,
+    last_spy_bar_is_fresh, _rv,
+)
+from .session_calendar import session_close
+from quantconnect.v5_core import quality_score
+
+PROFILE = "v5_close_only_unrestricted_research"
+MAX_PREMIUM_SPREAD = .03
+
+
+def _reference_frames(bars):
+    """Observed SPY completed close and observed volume-derived RVOL only."""
+    frames = []
+    for i, b in enumerate(bars):
+        prev = bars[i-20:i] if i >= 20 else []
+        rvol = b.volume / statistics.fmean(x.volume for x in prev) if (
+            len(prev)==20 and min(x.volume for x in prev)>0) else 0.
+        frames.append(SimpleNamespace(timestamp=b.start,
+            market=SimpleNamespace(spot=b.close, volume_ratio=rvol)))
+    return frames
+
+
+def paper_candidate(now, bars, quotes, *, equity, settled, peak):
+    """Independent paper signal / live-observation preview; never an order.
+
+    Verify fresh option quote AND its underlying timestamp and genuine size.
+    Does not infer a fill; paper execution uses sampled spread-crossing debit.
+    """
+    if now.tzinfo is None:
+        raise ValueError("timezone-aware now required")
+    local = now.astimezone(ET)
+    close = session_close(local.date())
+    if close is None or local.hour < 9 or (local.hour == 9 and local.minute < 52):
+        return None, {"state":"MARKET_CLOSED"}
+    if (datetime.combine(local.date(),close,ET)-local).total_seconds() < 20*60:
+        return None, {"state":"ENTRY_WINDOW_CLOSED"}
+    if not (equity>0 and settled>0 and peak>0):
+        return None, {"state":"INSUFFICIENT_SETTLED_CASH"}
+    if len(bars)<57 or not last_spy_bar_is_fresh(bars,now):
+        return None, {"state":"WAITING_REAL_COMPLETED_SPY_M1"}
+    tail=bars[-57:]
+    if any(b.start.astimezone(ET).date()!=local.date() or b.volume<=0 for b in tail):
+        return None, {"state":"NONCONTIGUOUS_REAL_SPY_M1"}
+    if any((b.start-a.start).total_seconds()!=60 for a,b in zip(tail,tail[1:])):
+        return None, {"state":"NONCONTIGUOUS_REAL_SPY_M1"}
+    # bar[-2] is the signal close; bar[-1] is the next FINISHED minute.
+    sig_at=bars[-2].available_at
+    if not 60 <= (now-sig_at).total_seconds() <= 125:
+        return None, {"state":"WAITING_AFTER_SIGNAL_MINUTE"}
+    frames=_reference_frames(bars[:-1])
+    setups=close_proxy_signals(frames,len(frames)-1,challenger=True)
+    if not setups:
+        return None, {"state":"NO_CLOSE_ONLY_V5_SIGNAL"}
+    rv=_rv(bars,len(bars)-3)
+    if rv<=0:
+        return None, {"state":"MISSING_REALIZED_VOLATILITY"}
+    choices=[]
+    for sig in setups:
+        for q in quotes:
+            try:
+                if (q.source!="webull_production"
+                    or q.timestamp_quality!="option_quote_timestamp"
+                    or q.underlying_timestamp is None
+                    or q.expiration!=local.date() or q.right!=sig.side):
+                    continue
+                if any(not 0 <= (now-at).total_seconds() <= MAX_SOURCE_DELAY_SECONDS
+                       for at in (q.timestamp,q.received_at,q.underlying_timestamp)):
+                    continue
+                bid=float(q.bid); ask=float(q.ask)
+                bs=int(q.bid_size); a_s=int(q.ask_size)
+                delta=float(q.greeks.delta); iv=float(q.greeks.implied_volatility)
+                if (not all(math.isfinite(x) for x in (bid,ask,delta,iv))
+                    or not ask>bid>0 or bs<1 or a_s<1
+                    or not .40<=abs(delta)<=.60 or iv<=0 or iv/rv>1.5):
+                    continue
+                spread=(ask-bid)/((ask+bid)/2)
+                if spread>MAX_PREMIUM_SPREAD:
+                    continue
+                debit=round((ask+SLIPPAGE_PER_SHARE)*100+FEE,2)
+                # Fully unrestricted premium budgeting IN PAPER, but strictly
+                # bound by real displayed bid/ask depth and settled cash.
+                n=min(int((settled+1e-8)//debit),bs,a_s)
+                if n<1:
+                    continue
+                score=quality_score(sig,spread,delta,iv,rv)
+                choices.append((abs(abs(delta)-.5),spread,str(q.option_symbol),
+                    sig,q,n,debit,score))
+            except (AttributeError,TypeError,ValueError,ZeroDivisionError,OverflowError):
+                continue
+    if not choices:
+        return None, {"state":"NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE"}
+    _,_,_,sig,q,n,debit,score=min(choices,key=lambda x:x[:3])
+    return {"symbol":q.option_symbol,"quantity":n,"side":sig.side,
+        "quality_score":score,"setup":sig.setup,
+        "signal_at":sig_at.isoformat(),"cycle":sig_at.isoformat(),
+        "debit_per_contract":debit,
+        "underlying_spot":q.underlying_price,
+        "sizing_mode":"UNRESTRICTED_CASH_PAPER_RESEARCH",
+        "reason":f"{PROFILE}; {sig.setup}; long0dte; paper-research-only",
+        "no_live_order":True}, {"state":"PAPER_RESEARCH_SIGNAL","contracts":n,
+                                 "full_premium_risk_usd":round(n*debit,2),
+                                 "no_live_order":True}
+
+
+def paper_exit_reason(position,quote,bars,now):
+    """Observed 35% hard loss / 25% premium trail / reversal / 18min exit."""
+    if quote is None or not 0<=(now-quote.timestamp).total_seconds()<=MAX_SOURCE_DELAY_SECONDS:
+        return None
+    opened=position["opened_at"]
+    if isinstance(opened,str):
+        opened=datetime.fromisoformat(opened)
+    if opened.tzinfo is None:
+        return "invalid_entry_timestamp"
+    debit=float(position.get("average_cost",0))
+    if debit<=0:
+        return "invalid_cost"
+    peak=float(position.get("peak_exit_value",debit))
+    credit=max(0.,(float(quote.bid)-SLIPPAGE_PER_SHARE)*100-FEE)
+    if credit<=debit*.65:
+        return "v5_paper_stop_35pct"
+    if credit<=max(peak,debit)*.75:
+        return "v5_paper_trailing_25pct"
+    age=(now-opened).total_seconds()
+    if age<600:
+        return None
+    if not last_spy_bar_is_fresh(bars,now) or len(bars)<5:
+        return "v5_missing_complete_m1"
+    direction=1 if position["symbol"][-9:].find("C")>=0 else -1
+    # Use recorded options right, NOT symbol-string guessing.
+    direction=1 if getattr(quote,"right",None)=="call" else -1
+    if direction*(bars[-1].close/bars[-4].close-1)<0:
+        return "v5_spy_close_reversal"
+    if age>=18*60:
+        return "v5_18min_timeout"
+    return None
