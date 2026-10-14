@@ -295,7 +295,8 @@ class LiveExecutor:
             position["peak_exit_value"] = peak
             reason = "automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None
             reason = reason or ("daily_stop" if daily and daily["halt_reason"] else None)
-            close_buffer = 15 if str(position.get("entry_reason","")).startswith("v4_original_3x;") else 10
+            close_buffer = 15 if str(position.get("entry_reason","")).startswith(
+                ("v4_original_3x;","v5_close_only_unrestricted_research;")) else 10
             reason = reason or ("session_close" if minutes_left <= close_buffer else None)
             reason = reason or ("continue_exit" if position["exit_requested"] else None)
             target_remaining = profit_exit_quantity(
@@ -304,7 +305,9 @@ class LiveExecutor:
             # A cancelled target order is retried only while the fresh net bid
             # still clears +100%; do not chase an old target below its price.
             entry_value = position["average_price"] * 100.0 + fee
-            if (reason is None and position["target_requested"] and target_remaining
+            if (reason is None and not str(position.get("entry_reason","")).startswith(
+                    "v5_close_only_unrestricted_research;")
+                    and position["target_requested"] and target_remaining
                     and q.bid * 100.0 - fee >= entry_value * 2.0):
                 reason = "take_profit"
             reason = reason or self.strategy.exit(position, now)
@@ -345,7 +348,23 @@ class LiveExecutor:
         per_contract = premium*100 + 1.0
         budget = min(account["settled_cash"], account["equity"]*limits.max_account_exposure_pct,
                      max(0.0, limits.daily_loss_limit+account["daily_pnl"]))
-        if str(candidate.get("reason","")).startswith("v4_original_3x;"):
+        candidate_reason=str(candidate.get("reason",""))
+        if candidate_reason.startswith(("v4_original_3x;",
+                                       "v5_close_only_unrestricted_research;")):
+            # Both V4 and user-selected V5 require fresh executable quote
+            # provenance, spread, depth and owner account risk envelope.
+            # V5 is NOT permitted to bypass the standing owner-configured
+            # contract-count, exposure, settled cash or daily-loss limits.
+            snapshot = self.market.quotes.get(candidate["symbol"])
+            mid=(q.ask+q.bid)/2
+            if (snapshot is None or snapshot.source!="webull_production"
+                    or snapshot.timestamp_quality!="option_quote_timestamp"
+                    or mid<=0 or (q.ask-q.bid)/mid>.035
+                    or int(snapshot.bid_size)<int(candidate["quantity"])
+                    or int(snapshot.ask_size)<int(candidate["quantity"])):
+                return {**common,"state":"RISK_BLOCKED",
+                        "reason":"final executable quote provenance/depth changed; no order"}
+        if candidate_reason.startswith("v4_original_3x;"):
             # The model's earlier 35% cap is rechecked at executable quote
             # prices; an ask jump cannot evade it. Revalidate options NBBO
             # liquidity and displayed depth immediately before reserving.
@@ -390,9 +409,17 @@ def run_forever(mode_getter, context):
                         market = LiveMarketReader()
                         key, secret = credentials
                         from .v4_live_strategy import V4QualityLiveStrategy
+                        profile=os.environ.get("LIVE_STRATEGY_PROFILE","v4_original_3x").strip().lower()
+                        if profile=="v5_close_only_unrestricted_research":
+                            from .v5_close_only_live_strategy import V5CloseOnlyLiveStrategy
+                            strategy=V5CloseOnlyLiveStrategy(market,path+".research")
+                        elif profile=="v4_original_3x":
+                            strategy=V4QualityLiveStrategy(market,path+".research")
+                        else:
+                            raise ValueError("unknown LIVE strategy profile; no broker orders")
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
-                            strategy=V4QualityLiveStrategy(market,path+".research"),
+                            strategy=strategy,
                             mode_getter=mode_getter)
                         active_credentials = credentials
                     publish(**executor.telemetry(executor.tick()))
