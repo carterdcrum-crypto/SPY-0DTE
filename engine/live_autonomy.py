@@ -15,7 +15,6 @@ from .exit_rules import profit_exit_quantity
 from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
 from .live_market import LiveDataProvider, LiveMarketReader, parse_occ_symbol, position_symbol
 from .live_risk import EASTERN
-from .live_strategy import LiveStrategy
 from .paper_runner import execution_lock
 from .session_calendar import session_bounds
 from .webull_live import WebullLiveClient, _balance_object, _number, _usd_asset, webull_env_status, production_credentials
@@ -390,11 +389,10 @@ def run_forever(mode_getter, context):
                     if executor is None or credentials != active_credentials:
                         market = LiveMarketReader()
                         key, secret = credentials
+                        from .v4_live_strategy import V4QualityLiveStrategy
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
-                            strategy=(__import__("engine.v4_live_strategy",fromlist=["V4QualityLiveStrategy"]).V4QualityLiveStrategy(market,path+".research")
-                                      if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").lower()=="v4_original_3x"
-                                      else LiveStrategy(market,path+".research")),
+                            strategy=V4QualityLiveStrategy(market,path+".research"),
                             mode_getter=mode_getter)
                         active_credentials = credentials
                     publish(**executor.telemetry(executor.tick()))

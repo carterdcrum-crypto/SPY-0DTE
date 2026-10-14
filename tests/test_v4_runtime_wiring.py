@@ -9,7 +9,7 @@ from engine.v4_live_strategy import V4QualityLiveStrategy
 
 def test_v4_paper_profile_is_selected_without_credentials_and_never_places_broker_orders(
         monkeypatch,tmp_path):
-    monkeypatch.setenv("SPY_STRATEGY_PROFILE","v4_quality_3x")
+    monkeypatch.setenv("SPY_STRATEGY_PROFILE","v4_original_3x")
     monkeypatch.setenv("PAPER_DB_PATH",str(tmp_path/"paper.sqlite"))
     monkeypatch.setenv("COLLECTOR_DB_PATH",str(tmp_path/"market.sqlite"))
     monkeypatch.setenv("PAPER_STARTING_CASH","1000")

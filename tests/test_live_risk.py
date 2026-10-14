@@ -15,7 +15,7 @@ from engine.live_risk import (
 EASTERN = ZoneInfo("America/New_York")
 
 
-def test_live_risk_envelope_arms_only_for_selected_trading_day(tmp_path):
+def test_live_risk_envelope_persists_across_trading_days(tmp_path):
     store = LiveRiskEnvelopeStore(tmp_path / "risk.sqlite")
     now = datetime(2026, 9, 25, 10, 0, tzinfo=EASTERN)
 
@@ -36,13 +36,13 @@ def test_live_risk_envelope_arms_only_for_selected_trading_day(tmp_path):
     assert envelope.as_dict(now)["max_open_positions"] == 1
 
     next_day = datetime(2026, 9, 26, 10, 0, tzinfo=EASTERN)
-    assert envelope.armed_today(next_day) is False
+    assert envelope.armed_today(next_day) is True
 
 
-def test_live_risk_envelope_requires_explicit_daily_arm_phrase(tmp_path):
+def test_standing_envelope_requires_owner_confirmation(tmp_path):
     store = LiveRiskEnvelopeStore(tmp_path / "risk.sqlite")
 
-    with pytest.raises(LiveRiskEnvelopeError, match="confirmation phrase"):
+    with pytest.raises(LiveRiskEnvelopeError, match="confirmation"):
         store.arm(
             daily_loss_limit=25.0,
             daily_gain_limit=40.0,
@@ -52,7 +52,7 @@ def test_live_risk_envelope_requires_explicit_daily_arm_phrase(tmp_path):
         )
 
 
-def test_disarm_preserves_limits_but_removes_today_authorization(tmp_path):
+def test_explicit_disarm_clears_standing_limits(tmp_path):
     store = LiveRiskEnvelopeStore(tmp_path / "risk.sqlite")
     now = datetime(2026, 9, 25, 10, 0, tzinfo=EASTERN)
     store.arm(
@@ -66,6 +66,7 @@ def test_disarm_preserves_limits_but_removes_today_authorization(tmp_path):
 
     disarmed = store.disarm()
     assert disarmed.trading_date is None
-    assert disarmed.daily_loss_limit == 25.0
-    assert disarmed.daily_gain_limit == 40.0
-    assert disarmed.max_contracts == 3
+    assert disarmed.daily_loss_limit is None
+    assert disarmed.daily_gain_limit is None
+    assert disarmed.max_contracts is None
+    assert not disarmed.armed_today()

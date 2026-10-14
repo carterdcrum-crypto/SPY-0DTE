@@ -12,7 +12,6 @@ from typing import Callable
 
 from .paper_account import PaperAccountStore
 from .paper_autotrader import PaperAutoSettings, SnapshotReader, _paper_db_path, _paper_starting_cash, _publish
-from .paper_dynamic_autotrader import risk_config_from_env
 from .runtime import WorkerContext
 
 log = logging.getLogger("spy0dte.paper.runner")
@@ -32,7 +31,9 @@ def execution_lock(account_path: str):
 
 
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
-    if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()=="v4_original_3x":
+    if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()!="v4_original_3x":
+        raise RuntimeError("Only the original V4 3x quantitative execution profile is supported")
+    if True:  # original quant V4 profile; intentionally no AI fallback
         from dataclasses import replace
         from .v4_paper_trader import V4QualityPaperTrader
         from .live_market import LiveDataProvider
@@ -62,18 +63,6 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
             settings=settings,production_provider=option_provider,
             bar_provider=bar_provider,
         )
-    # Old AI classes remain in historical research modules only. The default
-    # operational profile uses quant V4; this legacy fallback is opt-in.
-    from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
-    from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
-    trader_class = AIDelayedSimulationPaperAutoTrader if delayed else SaferAIAugmentedDynamicExitTrader
-    return trader_class(
-        mode_getter=mode_getter,
-        market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
-        account_store=PaperAccountStore(_paper_db_path(), default_starting_cash=_paper_starting_cash()),
-        settings=PaperAutoSettings.from_env(),
-        risk_config=risk_config_from_env(),
-    )
 
 
 def run_forever(mode_getter: Callable[[], str], context: WorkerContext, *, delayed: bool) -> None:

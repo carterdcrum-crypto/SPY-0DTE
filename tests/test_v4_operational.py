@@ -112,26 +112,23 @@ def test_historical_rounding_does_not_override_live_hard_risk(monkeypatch):
 
 
 
-def test_v4_live_candidate_requires_real_v2_regime_router(monkeypatch):
-    """A raw V1 signal may not bypass V2 regime/candle/VWAP vetoes."""
+
+def test_v4_original_does_not_require_v2_regime_or_vwap(monkeypatch):
+    """Regression: frozen $5k archive selected raw trend/stretch signals."""
     b=bars()
     monkeypatch.setattr(v,"identify_setups",lambda frames:[signal(b)])
-    rejected=[]
-    def denied(event,completed_bars,i):
-        rejected.append((event["at"],completed_bars[i].available_at))
-        return {"selected":False,"reason":"AGAINST_SESSION_VWAP"}
-    monkeypatch.setattr(v,"route_candidate",denied)
-    proposed,diag=v.candidate(NOW,b,[q()],equity=1000.,settled=1000.,peak=1000.)
-    assert proposed is None
-    assert rejected and rejected[0][0]==rejected[0][1]
-    assert diag["state"]=="NO_SIGNAL"
+    proposal,info=v.candidate(NOW,b,[q()],equity=1000.,settled=1000.,peak=1000.)
+    assert proposal is not None
+    assert proposal["quality_score"]>=5
+    assert "regime" not in proposal and "signal_vwap" not in proposal
+    assert "Original V4" in info["reason"]
 
 
-def test_v4_proposal_surfaces_confirmed_regime_and_asof_vwap(monkeypatch):
+def test_v4_original_rank_targets_delta_point_five(monkeypatch):
     b=bars()
     monkeypatch.setattr(v,"identify_setups",lambda frames:[signal(b)])
-    proposed,diag=v.candidate(NOW,b,[q()],equity=1000.,settled=1000.,peak=1000.)
-    assert proposed is not None
-    assert proposed["regime"]=="trend_up"
-    assert proposed["signal_vwap"]>0
-    assert proposed["quality_score"]>=5
+    quoted=q()
+    other=q(option_symbol="SPY261012C00601000",
+            greeks=SimpleNamespace(delta=.55,implied_volatility=.001))
+    proposal,_=v.candidate(NOW,b,[other,quoted],equity=1000.,settled=1000.,peak=1000.)
+    assert proposal["symbol"]==quoted.option_symbol

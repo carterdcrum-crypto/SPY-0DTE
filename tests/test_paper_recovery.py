@@ -3,10 +3,9 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from engine.ai_validation import AIValidationMixin
 from engine.paper_account import PaperAccountStore
 from engine.paper_autotrader import PaperAutoSettings
-from engine.paper_hold_value_exit import HoldValueExitPolicyMixin
+from engine.v4_paper_trader import V4QualityPaperTrader
 from engine import paper_runner
 from engine.runtime import WorkerContext
 
@@ -69,11 +68,11 @@ def test_recovery_after_committed_entry_does_not_buy_twice(monkeypatch, tmp_path
 
 
 @pytest.mark.parametrize("delayed", [False, True])
-def test_both_data_modes_use_latest_exit_and_validation(monkeypatch, tmp_path, delayed):
+def test_both_data_modes_use_original_quant_v4_without_ai(monkeypatch, tmp_path, delayed):
     monkeypatch.setenv("PAPER_DB_PATH", str(tmp_path / "paper.sqlite"))
     trader = paper_runner.create_trader(lambda: "SHADOW", delayed=delayed)
-    assert isinstance(trader, HoldValueExitPolicyMixin)
-    assert isinstance(trader, AIValidationMixin)
+    assert isinstance(trader, V4QualityPaperTrader)
+    assert not hasattr(trader, 'ai_engine')
 
 
 def test_concurrent_settlement_releases_cash_only_once(tmp_path):
