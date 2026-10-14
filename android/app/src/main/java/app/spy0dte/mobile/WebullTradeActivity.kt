@@ -134,6 +134,28 @@ internal class TradeBackend(private val token: String) {
         post("/v1/broker/webull", JSONObject().put("environment", "production").put("app_key", key).put("app_secret", secret))
     }
 
+    suspend fun verifyOwner(): Result<String> = withContext(Dispatchers.IO) {
+        if (base.isBlank()) return@withContext Result.failure(IllegalStateException("Backend URL is not configured"))
+        try {
+            val request = Request.Builder().url("$base/v1/auth/me")
+                .header("Authorization", "Bearer $token").get().build()
+            http.newCall(request).execute().use { response ->
+                val payload = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return@use Result.failure(IllegalStateException(
+                        "Google account not authorized by Railway (HTTP ${response.code}). Check the owner email allowlist.",
+                    ))
+                }
+                val owner = JSONObject(payload)
+                if (!owner.optBoolean("authenticated") || !owner.optBoolean("owner")) {
+                    Result.failure(IllegalStateException("Google account is not authorized as owner"))
+                } else Result.success(owner.optString("email"))
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
     private fun post(path: String, payload: JSONObject): Result<JSONObject> {
         if (base.isBlank()) return Result.failure(IllegalStateException("Backend URL is not configured"))
         return try {
@@ -304,15 +326,42 @@ internal fun parseStatus(text: String): ScreenStatus {
     )
 }
 
-private suspend fun googleSignIn(activity: Activity): Result<String> {
-    if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
-        return Result.failure(IllegalStateException("Google owner login is not configured in this build"))
+private suspend fun ownerGoogleClientId(): Result<String> = withContext(Dispatchers.IO) {
+    val base = BuildConfig.API_BASE_URL.trim().trimEnd('/')
+    if (base.isBlank()) return@withContext Result.failure(
+        IllegalStateException("Railway backend URL is not configured"),
+    )
+    try {
+        // Get the public OAuth Web Client ID from Railway at runtime. Neither
+        // owner emails nor broker keys are distributed in the Android APK.
+        val request = Request.Builder().url("$base/v1/auth/config").get().build()
+        OkHttpClient.Builder().callTimeout(15, TimeUnit.SECONDS).build()
+            .newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@use Result.failure(
+                    IllegalStateException("Railway Google login setup is unavailable (HTTP ${response.code})"),
+                )
+                val config = JSONObject(response.body?.string().orEmpty())
+                val clientId = config.optString("google_web_client_id").trim()
+                if (!config.optBoolean("owner_login_ready") || clientId.isBlank()) {
+                    Result.failure(IllegalStateException(
+                        "Google owner login needs GOOGLE_WEB_CLIENT_ID and APP_ALLOWED_EMAILS in Railway.",
+                    ))
+                } else Result.success(clientId)
+            }
+    } catch (error: Exception) {
+        Result.failure(error)
+    }
+}
+
+private suspend fun googleSignIn(activity: Activity, webClientId: String): Result<String> {
+    if (webClientId.isBlank()) {
+        return Result.failure(IllegalStateException("Google owner login is not configured"))
     }
     return try {
         val manager = CredentialManager.create(activity)
         val option = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+            .setServerClientId(webClientId)
             .build()
         val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
         val response = manager.getCredential(context = activity, request = request)
@@ -338,9 +387,11 @@ private fun startWatcher(activity: Activity, token: String) {
 
 @Composable
 private fun WebullTradeApp(activity: Activity) {
-    val oauthConfigured = BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()
-    var token by remember { mutableStateOf<String?>(if (oauthConfigured) null else "preview") }
+    // Never grant owner privileges because a build-time OAuth ID is missing.
+    // Preview is explicitly chosen and remains read-only/offline.
+    var token by remember { mutableStateOf<String?>(null) }
     var loginError by remember { mutableStateOf<String?>(null) }
+    var loginBusy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     if (token == null) {
@@ -350,14 +401,30 @@ private fun WebullTradeApp(activity: Activity) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
-            Text("SPY 0DTE · V4 QUANT")
+            Text("VERIFIED GOOGLE OWNER ACCESS")
             Spacer(Modifier.height(20.dp))
-            Button(onClick = {
+            Button(enabled = !loginBusy, onClick = {
                 scope.launch {
+                    loginBusy = true
                     loginError = null
-                    googleSignIn(activity).onSuccess { token = it }.onFailure { loginError = it.message }
+                    try {
+                        val clientId = ownerGoogleClientId().getOrThrow()
+                        val idToken = googleSignIn(activity, clientId).getOrThrow()
+                        // Only show connected account controls after Railway has
+                        // verified the ID token and explicit owner allowlist.
+                        TradeBackend(idToken).verifyOwner().getOrThrow()
+                        token = idToken
+                    } catch (error: Exception) {
+                        loginError = error.message ?: "Google owner sign-in failed"
+                    } finally {
+                        loginBusy = false
+                    }
                 }
-            }) { Text("SIGN IN AS OWNER") }
+            }) { Text(if (loginBusy) "VERIFYING OWNER…" else "SIGN IN AS OWNER") }
+            Spacer(Modifier.height(12.dp))
+            Button(enabled = !loginBusy, onClick = { token = "preview" }) {
+                Text("VIEW READ-ONLY PREVIEW")
+            }
             loginError?.let {
                 Spacer(Modifier.height(10.dp))
                 Text(it, color = GlassColors.Red)
@@ -370,7 +437,11 @@ private fun WebullTradeApp(activity: Activity) {
         activity = activity,
         token = token!!,
         preview = token == "preview",
-        onSignOut = if (oauthConfigured) ({ activity.stopService(Intent(activity, TradeWatchService::class.java)); token = null }) else null,
+        onSignOut = {
+            activity.stopService(Intent(activity, TradeWatchService::class.java))
+            token = null
+            loginError = null
+        },
     )
 }
 
@@ -386,15 +457,20 @@ private fun TradeConsole(
     var connectionError by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(token) {
-        startWatcher(activity, token)
-        val socket = backend.connect(
-            onStatus = { next -> activity.runOnUiThread { status = next; connectionError = null } },
-            onError = { error -> activity.runOnUiThread {
-                status = status.copy(connected = false, brokerConnected = false)
-                connectionError = error
-            } },
-        )
-        onDispose { socket.close() }
+        if (preview) {
+            connectionError = "Preview only. Sign in as owner to connect to Railway."
+            onDispose { }
+        } else {
+            startWatcher(activity, token)
+            val socket = backend.connect(
+                onStatus = { next -> activity.runOnUiThread { status = next; connectionError = null } },
+                onError = { error -> activity.runOnUiThread {
+                    status = status.copy(connected = false, brokerConnected = false)
+                    connectionError = error
+                } },
+            )
+            onDispose { socket.close() }
+        }
     }
 
     GlassDashboard(
