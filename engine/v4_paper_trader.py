@@ -93,7 +93,8 @@ class V4QualityPaperTrader(PaperAutoTrader):
 
     @staticmethod
     def _finish(now,values):
-        return PaperAutoTrader._finish(now,{**values,"strategy":IDENTIFIER})
+        return PaperAutoTrader._finish(now,{**values,"strategy":IDENTIFIER,
+            "sizing_mode":"adaptive_compound_paper"})
 
     def _quotes(self,now,position=None):
         if self.production_provider is not None:
@@ -174,8 +175,9 @@ class V4QualityPaperTrader(PaperAutoTrader):
         peak=max(acct.starting_cash,acct.starting_cash+acct.realized_pnl,equity)
         proposal,decision=candidate(current,self.bar_cache.bars,quotes,
             equity=equity,settled=acct.settled_cash,peak=peak,
-            max_contracts=min(3,self.settings.maximum_contracts),
-            exposure=min(.35,self.settings.maximum_position_fraction))
+            max_contracts=self.settings.maximum_contracts,
+            exposure=min(.35,self.settings.maximum_position_fraction),
+            sizing_mode="adaptive",starting_cash=acct.starting_cash)
         if proposal is None:
             return self._finish(current,{**decision,"mode":mode,
                 "last_signal":None,"last_action":None,

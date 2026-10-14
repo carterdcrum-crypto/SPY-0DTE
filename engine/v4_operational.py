@@ -25,6 +25,7 @@ from .regime_hold_conditional import (
 )
 from .regime_reclaim_frozen_signal import ema
 from .v4_quality_sizing import score_at_entry, size as quality_size
+from .v4_compound_sizing import adaptive_quantity
 from .weekly_options_data import Bar
 from .session_calendar import session_close
 
@@ -112,7 +113,7 @@ SLIPPAGE_PER_SHARE=.01
 MAX_SOURCE_DELAY_SECONDS=3
 MAX_SPREAD=.035
 MAX_IV_RV=1.5
-MAX_CONTRACTS=3
+BASELINE_MAX_CONTRACTS=3
 
 
 def _time(raw):
@@ -215,12 +216,15 @@ def _rv(bars:list[Bar],last:int)->float:
 
 
 def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
-              peak:float,max_contracts:int=3,exposure:float=.35):
+              peak:float,max_contracts:int=3,exposure:float=.35,
+              sizing_mode:str="original",starting_cash:float=1000.):
     """Return (order proposal or None, diagnostic) with causal sizing.
 
     *Only* evaluate fresh selected option quotes in the 1–2min window
     FOLLOWING a completed SPY signal; quotes must have time, sizes, greeks.
     """
+    if sizing_mode not in ("original","adaptive"):
+        raise ValueError("unknown V4 sizing mode")
     if now.tzinfo is None:
         raise ValueError("aware now required")
     if not last_spy_bar_is_fresh(bars,now):
@@ -293,11 +297,18 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
                 debit=round((q.ask+SLIPPAGE_PER_SHARE)*100+FEE,2)
                 # This is a long option. Even with a modeled stop, the full
                 # debit of EVERY contract is genuinely at risk.
-                qty=quality_size("v4_quality_3x",score=quality,
-                    equity=equity,settled=settled,peak=peak,debit=debit)
                 hard=int((min(settled,equity*min(.35,exposure))+1e-8)//debit)
-                qty=min(qty,MAX_CONTRACTS,max(0,int(max_contracts)),
-                        int(q.bid_size),int(q.ask_size),hard)
+                if sizing_mode=="adaptive":
+                    qty=adaptive_quantity(
+                        score=quality,equity=equity,settled=settled,
+                        peak=peak,debit=debit,starting_cash=starting_cash,
+                        exposure=min(.35,exposure),max_contracts=max_contracts,
+                        bid_size=int(q.bid_size),ask_size=int(q.ask_size))
+                else:
+                    qty=quality_size("v4_quality_3x",score=quality,
+                        equity=equity,settled=settled,peak=peak,debit=debit)
+                    qty=min(qty,BASELINE_MAX_CONTRACTS,max(0,int(max_contracts)),
+                            int(q.bid_size),int(q.ask_size),hard)
                 if qty<=0:
                     continue
                 # Preserve the original $5k V4 signal / contract choice:
@@ -313,13 +324,13 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
          key=lambda x:(x[3]["at"],x[0],x[1],x[2]))
     return {
         "symbol":q.option_symbol,"quantity":qty,
-        "quality_score":quality,"signal_at":sig["at"].isoformat(),
-        "reason":f"{IDENTIFIER}; setup={sig['setup']}; quality={quality}/6; qty={qty}; observed_m1_webull",
+        "quality_score":quality,"sizing_mode":("adaptive_compound" if sizing_mode=="adaptive" else "original_3x"),"signal_at":sig["at"].isoformat(),
+        "reason":f"{IDENTIFIER}; sizing={sizing_mode}; setup={sig['setup']}; quality={quality}/6; qty={qty}; observed_m1_webull",
         "cycle":sig["at"].isoformat(),"debit_per_contract":debit,
         "underlying_spot":q.underlying_price,
         "side":sig["side"],"rv":rv,
     },{"state":"SIGNAL","reason":"Original V4 frozen trend/stretch entry quality 3x candidate",
-        "strategy":IDENTIFIER,"quality_score":quality,
+        "strategy":IDENTIFIER,"sizing_mode":sizing_mode,"quality_score":quality,
         "contracts":qty,"signal":sig,"account_equity":equity}
 
 

@@ -53,7 +53,7 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
             pass
     settings=PaperAutoSettings.from_env()
     if "PAPER_MAX_CONTRACTS" not in os.environ:
-        settings=replace(settings,maximum_contracts=3)
+        settings=replace(settings,maximum_contracts=100)
     settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
     return V4QualityPaperTrader(
         mode_getter=mode_getter,

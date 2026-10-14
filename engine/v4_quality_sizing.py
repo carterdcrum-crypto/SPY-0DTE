@@ -21,9 +21,11 @@ from .regime_hold_sensitivity import (
 )
 from .regime_hold_conditional import simulate_conditional
 from .v4_dynamic_size_backtest import summary
+from .v4_compound_sizing import adaptive_quantity, unrestricted_research_quantity
 from .weekly_options_data import NY
 
-ARMS=("v4_fixed_one","v4_quality_2x","v4_quality_3x","v4_quality_2x_no_4pct_dd_gate")
+ARMS=("v4_fixed_one","v4_quality_2x","v4_quality_3x","v4_quality_2x_no_4pct_dd_gate",
+      "v4_adaptive_compound_guarded","v4_unrestricted_cash_stress_RESEARCH_ONLY")
 PREMIUM_EXTRAS_FRACTION=.35
 MAX_DRAWDOWN_FOR_EXTRA=.04
 MAX_SETUP_SCORE=6
@@ -65,6 +67,12 @@ def size(arm, *, score, equity, settled, peak, debit):
         return 0
     if arm=="v4_fixed_one":
         return 1
+    if arm=="v4_adaptive_compound_guarded":
+        return adaptive_quantity(score=score,equity=equity,settled=settled,
+            peak=peak,debit=debit,starting_cash=START_CASH,
+            exposure=.35,max_contracts=10000,bid_size=10000,ask_size=10000)
+    if arm=="v4_unrestricted_cash_stress_RESEARCH_ONLY":
+        return unrestricted_research_quantity(settled=settled,debit=debit)
     if arm.startswith("v4_quality_3x"):
         target=3 if score>=5 else 2 if score>=4 else 1
     else:
@@ -173,6 +181,7 @@ def run(data_dir:Path,out_dir:Path):
         "extra_contracts_premium_cap_pct_of_open_equity":35,
         "extra_contracts_drawdown_soft_veto_at_pct":4,
         "one_open_position_at_a_time":True,
+        "new_arms":"guarded adaptive compounding and unrestricted settled-cash stress (RESEARCH ONLY)",
         "settlement":"T+1, no same-day proceeds reuse, independent cash accounts",
         "costs":"$0.65 fee per side and $0.01/share slippage per contract side; +$2/contract stress in results",
         "max_drawdown":"end-of-day modeled account equity, not intraday maximum",

@@ -495,11 +495,12 @@ private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
 @Composable
 private fun GlassQuantSignals(status: ScreenStatus) {
     GlassPanel {
-        Text("QUANT ENGINE · ORIGINAL V4 3X", color = GlassColors.Text,
+        val adaptivePaper = status.mode == "PAPER" || status.mode == "SHADOW"
+        Text(if (adaptivePaper) "QUANT ENGINE · V4 ADAPTIVE PAPER" else "QUANT ENGINE · ORIGINAL V4 3X", color = GlassColors.Text,
             fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .7.sp)
         Spacer(Modifier.height(8.dp))
         GlassKeyValue("Signal", "Trend / stretch reclaim")
-        GlassKeyValue("Entry", "Six-factor quality · 1–3 contracts")
+        GlassKeyValue("Entry", if (adaptivePaper) "Six-factor quality · adaptive sizing (≤35% premium)" else "Six-factor quality · original 1–3 contracts")
         GlassKeyValue("Exits", "30% trail / 35% hard / conditional 10m")
         GlassKeyValue("Strategy", status.strategy)
         GlassKeyValue("State", status.decision.replace('_', ' '))

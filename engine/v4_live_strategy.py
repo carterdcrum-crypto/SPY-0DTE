@@ -7,6 +7,7 @@ reconciliation, cash/daily stops, and order submission.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, time
 from types import SimpleNamespace
 
@@ -23,6 +24,9 @@ class V4QualityLiveStrategy:
         self.bar_cache=WebullMinuteBarCache()
         self.settings=SimpleNamespace(fee_per_contract=.65)
         self.audit_path=audit_path
+        # No unvalidated changes to existing owner-authorized live trading.
+        self.adaptive_live_enabled=os.environ.get(
+            "V4_ADAPTIVE_LIVE_VALIDATED","false").strip().lower() in ("true","1","yes","on")
 
     def refresh_bars(self, provider, now: datetime):
         return self.bar_cache.refresh(provider,now)
@@ -45,6 +49,7 @@ class V4QualityLiveStrategy:
             "source":"webull_production_real_m1_and_timestamped_options",
             "data_blocker":self.bar_cache.error,
             "signal_model":"QUANT_ONLY_NO_LLM",
+            "sizing_mode":"adaptive_compound" if self.adaptive_live_enabled else "original_3x",
             "research_status":"HISTORICAL_CBBO_PROXY_NOT_LIVE_VALIDATED",
         }
 
@@ -54,7 +59,8 @@ class V4QualityLiveStrategy:
                 "reason":"missing verified live account or standing safety envelope"}
         if daily.get("halt_reason"):
             return None,{"state":"DAILY_HALT","reason":daily["halt_reason"]}
-        maximum=min(3,int(limits.max_contracts))
+        maximum=(int(limits.max_contracts) if self.adaptive_live_enabled
+                 else min(3,int(limits.max_contracts)))
         exposure=min(.35,float(limits.max_account_exposure_pct))
         return candidate(
             now,self.bar_cache.bars,self.market_reader.quotes.values(),
@@ -62,6 +68,8 @@ class V4QualityLiveStrategy:
             settled=float(account["settled_cash"]),
             peak=float(daily["high_watermark"]),
             max_contracts=maximum,exposure=exposure,
+            sizing_mode="adaptive" if self.adaptive_live_enabled else "original",
+            starting_cash=1000.,
         )
 
     def exit(self, position, now):

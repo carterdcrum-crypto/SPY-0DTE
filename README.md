@@ -122,6 +122,18 @@ not independently validated and cannot be promised.
 [Detailed archival study](docs/v4_quality_sizing_backtest_2026_10_12.md).
 [Operational comparison notes](docs/v4_3x_forward_selection.md).
 
+## V4 adaptive compounding (PAPER challenger; original LIVE preserved)
+
+The paper runner uses the original V4 entry and exit signals with adaptive
+quantity rather than a fixed three-contract cap. It scales qualified setups
+with equity while respecting 35% full-premium exposure, liquidity, settled
+cash, 25% accrued-profit reserve and drawdown throttles. The original 3x
+benchmark is unchanged. LIVE remains on original 3x until independently
+validated and explicitly promoted using `V4_ADAPTIVE_LIVE_VALIDATED=true`.
+Unrestricted settled-cash sizing is **research only**, never executable.
+No improvement in returns is claimed pending independent testing.
+See [rollout and limitations](docs/v4_adaptive_rollout_2026_10_14.md).
+
 ## 30-minute SPY chart and news update (v0.3.2)
 
 Price History presents the most recent **30 one-minute SPY candles**, with
