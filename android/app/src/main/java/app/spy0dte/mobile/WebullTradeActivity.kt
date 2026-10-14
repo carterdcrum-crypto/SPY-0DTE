@@ -365,6 +365,17 @@ internal class OwnerAuthBackend {
                                 503 -> "Owner setup code is not configured on Railway."
                                 401 -> "Incorrect username or password."
                                 403 -> "Invalid owner setup code."
+                                422 -> {
+                                    val first = json.optJSONArray("detail")?.optJSONObject(0)
+                                    val field = first?.optString("field")?.takeIf { it.isNotBlank() }
+                                        ?: first?.optJSONArray("loc")?.optString(1).orEmpty()
+                                    when (field) {
+                                        "username" -> "Username must contain 3–32 letters, numbers, dots, underscores, or dashes."
+                                        "password" -> "Password must be at least 14 characters long."
+                                        "setup_code" -> "Owner setup code must be at least 32 characters. Paste it without extra spaces."
+                                        else -> "Check username (3–32 characters), password (14+ characters), and the full setup code."
+                                    }
+                                }
                                 else -> "Owner login failed (HTTP ${response.code})."
                             },
                         ),
@@ -428,7 +439,7 @@ private fun WebullTradeApp(activity: Activity) {
                     visualTransformation = PasswordVisualTransformation(),
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("Only one signup is permitted, ever. Keep your password safe.")
+                Text("Only one signup is permitted, ever. Password: 14+ characters. Username: 3–32. Paste the complete setup code.")
             }
             Spacer(Modifier.height(18.dp))
             Button(
@@ -441,6 +452,12 @@ private fun WebullTradeApp(activity: Activity) {
                         error = null
                         val registering = existingOwner == false
                         try {
+                            if (registering && password.length < 14) {
+                                error("Password must be at least 14 characters long.")
+                            }
+                            if (registering && setupCode.length < 32) {
+                                error("Paste the complete one-time setup code (32+ characters).")
+                            }
                             val bearer = auth.authenticate(registering, username, password, setupCode).getOrThrow()
                             TradeBackend(bearer).verifyOwner().getOrThrow()
                             password = ""
