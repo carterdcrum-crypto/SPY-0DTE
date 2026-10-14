@@ -31,8 +31,13 @@ def execution_lock(account_path: str):
 
 
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
+    # The selected LIVE profile remains V4. V5 is a separately selected
+    # PAPER-only research profile, never shared with Webull live execution.
     if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()!="v4_original_3x":
-        raise RuntimeError("Only the original V4 3x quantitative execution profile is supported")
+        raise RuntimeError("LIVE production profile must remain original V4")
+    paper_profile=os.environ.get("PAPER_STRATEGY_PROFILE","v4_original_3x").strip().lower()
+    if paper_profile not in ("v4_original_3x","v5_close_only_unrestricted_research"):
+        raise RuntimeError("Unknown paper strategy profile")
     from dataclasses import replace
     from .v4_paper_trader import V4QualityPaperTrader
     from .live_market import LiveDataProvider
@@ -55,7 +60,12 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     if "PAPER_MAX_CONTRACTS" not in os.environ:
         settings=replace(settings,maximum_contracts=100)
     settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
-    return V4QualityPaperTrader(
+    if paper_profile=="v5_close_only_unrestricted_research":
+        from .v5_close_only_paper import V5CloseOnlyPaperTrader
+        trader_type=V5CloseOnlyPaperTrader
+    else:
+        trader_type=V4QualityPaperTrader
+    return trader_type(
         mode_getter=mode_getter,
         market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
         account_store=PaperAccountStore(_paper_db_path(),default_starting_cash=_paper_starting_cash()),
