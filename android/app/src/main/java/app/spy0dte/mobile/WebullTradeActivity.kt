@@ -453,10 +453,10 @@ private fun WebullTradeApp(activity: Activity) {
                         val registering = existingOwner == false
                         try {
                             if (registering && password.length < 14) {
-                                error("Password must be at least 14 characters long.")
+                                throw IllegalArgumentException("Password must be at least 14 characters long.")
                             }
                             if (registering && setupCode.length < 32) {
-                                error("Paste the complete one-time setup code (32+ characters).")
+                                throw IllegalArgumentException("Paste the complete one-time setup code (32+ characters).")
                             }
                             val bearer = auth.authenticate(registering, username, password, setupCode).getOrThrow()
                             TradeBackend(bearer).verifyOwner().getOrThrow()
