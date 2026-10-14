@@ -36,13 +36,13 @@ private fun candleEtTime(raw:String):String = runCatching{
 /** Five *completed* real SPY one-minute candles; no seeded demo/mock prices. */
 @Composable
 internal fun SpyFiveMinuteChart(status:ScreenStatus){
-    val bars=status.spyChart
+    val bars=status.spyChart.candles
     Column(Modifier.fillMaxWidth().testTag("spy_5min_chart"),
         verticalArrangement=Arrangement.spacedBy(7.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
             Text("5 MIN WINDOW · 1 MIN CANDLES",color=GlassColors.TextMuted,
                 fontSize=10.sp,fontWeight=FontWeight.SemiBold)
-            Text(when(status.spyChartState){
+            Text(when(status.spyChart.state){
                 "CURRENT"->"●  LIVE DATA"
                 "STALE"->"●  STALE"
                 else->"NO MARKET DATA"
@@ -54,7 +54,7 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
                 Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
                     Text("Waiting for 5 real completed SPY candles",
                         color=GlassColors.Text,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
-                    Text(status.spyChartReason?.take(140)
+                    Text(status.spyChart.reason?.take(140)
                         ?: "The broker must provide current SPY 1-minute OHLCV bars. No prices are simulated.",
                         color=GlassColors.TextMuted,fontSize=10.sp)
                 }
@@ -74,8 +74,8 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
             val xStep=w/bars.size
             val padY=19.dp.toPx()
             val usableH=h-2*padY
-            fun y(price:Double):Float=(padY+
-                (1.-((price-floor)/padded).coerceIn(0.,1.)).toFloat()*usableH)
+            fun y(price:Double):Float=padY +
+                (1.0-((price-floor)/padded).coerceIn(0.0,1.0)).toFloat()*usableH
             repeat(4){index->
                 val gridY=padY+usableH*index/3f
                 drawLine(chartGrid,Offset(0f,gridY),Offset(w,gridY),strokeWidth=1.dp.toPx())

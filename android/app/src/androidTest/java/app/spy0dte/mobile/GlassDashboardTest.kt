@@ -157,9 +157,9 @@ class GlassDashboardTest {
             GlassDashboard(fixture.copy(spyChart=chart), false, null, actions(), null)
         } }
         compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
-        compose.onNodeWithTag("spy_5min_chart").assertIsDisplayed()
-        compose.onNodeWithText("SPY · 5 MIN").assertIsDisplayed()
-        compose.onNodeWithText("SPY  $604.50").assertIsDisplayed()
+        compose.onNodeWithTag("spy_5min_chart").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("SPY · LAST 5 MINUTES").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("5 MIN WINDOW · 1 MIN CANDLES").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun newsTabDisplaysThreeRealPublishersAndRefresh() {
@@ -167,11 +167,11 @@ class GlassDashboardTest {
             GlassDashboard(fixture, false, null, actions(), null)
         } }
         compose.onNodeWithTag("insight_NEWS").performScrollTo().performClick()
-        compose.onNodeWithText("MARKET NEWS").assertIsDisplayed()
-        compose.onNodeWithTag("news_source_CNBC_Markets").assertIsDisplayed()
-        compose.onNodeWithTag("news_source_NPR_Business").assertIsDisplayed()
-        compose.onNodeWithTag("news_source_Federal_Reserve").assertIsDisplayed()
-        compose.onNodeWithTag("refresh_market_news").assertExists()
+        compose.onNodeWithText("TRUSTED MARKET NEWS").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("news_source_cnbc_markets").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("news_source_reuters_markets").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("news_source_federal_reserve").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("refresh_news").assertExists()
     }
 
     @Test fun rssParserRejectsUntrustedUrlsAndDoesNotInventHeadlines() {

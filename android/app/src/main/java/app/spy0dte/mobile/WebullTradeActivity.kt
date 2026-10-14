@@ -198,24 +198,6 @@ internal fun parseStatus(text: String): ScreenStatus {
     val gate = root.optJSONObject("live_gate") ?: JSONObject()
     val broker = root.optJSONObject("live_broker") ?: JSONObject()
     val risk = root.optJSONObject("live_risk") ?: JSONObject()
-    val chart = root.optJSONObject("spy_chart_5m") ?: JSONObject()
-    val chartBars = buildList {
-        val records=chart.optJSONArray("candles")
-        if(records!=null) for(i in 0 until records.length()) {
-            val row=records.optJSONObject(i) ?: continue
-            val o=number(row,"open") ?: continue
-            val h=number(row,"high") ?: continue
-            val l=number(row,"low") ?: continue
-            val c=number(row,"close") ?: continue
-            val v=row.optLong("volume",0L)
-            val at=row.optString("time")
-            if(at.isNotBlank()&&o>0&&h>=maxOf(o,c,l)&&l<=minOf(o,c,h)&&v>0L){
-                add(SpyCandle(at,o,h,l,c,v))
-            }
-        }
-    }.takeLast(5)
-
-
     val paperAutomation = root.optJSONObject("paper_automation") ?: JSONObject()
     val liveAuto = root.optJSONObject("live_autonomy") ?: JSONObject()
     val isLive = root.optString("mode") == "LIVE"
@@ -290,10 +272,6 @@ internal fun parseStatus(text: String): ScreenStatus {
         exitProfile = automation.optString("exit_profile", "—"),
         spyChart = spyChart,
         spot = number(market, "spot"),
-        spyChart = chartBars,
-        spyChartState = chart.optString("state", "UNAVAILABLE"),
-        spyChartAgeSeconds = number(chart, "age_seconds"),
-        spyChartReason = chart.optString("reason").ifBlank { null },
         dataAge = number(market, "data_age_seconds"),
         feedDelay = number(market, "feed_delay_seconds"),
         liveReady = gate.optBoolean("ready", false),
