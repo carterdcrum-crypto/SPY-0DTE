@@ -494,20 +494,52 @@ private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     }
 }
 
+/** Engine identity comes from the selected LIVE profile or PAPER worker,
+ * never from a hard-coded legacy V4 Analytics card. */
+internal fun v5EngineSelected(status: ScreenStatus): Boolean =
+    if (status.mode == "LIVE") {
+        status.liveStrategyProfile == "v5_close_only_unrestricted_research"
+    } else {
+        status.strategy == "v5_close_only_unrestricted_research"
+    }
+
+internal fun engineDisplayName(status: ScreenStatus): String =
+    if (v5EngineSelected(status)) "V5 Close-Only · Unrestricted"
+    else if (status.mode == "PAPER" || status.mode == "SHADOW") "V4 Adaptive Paper"
+    else "Original V4 3x"
+
 @Composable
 private fun GlassQuantSignals(status: ScreenStatus) {
+    val v5 = v5EngineSelected(status)
+    val adaptivePaper = status.mode == "PAPER" || status.mode == "SHADOW"
     GlassPanel {
-        val adaptivePaper = status.mode == "PAPER" || status.mode == "SHADOW"
-        Text(if (adaptivePaper) "QUANT ENGINE · V4 ADAPTIVE PAPER" else "QUANT ENGINE · ORIGINAL V4 3X", color = GlassColors.Text,
-            fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .7.sp)
+        Text(
+            when {
+                v5 -> "QUANT ENGINE · V5 CLOSE-ONLY"
+                adaptivePaper -> "QUANT ENGINE · V4 ADAPTIVE PAPER"
+                else -> "QUANT ENGINE · ORIGINAL V4 3X"
+            },
+            color = GlassColors.Text,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .7.sp,
+        )
         Spacer(Modifier.height(8.dp))
-        GlassKeyValue("Signal", "Trend / stretch reclaim")
-        GlassKeyValue("Entry", if (adaptivePaper) "Six-factor quality · adaptive sizing (≤35% premium)" else "Six-factor quality · original 1–3 contracts")
-        GlassKeyValue("Exits", "30% trail / 35% hard / conditional 10m")
-        GlassKeyValue("Strategy", status.strategy)
+        if (v5) {
+            GlassKeyValue("Signal", "Momentum ignition / liquidity reversal / volatility expansion")
+            GlassKeyValue("Entry", "Completed SPY 1-min closes · verified option quotes")
+            GlassKeyValue("Sizing", "Dynamic · settled cash and displayed market depth")
+            GlassKeyValue("Exits", "35% loss trigger / 25% trail / reversal / 18 min")
+        } else {
+            GlassKeyValue("Signal", "Trend / stretch reclaim")
+            GlassKeyValue("Entry", if (adaptivePaper) "Six-factor quality · adaptive sizing (≤35% premium)" else "Six-factor quality · original 1–3 contracts")
+            GlassKeyValue("Exits", "30% trail / 35% hard / conditional 10m")
+        }
+        GlassKeyValue("Engine", engineDisplayName(status))
         GlassKeyValue("State", status.decision.replace('_', ' '))
-        Text("Quantitative rules only · no AI recommendations or generated trades.",
-            color = GlassColors.TextMuted, fontSize = 10.sp)
+        Text(
+            if (v5) "V5 is the selected quantitative engine. Live entries still require fresh market data, real settled cash and executable quotes."
+            else "Quantitative rules only · no AI recommendations or generated trades.",
+            color = GlassColors.TextMuted, fontSize = 10.sp,
+        )
     }
 }
 
@@ -805,9 +837,14 @@ private fun GlassAnalyticsScreen(status: ScreenStatus) {
         GlassPanel {
             Text("ENGINE", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            GlassKeyValue("Strategy", status.strategy)
-            GlassKeyValue("Risk", status.riskProfile)
-            GlassKeyValue("Exit", status.exitProfile)
+            GlassKeyValue("Active engine", engineDisplayName(status))
+            if (v5EngineSelected(status)) {
+                GlassKeyValue("Risk", "No owner caps · cash and quote-depth checks")
+                GlassKeyValue("Exit", "35% loss / 25% trail / reversal / 18 min")
+            } else {
+                GlassKeyValue("Risk", status.riskProfile)
+                GlassKeyValue("Exit", status.exitProfile)
+            }
             GlassKeyValue("Decision", status.decision)
             GlassKeyValue("Worker", status.workerState)
             Spacer(Modifier.height(6.dp))
