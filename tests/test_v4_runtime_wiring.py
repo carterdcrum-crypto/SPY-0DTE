@@ -5,7 +5,6 @@ from pathlib import Path
 from engine.paper_runner import create_trader
 from engine.v4_paper_trader import V4QualityPaperTrader
 from engine.v4_live_strategy import V4QualityLiveStrategy
-from engine.live_strategy import LiveStrategy
 
 
 def test_v4_paper_profile_is_selected_without_credentials_and_never_places_broker_orders(
@@ -27,5 +26,7 @@ def test_v4_paper_profile_is_selected_without_credentials_and_never_places_broke
     assert trader.account_store.snapshot().open_positions==0
 
 
-def test_v4_live_adapter_is_a_guarded_live_strategy_subclass():
-    assert issubclass(V4QualityLiveStrategy,LiveStrategy)
+def test_v4_live_adapter_is_quant_only_with_no_ai_inheritance():
+    from engine.paper_ai_autotrader import AIAugmentedDynamicExitTrader
+    assert not issubclass(V4QualityLiveStrategy,AIAugmentedDynamicExitTrader)
+    assert 'ai_engine' not in vars(V4QualityLiveStrategy(None,'test'))
