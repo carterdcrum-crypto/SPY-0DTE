@@ -122,17 +122,21 @@ not independently validated and cannot be promised.
 [Detailed archival study](docs/v4_quality_sizing_backtest_2026_10_12.md).
 [Operational comparison notes](docs/v4_3x_forward_selection.md).
 
-## 30-minute SPY chart and news update (v0.3.1)
+## 30-minute SPY chart and news update (v0.3.2)
 
 Price History presents the most recent **30 one-minute SPY candles**, with
 the last candle updating as an explicitly labelled **forming** candle
-only if Webull actually supplies an in-progress 1-minute bar. The chart's
-source is the provider's OHLCV, requested approximately every five seconds;
+only if Webull supplies a real-time in-progress one-minute bar via its
+`real_time_required=true` request. The trading algorithm still receives
+a separate `real_time_required=false` set of **completed** bars.
+The chart's source is provider OHLCV requested approximately every five seconds;
 the app's server status updates every second. No interpolated or invented
 prices, ticks, volume, or inferred latest bid are produced. Completed bars
 remain the only inputs to V4's entry and exit algorithm. If Webull delays
 or omits real-time in-progress stock bars, the chart shows
-"last closed"/"stale" rather than pretending a live candle.
+"last closed"/"stale" with an explicit Webull subscription blocker,
+rather than pretending a live candle. A Webull OpenAPI market-data
+subscription may be required for real-time SPY stock bars.
 
 The News tab presents **Latest Headlines first** and **Trusted Market News
 publisher buttons below**, including Reuters, AP Business, CNBC Markets,
