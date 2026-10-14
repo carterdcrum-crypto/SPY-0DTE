@@ -19,7 +19,6 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from .regime_reclaim_frozen_signal import identify_setups
-from .regime_reclaim_v2 import route_candidate
 from .regime_hold_conditional import (
     EXTEND_MIN_RETURN, EXTEND_MIN_RVOL, EXTEND_MIN_SPY_MOMENTUM_BPS,
     EXTEND_MIN_PREMIUM_PEAK_FRACTION, MAX_QUOTE_SPREAD,
@@ -30,7 +29,7 @@ from .weekly_options_data import Bar
 from .session_calendar import session_close
 
 ET=ZoneInfo("America/New_York")
-IDENTIFIER="v4_quality_3x"
+IDENTIFIER="v4_original_3x"
 FEE=0.65
 SLIPPAGE_PER_SHARE=.01
 MAX_SOURCE_DELAY_SECONDS=3
@@ -168,12 +167,6 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
             continue
         i=next((n for n,b in enumerate(bars) if b.available_at==signal["at"]),None)
         if i is None:continue
-        # V4 archived regime entries start with V2's completed-bar router:
-        # trend vs range, directional candle, RVOL and as-of VWAP confirmation.
-        # A raw V1 reclaim alone must never qualify as a V4 order.
-        routed=route_candidate(signal,bars,i)
-        if not routed["selected"]:
-            continue
         rv=_rv(bars,i)
         if rv<=0:continue
         for q in quotes:
@@ -220,14 +213,11 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
                         int(q.bid_size),int(q.ask_size),hard)
                 if qty<=0:
                     continue
-                # Mirror V2's regime-specific *as-of* option ranking:
-                # trend delta target .55; range-reversal target .45, with
-                # spread and bid/ask depth penalty. Do not peek at exit.
-                target=.55 if signal["setup"]=="trend_reclaim" else .45
-                depth=min(q.bid_size,q.ask_size)
-                rank=10*spread+.6*abs(abs(delta)-target)+.08/math.sqrt(depth)
-                possible.append((rank,spread,q.option_symbol,
-                    routed,q,quality,qty,debit,rv))
+                # Preserve the original $5k V4 signal / contract choice:
+                # raw frozen trend/stretch, then nearest |delta| to .50.
+                # Spread/IV/depth remain pre-trade guards, NOT a new regime.
+                possible.append((abs(abs(delta)-.50),spread,q.option_symbol,
+                    signal,q,quality,qty,debit,rv))
             except (ValueError,TypeError,ZeroDivisionError,AttributeError,OverflowError):
                 continue
     if not possible:
@@ -241,8 +231,7 @@ def candidate(now:datetime,bars:list[Bar],quotes,*,equity:float,settled:float,
         "cycle":sig["at"].isoformat(),"debit_per_contract":debit,
         "underlying_spot":q.underlying_price,
         "side":sig["side"],"rv":rv,
-        "regime":sig["regime"],"signal_vwap":sig["vwap_asof"],
-    },{"state":"SIGNAL","reason":"V4 V2 regime/VWAP-confirmed quality 3x candidate meets as-of gates",
+    },{"state":"SIGNAL","reason":"Original V4 frozen trend/stretch entry quality 3x candidate",
         "strategy":IDENTIFIER,"quality_score":quality,
         "contracts":qty,"signal":sig,"account_equity":equity}
 

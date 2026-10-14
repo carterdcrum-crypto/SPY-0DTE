@@ -296,7 +296,7 @@ class LiveExecutor:
             position["peak_exit_value"] = peak
             reason = "automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None
             reason = reason or ("daily_stop" if daily and daily["halt_reason"] else None)
-            close_buffer = 15 if str(position.get("entry_reason","")).startswith("v4_quality_3x;") else 10
+            close_buffer = 15 if str(position.get("entry_reason","")).startswith("v4_original_3x;") else 10
             reason = reason or ("session_close" if minutes_left <= close_buffer else None)
             reason = reason or ("continue_exit" if position["exit_requested"] else None)
             target_remaining = profit_exit_quantity(
@@ -346,7 +346,7 @@ class LiveExecutor:
         per_contract = premium*100 + 1.0
         budget = min(account["settled_cash"], account["equity"]*limits.max_account_exposure_pct,
                      max(0.0, limits.daily_loss_limit+account["daily_pnl"]))
-        if str(candidate.get("reason","")).startswith("v4_quality_3x;"):
+        if str(candidate.get("reason","")).startswith("v4_original_3x;"):
             # The model's earlier 35% cap is rechecked at executable quote
             # prices; an ask jump cannot evade it. Revalidate options NBBO
             # liquidity and displayed depth immediately before reserving.
@@ -393,7 +393,7 @@ def run_forever(mode_getter, context):
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
                             strategy=(__import__("engine.v4_live_strategy",fromlist=["V4QualityLiveStrategy"]).V4QualityLiveStrategy(market,path+".research")
-                                      if os.environ.get("SPY_STRATEGY_PROFILE","legacy").lower()=="v4_quality_3x"
+                                      if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").lower()=="v4_original_3x"
                                       else LiveStrategy(market,path+".research")),
                             mode_getter=mode_getter)
                         active_credentials = credentials

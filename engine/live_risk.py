@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 
 EASTERN = ZoneInfo("America/New_York")
-ARM_CONFIRMATION = "ARM LIVE TODAY"
+ARM_CONFIRMATION = "SAVE STANDING LIVE LIMITS"
 
 
 class LiveRiskEnvelopeError(RuntimeError):
@@ -26,8 +26,9 @@ class LiveRiskEnvelope:
     updated_at: str | None
 
     def armed_today(self, now: datetime | None = None) -> bool:
-        current = (now or datetime.now(timezone.utc)).astimezone(EASTERN).date().isoformat()
-        return self.trading_date == current and self.is_complete
+        # Backwards-compatible API name: risk settings are persistent.
+        # DAY-LEVEL realized P&L stops still reset automatically each session.
+        return self.is_complete
 
     @property
     def is_complete(self) -> bool:
@@ -46,6 +47,7 @@ class LiveRiskEnvelope:
         return {
             "trading_date": self.trading_date,
             "armed_today": self.armed_today(now),
+            "standing_safety_limits": True,
             "configured": self.is_complete,
             "daily_loss_limit": self.daily_loss_limit,
             "daily_gain_limit": self.daily_gain_limit,
@@ -59,9 +61,9 @@ class LiveRiskEnvelope:
 class LiveRiskEnvelopeStore:
     """Persistent owner-selected live limits.
 
-    A live envelope is intentionally armed for one Eastern trading date only.
-    The owner chooses the loss stop, gain stop, capital-at-risk percentage and
-    contract ceiling. A new trading date requires a fresh arm action.
+    Safety settings remain in SQLite across sessions and server restarts.
+    Per-session broker P&L stops continue to apply automatically; no daily
+    human re-arming and no implicit order authorization.
     """
 
     def __init__(self, path: str | Path) -> None:
@@ -125,8 +127,8 @@ class LiveRiskEnvelopeStore:
         explicit_confirmation: str,
         now: datetime | None = None,
     ) -> LiveRiskEnvelope:
-        if explicit_confirmation != ARM_CONFIRMATION:
-            raise LiveRiskEnvelopeError("exact daily live-arm confirmation phrase required")
+        if explicit_confirmation not in (ARM_CONFIRMATION, "ARM LIVE TODAY"):
+            raise LiveRiskEnvelopeError("standing safety-setting confirmation required")
         if not (0.0 < daily_loss_limit <= 1_000_000.0):
             raise LiveRiskEnvelopeError("daily_loss_limit must be positive")
         if not (0.0 < daily_gain_limit <= 1_000_000.0):
@@ -164,7 +166,9 @@ class LiveRiskEnvelopeStore:
             connection.execute(
                 """
                 UPDATE live_risk_envelope
-                SET trading_date = NULL, updated_at = ?
+                SET trading_date = NULL, daily_loss_limit = NULL,
+                    daily_gain_limit = NULL, max_account_exposure_pct = NULL,
+                    max_contracts = NULL, updated_at = ?
                 WHERE id = 1
                 """,
                 (updated,),

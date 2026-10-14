@@ -133,7 +133,7 @@ def _webull_live_gate(_: base.ControlStore) -> dict[str, Any]:
 
     envelope = api_v2._live_risk_store().snapshot()
     if not envelope.armed_today():
-        reasons.append("daily_live_limits_not_armed")
+        reasons.append("standing_live_safety_not_configured")
     reasons.extend(_market_reasons())
 
     guard = None

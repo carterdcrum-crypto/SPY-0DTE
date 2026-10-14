@@ -158,7 +158,7 @@ def _live_gate(store: base.ControlStore) -> dict[str, Any]:
 
     envelope = _live_risk_store().snapshot()
     if not envelope.armed_today():
-        reasons.append("daily_live_limits_not_armed")
+        reasons.append("standing_live_safety_not_configured")
 
     if _env_bool("APP_PREVIEW_MODE", False):
         reasons.append("owner_auth_required_for_live")
@@ -386,7 +386,7 @@ def preview_tradier_option_order(
 
     envelope = _live_risk_store().snapshot()
     if not envelope.armed_today():
-        raise HTTPException(status_code=409, detail="daily live limits are not armed")
+        raise HTTPException(status_code=409, detail="standing live safety limits are not configured")
 
     if request.position_intent == "BUY_TO_OPEN":
         guard = cached_live_broker_guard(envelope, ttl_seconds=0.0)

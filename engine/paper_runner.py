@@ -32,10 +32,7 @@ def execution_lock(account_path: str):
 
 
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
-    from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
-    from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
-
-    if os.environ.get("SPY_STRATEGY_PROFILE","legacy").strip().lower()=="v4_quality_3x":
+    if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()=="v4_original_3x":
         from dataclasses import replace
         from .v4_paper_trader import V4QualityPaperTrader
         from .live_market import LiveDataProvider
@@ -65,6 +62,10 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
             settings=settings,production_provider=option_provider,
             bar_provider=bar_provider,
         )
+    # Old AI classes remain in historical research modules only. The default
+    # operational profile uses quant V4; this legacy fallback is opt-in.
+    from .paper_ai_delayed_simulation import AIDelayedSimulationPaperAutoTrader
+    from .paper_ai_exit_v2 import SaferAIAugmentedDynamicExitTrader
     trader_class = AIDelayedSimulationPaperAutoTrader if delayed else SaferAIAugmentedDynamicExitTrader
     return trader_class(
         mode_getter=mode_getter,
