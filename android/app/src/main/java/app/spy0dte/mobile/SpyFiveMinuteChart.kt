@@ -46,7 +46,7 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
                 "CURRENT"->"●  LIVE DATA"
                 "STALE"->"●  STALE"
                 else->"NO MARKET DATA"
-            },color=if(status.spyChartState=="CURRENT")chartUp else GlassColors.Amber,fontSize=9.sp)
+            },color=if(status.spyChart.state=="CURRENT")chartUp else GlassColors.Amber,fontSize=9.sp)
         }
         if(bars.size!=5){
             Box(Modifier.fillMaxWidth().height(190.dp).background(Color.White.copy(alpha=.58f),
@@ -105,7 +105,7 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
             "  C "+"%.2f".format(end.close)+
             "  Vol "+end.volume,
             color=GlassColors.TextMuted,fontSize=10.sp)
-        if(status.spyChartState!="CURRENT"){
+        if(status.spyChart.state!="CURRENT"){
             Text("Market data is stale. Chart is informational only; no false live price is shown.",
                 color=GlassColors.Amber,fontSize=10.sp)
         }

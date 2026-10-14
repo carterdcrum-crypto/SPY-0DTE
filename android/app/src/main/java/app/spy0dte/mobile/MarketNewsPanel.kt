@@ -105,7 +105,7 @@ internal fun parseMarketRss(xml:String,source:String):List<NewsHeadline>{
   return stories
 }
 
-internal suspend fun loadMarketNews():List<NewsHeadline>=withContext(Dispatchers.IO){
+internal suspend fun loadMarketNews(): List<NewsHeadline> = withContext(Dispatchers.IO){
   MARKET_NEWS_SOURCES.filter{it.feed!=null}.flatMap{ source->
     try{
       val req=Request.Builder().url(requireNotNull(source.feed))
