@@ -63,6 +63,9 @@ def _validate(username: str, password: str) -> str:
 
 
 def _issue(conn: sqlite3.Connection) -> str:
+    # Exactly one active session for the sole owner. A new sign-in revokes
+    # every prior phone/session without any separate device-management API.
+    conn.execute("DELETE FROM sessions")
     token = secrets.token_urlsafe(48)
     conn.execute("INSERT INTO sessions(token_hash,expires_at) VALUES(?,?)",
                  (hashlib.sha256(token.encode("ascii")).hexdigest(), time.time() + SESSION_SECONDS))
