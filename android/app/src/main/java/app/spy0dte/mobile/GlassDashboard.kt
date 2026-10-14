@@ -81,6 +81,8 @@ import kotlinx.coroutines.launch
 
 internal data class GlassActions(
     val saveCredentials: suspend (String, String) -> Result<String>,
+    val listCashAccounts: suspend () -> Result<List<WebullAccountChoice>>,
+    val selectCashAccount: suspend (String) -> Result<String>,
     val setLiveAutonomy: suspend (Boolean) -> Result<String>,
     val setMode: suspend (String) -> Result<String>,
     val setPaperAutonomy: suspend (Boolean) -> Result<String>,
@@ -849,6 +851,26 @@ private fun GlassSettingsScreen(
     var appKey by remember { mutableStateOf("") }
     var appSecret by remember { mutableStateOf("") }
     var savingCredentials by remember { mutableStateOf(false) }
+    var availableAccounts by remember { mutableStateOf<List<WebullAccountChoice>>(emptyList()) }
+    var loadingAccounts by remember { mutableStateOf(false) }
+    var selectingAccount by remember { mutableStateOf(false) }
+    var accountMessage by remember { mutableStateOf<String?>(null) }
+
+    fun refreshWebullAccounts() {
+        if (loadingAccounts) return
+        loadingAccounts = true
+        accountMessage = null
+        scope.launch {
+            actions.listCashAccounts()
+                .onSuccess { availableAccounts = it; if (it.isEmpty()) accountMessage = "No Webull accounts found." }
+                .onFailure { accountMessage = it.message ?: "Could not load Webull accounts." }
+            loadingAccounts = false
+        }
+    }
+
+    LaunchedEffect(status.brokerConfigured) {
+        if (status.brokerConfigured) refreshWebullAccounts()
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
@@ -1049,6 +1071,42 @@ private fun GlassSettingsScreen(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (status.brokerConfigured) {
+                Spacer(Modifier.height(8.dp))
+                Text("CHOOSE WEBULL CASH ACCOUNT", color = GlassColors.Text,
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                Text("Webull found multiple cash accounts. Select the one that will trade SPY options. Account selection is blocked while Auto Trade is on.",
+                    color = GlassColors.TextMuted, fontSize = 11.sp)
+                GlassOutlineButton(
+                    text = if (loadingAccounts) "Looking up accounts…" else "Refresh Webull Accounts",
+                    onClick = { refreshWebullAccounts() },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                availableAccounts.forEach { account ->
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(account.label + if (account.selected) " ✓" else "",
+                            color = GlassColors.Text, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                        GlassOutlineButton(
+                            text = if (account.selected) "Selected" else "Select",
+                            enabled = account.isCash && !account.selected &&
+                                !status.liveEnabled && !selectingAccount,
+                            modifier = Modifier.weight(0.45f),
+                            onClick = {
+                                selectingAccount = true
+                                scope.launch {
+                                    actions.selectCashAccount(account.accountId)
+                                        .onSuccess { accountMessage = it; refreshWebullAccounts() }
+                                        .onFailure { accountMessage = it.message ?: "Selection failed." }
+                                    selectingAccount = false
+                                }
+                            },
+                        )
+                    }
+                }
+                accountMessage?.let { GlassNotice(it, danger = it.contains("failed", true) ||
+                    it.contains("error", true) || it.contains("off", true)) }
+            }
             GlassKeyValue("Broker connected", if (status.brokerConnected) "YES" else "NO")
             if (status.brokerConfigured && !status.brokerConnected) {
                 val detail = if (status.liveState == "RECOVERING" && status.liveReason.isNotBlank())
@@ -1184,8 +1242,9 @@ private fun GlassPrimaryButton(
 }
 
 @Composable
-private fun GlassOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun GlassOutlineButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     OutlinedButton(
+        enabled = enabled,
         onClick = onClick,
         modifier = modifier.heightIn(min = 48.dp),
         shape = RoundedCornerShape(15.dp),

@@ -106,3 +106,9 @@ internal data class ScreenStatus(
 )
 
 internal data class LivePosition(val symbol: String, val quantity: Int, val averagePrice: Double?)
+internal data class WebullAccountChoice(
+    val accountId: String,
+    val label: String,
+    val isCash: Boolean,
+    val selected: Boolean,
+)

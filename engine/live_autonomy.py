@@ -17,7 +17,7 @@ from .live_market import LiveDataProvider, LiveMarketReader, parse_occ_symbol, p
 from .live_risk import EASTERN
 from .paper_runner import execution_lock
 from .session_calendar import session_bounds
-from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _number, _usd_asset, webull_env_status, production_credentials
+from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _number, _usd_asset, webull_env_status, production_credentials, selected_webull_account_id
 
 log = logging.getLogger("spy0dte.live")
 _status_lock = threading.Lock()
@@ -423,6 +423,7 @@ def run_forever(mode_getter, context):
         store = LiveAutonomyStore(path)
         executor = None
         active_credentials = None
+        active_account_id = None
         failures = 0
         while not context.stop.is_set():
             started = time.monotonic()
@@ -435,7 +436,8 @@ def run_forever(mode_getter, context):
                             reasons=reasons, broker_connected=False)
                 else:
                     credentials = production_credentials()
-                    if executor is None or credentials != active_credentials:
+                    selection = selected_webull_account_id()
+                    if executor is None or credentials != active_credentials or selection != active_account_id:
                         market = LiveMarketReader()
                         key, secret = credentials
                         from .v4_live_strategy import V4QualityLiveStrategy
@@ -452,6 +454,7 @@ def run_forever(mode_getter, context):
                             strategy=strategy,
                             mode_getter=mode_getter)
                         active_credentials = credentials
+                        active_account_id = selection
                     publish(**executor.telemetry(executor.tick()))
                 failures = 0
                 context.heartbeat(last_error=None)

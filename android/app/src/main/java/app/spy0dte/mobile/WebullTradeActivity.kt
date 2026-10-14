@@ -132,6 +132,41 @@ internal class TradeBackend(private val token: String) {
         post("/v1/broker/webull", JSONObject().put("environment", "production").put("app_key", key).put("app_secret", secret))
     }
 
+    suspend fun listCashAccounts(): Result<List<WebullAccountChoice>> = withContext(Dispatchers.IO) {
+        if (base.isBlank()) return@withContext Result.failure(IllegalStateException("Backend URL is not configured"))
+        try {
+            val request = Request.Builder().url("$base/v1/broker/webull/accounts")
+                .header("Authorization", "Bearer $token").get().build()
+            http.newCall(request).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return@use Result.failure(IllegalStateException(
+                        "Webull cash account lookup failed (HTTP ${response.code})."
+                    ))
+                }
+                val rows = JSONObject(raw).optJSONArray("accounts")
+                val choices = buildList {
+                    if (rows != null) for (index in 0 until rows.length()) {
+                        val item = rows.optJSONObject(index) ?: continue
+                        add(WebullAccountChoice(
+                            accountId = item.optString("account_id"),
+                            label = item.optString("label"),
+                            isCash = item.optString("account_type") == "CASH",
+                            selected = item.optBoolean("selected", false),
+                        ))
+                    }
+                }
+                Result.success(choices)
+            }
+        } catch (error: Exception) { Result.failure(error) }
+    }
+
+    suspend fun selectCashAccount(accountId: String): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post("/v1/broker/webull/select-account",
+            JSONObject().put("account_id", accountId)
+                .put("confirmation", "SELECT WEBULL CASH ACCOUNT"))
+    }
+
     suspend fun logout(): Result<JSONObject> = withContext(Dispatchers.IO) {
         post("/v1/auth/logout", JSONObject())
     }
@@ -541,6 +576,10 @@ private fun TradeConsole(
         actions = GlassActions(
     saveCredentials = { key, secret ->
         backend.saveProductionCredentials(key, secret).map { "Production credentials saved securely on Railway." }
+    },
+    listCashAccounts = { backend.listCashAccounts() },
+    selectCashAccount = { accountId ->
+        backend.selectCashAccount(accountId).map { it.optString("message", "Webull CASH account selected.") }
     },
     setLiveAutonomy = { enabled ->
         backend.setLiveAutonomy(enabled).map { result ->

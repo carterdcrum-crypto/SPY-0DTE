@@ -29,6 +29,8 @@ from .webull_live import (
     WebullLiveError,
     cached_webull_guard,
     webull_env_status,
+    selected_webull_account_id,
+    save_selected_webull_account_id,
 )
 
 
@@ -251,7 +253,7 @@ def set_live_autonomy(request: LiveAutonomyRequest, user: base.UserIdentity = De
             store.enable(owner=user.subject, limits=saved_limits,
                          unrestricted_v5=v5_unrestricted,
                          confirmation=request.confirmation, now=now,
-                         account_id=os.environ.get("WEBULL_ACCOUNT_ID", "").strip())
+                         account_id=selected_webull_account_id())
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         base._control_store().set_mode(base.TradingMode.LIVE)
@@ -377,6 +379,68 @@ def _current_entry_order(client: WebullLiveClient) -> tuple[OptionOrderRequest, 
         ),
         alert,
     )
+
+
+class SelectWebullCashAccount(BaseModel):
+    account_id: str = Field(min_length=1, max_length=128)
+    confirmation: Literal["SELECT WEBULL CASH ACCOUNT"]
+
+
+@app.get("/v1/broker/webull/accounts")
+def list_webull_cash_accounts(user: base.UserIdentity = Depends(base.require_user)):
+    _require_real_owner(user)
+    if not webull_env_status()["configured"]:
+        raise HTTPException(status_code=409, detail="Configure production Webull credentials first")
+    try:
+        entries = WebullLiveClient.from_env().accounts()
+        accounts = []
+        for entry in entries:
+            account_id = str(entry.get("account_id") or "").strip()
+            if not account_id:
+                continue
+            account_type = str(entry.get("account_type") or "UNKNOWN").upper()
+            account_number = str(entry.get("account_number") or account_id)
+            accounts.append({
+                "account_id": account_id,
+                "label": f"{account_type} account ending {account_number[-4:]}",
+                "account_type": account_type,
+                "selected": account_id == selected_webull_account_id(),
+            })
+        return {"accounts": accounts}
+    except (WebullLiveError, RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="Webull account lookup failed; check Webull OpenAPI permissions") from exc
+
+
+@app.post("/v1/broker/webull/select-account")
+def select_webull_cash_account(request: SelectWebullCashAccount,
+                               user: base.UserIdentity = Depends(base.require_user)):
+    _require_real_owner(user)
+    store = LiveAutonomyStore(autonomy_db_path())
+    policy = store.policy()
+    if policy["enabled"] or store.positions() or store.orders(pending_only=True):
+        raise HTTPException(status_code=409, detail="Turn Auto Trade off and clear live managed positions/orders first")
+    pinned = str(policy.get("account_id") or "")
+    if pinned and pinned != request.account_id:
+        raise HTTPException(status_code=409, detail="A different account is pinned to live authorization. Contact support for a verified reset.")
+    if not webull_env_status()["configured"]:
+        raise HTTPException(status_code=409, detail="Configure production Webull credentials first")
+    try:
+        client = WebullLiveClient.from_env()
+        matches = [row for row in client.accounts() if str(row.get("account_id") or "") == request.account_id]
+        if len(matches) != 1 or str(matches[0].get("account_type") or "").upper() != "CASH":
+            raise HTTPException(status_code=422, detail="Select one accessible Webull CASH account")
+        # No account selection is allowed with outstanding broker orders.
+        if client.open_orders(request.account_id):
+            raise HTTPException(status_code=409, detail="Selected Webull account has open orders; cancel or finish them first")
+        save_selected_webull_account_id(request.account_id)
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (WebullLiveError, RuntimeError) as exc:
+        raise HTTPException(status_code=502, detail="Webull account verification failed; no selection saved") from exc
+    return {"selected": True, "label": "Webull CASH account selected",
+            "message": "Account saved; wait for broker connection to become ready before enabling Auto Trade"}
 
 
 @app.get("/v1/broker/webull/readiness")

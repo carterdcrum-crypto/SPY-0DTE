@@ -144,7 +144,7 @@ class WebullLiveClient:
         key, secret = production_credentials()
         return cls(
             key, secret,
-            account_id=os.environ.get("WEBULL_ACCOUNT_ID", "").strip() or None,
+            account_id=selected_webull_account_id() or None,
             token_dir=os.environ.get("WEBULL_OPENAPI_TOKEN_DIR", "").strip() or None,
         )
 
@@ -256,6 +256,42 @@ class WebullLiveClient:
         return dict(payload) if isinstance(payload, Mapping) else None
 
 
+def selected_webull_account_id() -> str:
+    """The owner-selected CASH account persists on Railway's /data volume."""
+    env = os.environ.get("WEBULL_ACCOUNT_ID", "").strip()
+    if env:
+        return env
+    path = Path(os.environ.get("WEBULL_SELECTED_ACCOUNT_PATH", "/data/spy_webull_selected_account"))
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
+
+
+def save_selected_webull_account_id(account_id: str) -> None:
+    """Atomic owner-selected account update; never store credentials here."""
+    if not account_id or len(account_id) > 128 or any(c.isspace() for c in account_id):
+        raise ValueError("invalid broker account identifier")
+    if os.environ.get("WEBULL_ACCOUNT_ID", "").strip():
+        raise ValueError("WEBULL_ACCOUNT_ID is managed by Railway; update that variable instead")
+    path = Path(os.environ.get("WEBULL_SELECTED_ACCOUNT_PATH", "/data/spy_webull_selected_account"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    import tempfile
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", prefix=".webull-selection-",
+                                         dir=path.parent, delete=False) as stream:
+            temp_path = Path(stream.name)
+            os.chmod(temp_path, 0o600)
+            stream.write(account_id + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
 def production_credentials() -> tuple[str, str]:
     from .api import _control_store, _cipher
     store = _control_store()
@@ -280,7 +316,7 @@ def webull_env_status() -> dict[str, Any]:
         "environment": "production",
         "app_key_configured": key,
         "app_secret_configured": secret,
-        "account_id_configured": bool(os.environ.get("WEBULL_ACCOUNT_ID", "").strip()),
+        "account_id_configured": bool(selected_webull_account_id()),
         "configured": key and secret,
         "credential_source": "encrypted_profile" if saved else "environment" if key and secret else "missing",
         "execution": "persistent_owner_authorization",
