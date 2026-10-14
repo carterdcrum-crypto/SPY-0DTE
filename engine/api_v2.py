@@ -307,6 +307,13 @@ def set_paper_autonomy(
     _: base.UserIdentity = Depends(base.require_user),
 ) -> dict[str, Any]:
     store = base._control_store()
+    # PAPER/SHADOW action must also stop standing LIVE authorization,
+    # just like /v1/mode. Otherwise the UI might show an old live toggle
+    # as enabled after switching to simulation.
+    from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+    live = LiveAutonomyStore(autonomy_db_path())
+    if live.policy()["enabled"]:
+        live.disable(datetime.now(timezone.utc))
     store.set_mode(base.TradingMode.PAPER if request.armed else base.TradingMode.SHADOW)
     return _paper_autonomy_payload()
 
