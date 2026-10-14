@@ -9,6 +9,7 @@ from AlgorithmImports import *
 from datetime import datetime
 import json
 import math
+import statistics
 
 from v5_core import latest_signals, quality_score, contract_quantity, realized_volatility, ema
 
@@ -285,6 +286,19 @@ class Spy0DteV5Comparison(QCAlgorithm):
         losses = [x for x in self.realized if x<0]
         from v5_core import score_equity
         equity = score_equity(self.daily)
+        # Descriptive, correlated rolling-window rates; NEVER an ex-ante
+        # probability of success or ruin. Report only observed QC backtests.
+        daily_returns = [math.log(b/a) for a,b in zip([1000.]+self.daily[:-1],self.daily)
+                         if a>0 and b>0]
+        sharpe = (math.sqrt(252)*statistics.fmean(daily_returns)/
+                  statistics.stdev(daily_returns)
+                  if len(daily_returns)>=3 and statistics.stdev(daily_returns)>0
+                  else None)
+        windows = []
+        for i in range(len(self.daily)-41):
+            initial = 1000. if i==0 else self.daily[i-1]
+            if initial>0:
+                windows.append(self.daily[i+41]/initial)
         result = {
             "variant":self.variant,"starting_cash":1000,
             "sessions":len(self.daily),"equity":equity["ending_equity"] if equity else None,
@@ -295,6 +309,11 @@ class Spy0DteV5Comparison(QCAlgorithm):
             "win_pct":round(100*len(wins)/len(self.realized),2) if self.realized else None,
             "profit_factor":round(sum(wins)/abs(sum(losses)),3) if losses else None,
             "missing_or_rejected_quotes":self.no_quote,"closed_bar_signals":self.signals,
+            "annualized_sample_daily_sharpe":round(sharpe,3) if sharpe is not None else None,
+            "rolling_42d_observed_windows":len(windows),
+            "rolling_42d_5x_frequency_pct":round(100*sum(x>=5 for x in windows)/len(windows),2) if windows else None,
+            "rolling_42d_loss_50pct_frequency_pct":round(100*sum(x<=.5 for x in windows)/len(windows),2) if windows else None,
+            "rolling_rates_are_correlated_sample_not_probability":True,
             "no_executable_quote_or_no_data":len(self.realized)==0,
             "net_profit_usd":round(sum(self.realized),2),
             "median_daily_return_pct":(
