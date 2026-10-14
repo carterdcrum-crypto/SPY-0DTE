@@ -65,7 +65,11 @@ class LiveAutonomyStore:
     def connect(self):
         db = sqlite3.connect(self.path, timeout=10)
         db.row_factory = sqlite3.Row
-        db.execute("PRAGMA journal_mode=WAL")
+        # Changing journal mode for every status read can contend with the
+        # live writer and lock an otherwise healthy WAL database.
+        db.execute("PRAGMA busy_timeout=10000")
+        if db.execute("PRAGMA journal_mode").fetchone()[0].lower() != "wal":
+            db.execute("PRAGMA journal_mode=WAL")
         db.execute("PRAGMA synchronous=FULL")
         try:
             with db:
