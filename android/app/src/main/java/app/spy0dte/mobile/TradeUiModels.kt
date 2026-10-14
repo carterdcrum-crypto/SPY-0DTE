@@ -97,6 +97,7 @@ internal data class ScreenStatus(
     val paperBuys: Int = 0,
     val paperSells: Int = 0,
     val paperUnrealizedPnl: Double? = null,
+    val liveStrategyProfile: String = "v4_original_3x",
     val liveEnabled: Boolean = false,
     val liveState: String = "STARTING",
     val liveReason: String = "Waiting for live worker",
