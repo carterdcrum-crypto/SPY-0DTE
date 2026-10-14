@@ -109,4 +109,39 @@ class GlassDashboardTest {
         compose.onNodeWithText("Your account. Your controls.").assertIsDisplayed()
         screenshot("06-large-text-settings")
     }
+
+    @Test fun quantTabsNavigateWithoutAnyAiControl() {
+        compose.setContent { GlassTheme { GlassDashboard(fixture, false, null, actions(), null) } }
+        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertIsDisplayed()
+        compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
+        compose.onNodeWithTag("insight_OPTIONS").performScrollTo().performClick()
+        compose.onNodeWithTag("insight_QUANT").performScrollTo().performClick()
+        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertIsDisplayed()
+    }
+
+    @Test fun settingsSaveAndPaperActivationCallTheirBackendActions() {
+        var saved: List<Any>? = null
+        var paperCalls = 0
+        val actionSet = GlassActions(
+            saveCredentials = { _, _ -> Result.success("Saved") },
+            setLiveAutonomy = { Result.success("Saved") },
+            setMode = { Result.success(it) },
+            setPaperAutonomy = { paperCalls++; Result.success("Paper saved") },
+            resetPaperAccount = { Result.success("Reset") },
+            armRisk = { loss, gain, exposure, contracts ->
+                saved = listOf(loss, gain, exposure, contracts)
+                Result.success("Standing safety settings saved")
+            },
+            disarmRisk = { error("daily arming button must not exist") },
+        )
+        compose.setContent { GlassTheme { GlassDashboard(fixture, false, null, actionSet, null) } }
+        compose.onNodeWithTag("nav_SETTINGS").performClick()
+        compose.onNodeWithText("Save Safety Settings").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(listOf(25.0, 40.0, .35, 3), saved)
+        compose.onNodeWithText("Arm Autonomous Paper").performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(1, paperCalls)
+    }
+
 }
