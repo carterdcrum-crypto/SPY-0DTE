@@ -1,8 +1,9 @@
 """User-selected V5 close-only unrestricted *cash* LIVE execution policy.
 
 Faithful close-only challenger signal, no cap from the signal itself.
-Existing broker risk envelope (settled cash, owner contracts/exposure/daily
-loss limits), fresh timestamped real-market data and NBBO size ALWAYS apply.
+The user intentionally removed discretionary daily loss/gain, maximum
+contracts, and exposure ceilings for this LIVE profile. Still enforce
+actual Webull settled buying power and current NBBO depth.
 The 500k archival replay did not have those checks. No AI decisions.
 Never bypass owner LIVE Auto Trade switch or the single-writer executor.
 """
@@ -16,24 +17,26 @@ from .v4_operational import FEE
 
 
 class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
+    unrestricted_v5_live = True
+
     def telemetry(self):
         return {
             "strategy": PROFILE,
-            "sizing_mode": "unrestricted_cash_signal_BROKER_ENVELOPE_ENFORCED",
+            "sizing_mode": "unrestricted_SETTLED_CASH_AND_VERIFIED_DEPTH",
             "signal_model": "CLOSE_ONLY_QUANT_NO_LLM",
             "exit_profile": "35pct_hard_25pct_trailing_close_reversal_18min",
-            "risk_profile": "owner_max_contracts_and_exposure_daily_stop_cash_depth",
+            "risk_profile": "NO_OWNER_DAILY_GAIN_LOSS_CONTRACT_EXPOSURE_CAPS_cash_depth_only",
             "data_source": "timestamp_verified_webull_completed_m1_and_0dte_nbbo",
             "data_blocker": self.bar_cache.error,
             "historical_evidence": "UNVALIDATED_REUSED_CBBO_MINUTE_PROXY",
         }
 
     def entry(self, now, account, daily, limits):
-        if account is None or daily is None or limits is None:
+        if account is None or daily is None:
             return None, {"state":"RISK_BLOCKED",
-                          "reason":"missing verified live account/risk envelope"}
-        if daily.get("halt_reason"):
-            return None, {"state":"DAILY_HALT", "reason":daily["halt_reason"]}
+                          "reason":"missing verified live account or equity high watermark"}
+        # Deliberately ignore previous V4 owner-defined gain/loss limits.
+        # The broker reconciler still requires settled cash and actual depth.
         proposal, diag=paper_candidate(
             now, self.bar_cache.bars, self.market_reader.quotes.values(),
             equity=float(account["equity"]),
@@ -41,8 +44,8 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
             peak=float(daily["high_watermark"]))
         if proposal is None:
             return None, {**diag,"strategy":PROFILE}
-        # Final live executor recomputes from the exact pre-trade ask and
-        # applies owner-authenticated contract/exposure/daily-loss limits.
+        # Final live executor rechecks the exact ask, fresh depth and settled
+        # buying power; no arbitrary owner contract/day-profit/loss ceilings.
         return {
             "symbol":proposal["symbol"],
             "quantity":int(proposal["quantity"]),
@@ -51,7 +54,7 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
             "model_proposed_cash_depth_quantity":int(proposal["quantity"]),
         },{**diag,"state":"SIGNAL","strategy":PROFILE,
            "live_model":"user_selected_V5_cash_unrestricted",
-           "broker_risk_limits_enforced":True}
+           "broker_settled_cash_and_nbbo_depth_enforced":True}
 
     def exit(self, position, now):
         reason=str(position.get("entry_reason",""))
