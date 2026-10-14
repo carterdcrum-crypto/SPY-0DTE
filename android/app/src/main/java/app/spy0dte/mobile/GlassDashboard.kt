@@ -894,6 +894,18 @@ private fun GlassSettingsScreen(
             }
         }
 
+        if (status.liveStrategyProfile == "v5_close_only_unrestricted_research") {
+            GlassPanel {
+                Text("V5 UNRESTRICTED CASH MODE", color = GlassColors.Text,
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("No daily loss cap, daily profit cap, contract-count cap, " +
+                    "or account exposure cap. Positions can risk ALL settled cash. " +
+                    "The original owner Auto trade switch, real-time quote checks " +
+                    "and broker cash/depth requirements remain.",
+                    color = GlassColors.Amber, fontSize = 11.sp)
+            }
+        } else {
         GlassPanel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("RISK CONTROLS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
@@ -924,6 +936,8 @@ private fun GlassSettingsScreen(
                     }
                 },
             )
+        }
+
         }
 
         GlassPanel {
