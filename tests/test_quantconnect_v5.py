@@ -12,7 +12,9 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from quantconnect.v5_core import (
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "quantconnect"))
+from v5_core import (
     latest_signals, contract_quantity, realized_volatility, quality_score,
     score_equity, Signal,
 )
