@@ -375,3 +375,33 @@ def test_preview_cannot_authorize_autonomy(tmp_path, monkeypatch):
                                          api.UserIdentity(subject="preview", email="preview@local"))
     assert exc.value.status_code == 403
     assert not LiveAutonomyStore(tmp_path/"live.sqlite").policy()["enabled"]
+
+
+def test_v5_live_selected_model_order_keeps_owner_limits_and_real_depth(rig):
+    from dataclasses import replace as dataclass_replace
+    original=rig.provider.collect_once
+    rig.provider.collect_once=lambda day: [
+        dataclass_replace(x,bid_size=10,ask_size=10)
+        for x in original(day)]
+    rig.strategy.quantity=8
+    rig.strategy.entry=lambda now, account, daily, limits: (
+        {"symbol":f"SPY{now:%y%m%d}C00660000","cycle":now.isoformat(),
+         "quantity":8,
+         "reason":"v5_close_only_unrestricted_research; momentum_ignition_CLOSE_PROXY"},
+        {"state":"SIGNAL","strategy":"v5_close_only_unrestricted_research"})
+    res=rig.executor.tick()
+    assert res["state"]=="ORDER_SUBMITTED"
+    assert len(rig.broker.submissions)==1
+    # Model was unconstrained at quantity 8, but user-authorized max is 3.
+    assert rig.broker.submissions[0].quantity==3
+
+
+def test_v5_live_rejects_fake_or_missing_market_depth_before_order(rig):
+    rig.strategy.entry=lambda now,account,daily,limits: (
+        {"symbol":f"SPY{now:%y%m%d}C00660000","cycle":now.isoformat(),
+         "quantity":8,
+         "reason":"v5_close_only_unrestricted_research; liquidity_reversal_CLOSE_PROXY"},
+        {"state":"SIGNAL","strategy":"v5_close_only_unrestricted_research"})
+    res=rig.executor.tick()
+    assert res["state"]=="RISK_BLOCKED"
+    assert rig.broker.submissions==[]
