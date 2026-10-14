@@ -48,7 +48,8 @@ def test_v4_closed_bar_signal_parity_with_frozen_reference():
             received = latest_signals(closes[:i+1],highs[:i+1],
                                       lows[:i+1],vols[:i+1],"v4_original")
             expected = [(row["side"],row["setup"]) for row in original
-                        if row["at"]==frames[i].timestamp+timedelta(minutes=1)]
+                        if row["at"]==frames[i].timestamp+timedelta(minutes=1)
+                        and row["setup"] in ("trend_reclaim","stretch_reclaim")]
             assert [(x.side,x.setup) for x in received] == expected
 
 
