@@ -1019,7 +1019,18 @@ private fun GlassSettingsScreen(
             Spacer(Modifier.height(7.dp))
             GlassKeyValue("Provider", status.broker.uppercase())
             GlassKeyValue("API configured", if (status.brokerConfigured) "YES" else "NO")
-            Text("Webull production OpenAPI credentials", color = GlassColors.TextMuted, fontSize = 11.sp)
+            Text(
+                if (status.brokerConfigured) "Keys stored on Railway. This does NOT mean Webull accepted them. Saved keys are never displayed here."
+                else "Webull production OpenAPI credentials are missing. Enter both keys below.",
+                color = GlassColors.TextMuted, fontSize = 11.sp,
+            )
+            if (status.liveEnabled) {
+                Spacer(Modifier.height(8.dp))
+                GlassNotice(
+                    "Auto Trade is ON. Saving keys is locked while trading is enabled. Turn Auto Trade OFF, then confirm no working orders or positions in Webull before replacing keys.",
+                    danger = true,
+                )
+            }
             OutlinedTextField(appKey, { appKey = it }, label = { Text("App key") }, singleLine = true,
                 visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(appSecret, { appSecret = it }, label = { Text("App secret") }, singleLine = true,
@@ -1039,6 +1050,12 @@ private fun GlassSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
             GlassKeyValue("Broker connected", if (status.brokerConnected) "YES" else "NO")
+            if (status.brokerConfigured && !status.brokerConnected) {
+                val detail = if (status.liveState == "RECOVERING" && status.liveReason.isNotBlank())
+                    "Broker diagnostic: ${status.liveReason}"
+                else "Broker is not authenticated/verified. Check Webull OpenAPI access and permissions."
+                GlassNotice(detail, danger = true)
+            }
             GlassKeyValue("Cash", money(status.brokerState.cashAvailable))
             GlassKeyValue("Day P&L", signedMoney(status.brokerState.dailyPnl), pnlColor(status.brokerState.dailyPnl))
             GlassKeyValue("Owner auth", if (preview) "LOCKED" else "ACTIVE", if (preview) GlassColors.Amber else GlassColors.Green)
