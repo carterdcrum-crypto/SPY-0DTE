@@ -164,7 +164,8 @@ internal fun parseStatus(text: String): ScreenStatus {
     val market = if (root.optString("mode") == "LIVE") {
         root.optJSONObject("live_autonomy")?.optJSONObject("market") ?: JSONObject()
     } else root.optJSONObject("market") ?: JSONObject()
-    val chartJson = root.optJSONObject("spy_chart_5m") ?: JSONObject()
+    val chartJson = root.optJSONObject("spy_chart_30m")
+        ?: root.optJSONObject("spy_chart_5m") ?: JSONObject()
     val verifiedCandles = buildList {
         chartJson.optJSONArray("candles")?.let { data ->
             for (i in 0 until data.length()) {
@@ -181,7 +182,8 @@ internal fun parseStatus(text: String): ScreenStatus {
                 if (open != null && high != null && low != null && close != null &&
                     high >= maxOf(open, close, low) && low <= minOf(open, close, high) &&
                     volume > 0 && time.isNotEmpty()
-                ) add(SpyCandle(time, open, high, low, close, volume))
+                ) add(SpyCandle(time, open, high, low, close, volume,
+                    forming = bar.optBoolean("forming", false)))
             }
         }
     }
@@ -193,7 +195,8 @@ internal fun parseStatus(text: String): ScreenStatus {
         ageSeconds = chartJson.optDouble("age_seconds").takeIf {
             chartJson.has("age_seconds") && !chartJson.isNull("age_seconds") && it.isFinite()
         },
-        candles = if (verifiedCandles.size == 5) verifiedCandles else emptyList(),
+        hasFormingCandle = chartJson.optBoolean("has_forming_candle", false),
+        candles = verifiedCandles.takeLast(30),
     )
     val gate = root.optJSONObject("live_gate") ?: JSONObject()
     val broker = root.optJSONObject("live_broker") ?: JSONObject()

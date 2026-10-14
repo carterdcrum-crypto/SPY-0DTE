@@ -53,6 +53,7 @@ internal data class SpyCandle(
     val low: Double,
     val close: Double,
     val volume: Long,
+    val forming: Boolean = false,
 )
 
 internal data class SpyChartState(
@@ -61,6 +62,7 @@ internal data class SpyChartState(
     val reason: String? = null,
     val asof: String? = null,
     val ageSeconds: Double? = null,
+    val hasFormingCandle: Boolean = false,
     val candles: List<SpyCandle> = emptyList(),
 )
 

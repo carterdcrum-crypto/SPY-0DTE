@@ -33,7 +33,7 @@ private fun asEt(iso:String)=runCatching{
     candleLabel.format(OffsetDateTime.parse(iso).toInstant())
 }.getOrDefault("—")
 
-/** Exactly five authentic completed 1m stock bars spanning a rolling 5m window. */
+/** Up to thirty authenticated 1m bars; last can be a visibly flagged forming bar. */
 @Composable
 internal fun SpyFiveMinuteChart(status:ScreenStatus){
     val bars=status.spyChart.candles
@@ -41,34 +41,35 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
     Column(modifier=Modifier.fillMaxWidth().testTag("spy_5min_chart"),
         verticalArrangement=Arrangement.spacedBy(8.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            Text("5 MIN WINDOW · 1 MIN CANDLES",fontSize=10.sp,
+            Text("30 MIN WINDOW · 1 MIN CANDLES",fontSize=10.sp,
                 color=GlassColors.TextMuted,fontWeight=FontWeight.SemiBold)
-            Text(if(state=="CURRENT")"●  LIVE DATA"
-                else if(state=="STALE")"●  STALE" else "NO MARKET DATA",
-                fontSize=9.sp,color=if(state=="CURRENT") CHART_GREEN else GlassColors.Amber)
+            Text(if(state=="LIVE_FORMING")"● LIVE · FORMING"
+                else if(state=="WAITING_FOR_NEXT_BAR")"● LAST CLOSED"
+                else if(state=="STALE")"● STALE" else "NO MARKET DATA",
+                fontSize=9.sp,color=if(state=="LIVE_FORMING") CHART_GREEN else GlassColors.Amber)
         }
-        if(bars.size==5){
+        if(bars.isNotEmpty()){
             ChartCanvas(bars)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                 Text(asEt(bars.first().time)+" ET",color=GlassColors.TextMuted,fontSize=9.sp)
-                Text("5 real candles",color=GlassColors.TextMuted,fontSize=9.sp)
+                Text("${bars.size} × 1m",color=GlassColors.TextMuted,fontSize=9.sp)
                 Text(asEt(bars.last().time)+" ET",color=GlassColors.TextMuted,fontSize=9.sp)
             }
             val last=bars.last()
-            Text("Latest completed: O "+ "%.2f".format(last.open)+
+            Text((if(last.forming)"LIVE FORMING: O " else "Last completed: O ")+ "%.2f".format(last.open)+
                  " · H "+"%.2f".format(last.high)+
                  " · L "+"%.2f".format(last.low)+
                  " · C "+"%.2f".format(last.close)+
                  " · Vol "+last.volume,
                  color=GlassColors.TextMuted,fontSize=10.sp)
-            if(state!="CURRENT")Text("Data is stale. Trading never uses stale chart candles.",
+            if(state!="LIVE_FORMING")Text("Live minute unavailable. Showing verified bars; the quant uses only closed candles.",
                 color=GlassColors.Amber,fontSize=10.sp)
         }else{
             Box(Modifier.fillMaxWidth().height(165.dp)
                 .background(Color.White.copy(alpha=.55f),RoundedCornerShape(17.dp))
                 .padding(15.dp)){
                 Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Text("Waiting for 5 completed SPY candles",color=GlassColors.Text,
+                    Text("Waiting for authentic SPY minute candles",color=GlassColors.Text,
                         fontWeight=FontWeight.SemiBold,fontSize=12.sp)
                     Text(status.spyChart.reason?.take(160)
                         ?: "Authentic Webull 1-minute stock OHLCV required. No demo prices.",

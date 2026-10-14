@@ -144,43 +144,45 @@ internal fun MarketNewsPanel(){
   }
   LaunchedEffect(Unit){refresh()}
   Column(modifier=Modifier.testTag("news_panel"),verticalArrangement=Arrangement.spacedBy(10.dp)){
+    // Latest headlines are FIRST, before the directory of trusted sources.
     Card(colors=CardDefaults.cardColors(containerColor=GlassColors.White),
       border=BorderStroke(1.dp,GlassColors.Border),shape=RoundedCornerShape(22.dp)){
-      Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+      Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-          Text("TRUSTED MARKET NEWS",fontWeight=FontWeight.Bold,fontSize=12.sp,color=GlassColors.Text)
+          Text("LATEST HEADLINES",color=GlassColors.Text,fontWeight=FontWeight.Bold,fontSize=12.sp)
           OutlinedButton(onClick={scope.launch{refresh()}},enabled=!loading,
             modifier=Modifier.testTag("refresh_news")){
             Text(if(loading)"Loading" else "Refresh",fontSize=10.sp)
           }
         }
-        Text("Headlines and primary-source releases. News does not feed the V4 algorithm.",
+        if(loading&&articles.isEmpty()){
+          Text("Retrieving actual market headlines…",color=GlassColors.TextMuted,fontSize=11.sp)
+        }else if(checked&&articles.isEmpty()){
+          Text("No current headlines were returned. Open trusted publishers below.",
+            color=GlassColors.TextMuted,fontSize=11.sp)
+        }
+        articles.forEach{article->
+          Column(Modifier.fillMaxWidth().clickable{openPage(article.url)}.padding(vertical=5.dp)){
+            Text(article.source,color=GlassColors.GreenDark,fontSize=10.sp)
+            Spacer(Modifier.height(3.dp))
+            Text(article.title,color=GlassColors.Text,fontSize=12.sp,fontWeight=FontWeight.Medium)
+            if(article.published.isNotBlank())
+              Text(article.published,color=GlassColors.TextMuted,fontSize=10.sp)
+          }
+        }
+      }
+    }
+    Card(colors=CardDefaults.cardColors(containerColor=GlassColors.White),
+      border=BorderStroke(1.dp,GlassColors.Border),shape=RoundedCornerShape(22.dp)){
+      Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
+        Text("TRUSTED MARKET NEWS",fontWeight=FontWeight.Bold,fontSize=12.sp,
+          color=GlassColors.Text)
+        Text("Direct publisher links and primary releases. Headlines never feed V4 trades.",
           color=GlassColors.TextMuted,fontSize=11.sp)
         MARKET_NEWS_SOURCES.forEach{source->
           OutlinedButton(onClick={openPage(source.page)},modifier=Modifier.fillMaxWidth()
             .testTag("news_source_"+source.name.lowercase().replace(" ","_"))){
             Text("Open "+source.name+"  ↗",fontSize=12.sp)
-          }
-        }
-        if(checked&&articles.isEmpty()){
-          Text("Headlines temporarily unavailable. Use the sources above for current coverage.",
-            color=GlassColors.TextMuted,fontSize=11.sp)
-        }
-      }
-    }
-    if(articles.isNotEmpty()){
-      Card(colors=CardDefaults.cardColors(containerColor=GlassColors.White),
-        border=BorderStroke(1.dp,GlassColors.Border),shape=RoundedCornerShape(22.dp)){
-        Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-          Text("LATEST HEADLINES",color=GlassColors.Text,fontWeight=FontWeight.Bold,fontSize=12.sp)
-          articles.forEach{article->
-            Column(Modifier.fillMaxWidth().clickable{openPage(article.url)}.padding(vertical=5.dp)){
-              Text(article.source,color=GlassColors.GreenDark,fontSize=10.sp)
-              Spacer(Modifier.height(3.dp))
-              Text(article.title,color=GlassColors.Text,fontSize=12.sp,fontWeight=FontWeight.Medium)
-              if(article.published.isNotBlank())
-                Text(article.published,color=GlassColors.TextMuted,fontSize=10.sp)
-            }
           }
         }
       }

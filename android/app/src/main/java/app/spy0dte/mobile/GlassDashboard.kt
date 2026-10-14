@@ -754,7 +754,7 @@ private fun GlassDivider() {
 @Composable
 private fun GlassChartPanel(status: ScreenStatus) {
     GlassPanel {
-        Text("SPY · LAST 5 MINUTES", color=GlassColors.Text,
+        Text("SPY · LAST 30 MINUTES", color=GlassColors.Text,
             fontSize=12.sp, fontWeight=FontWeight.SemiBold)
         Spacer(Modifier.height(7.dp))
         Text(status.spot?.let { "SPY  %.2f".format(it) } ?: "SPY  —",
