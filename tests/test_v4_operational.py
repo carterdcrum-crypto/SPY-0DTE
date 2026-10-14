@@ -132,3 +132,18 @@ def test_v4_original_rank_targets_delta_point_five(monkeypatch):
             greeks=SimpleNamespace(delta=.55,implied_volatility=.001))
     proposal,_=v.candidate(NOW,b,[other,quoted],equity=1000.,settled=1000.,peak=1000.)
     assert proposal["symbol"]==quoted.option_symbol
+
+
+def test_official_webull_nested_symbol_bars_parse():
+    rows=[]
+    start=NOW.replace(second=0,microsecond=0)-timedelta(minutes=3)
+    for i in range(4):
+        at=start+timedelta(minutes=i)
+        rows.append({"time":at.isoformat(),"open":"600","high":"601",
+                     "low":"599","close":"600","volume":"220"})
+    data={"result":[{"symbol":"SPY","result":rows}]}
+    parsed=v.parse_webull_bars(data,NOW)
+    assert len(parsed)==3
+    assert all(x.volume==220 for x in parsed)
+    with pytest.raises(ValueError,match="SPY"):
+        v.parse_webull_bars({"result":[{"symbol":"AAPL","result":rows}]},NOW)

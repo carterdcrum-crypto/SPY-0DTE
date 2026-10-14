@@ -71,7 +71,14 @@ def parse_webull_bars(payload, now:datetime)->list[Bar]:
     rows=payload.get("result")
     if not isinstance(rows,list):
         raise ValueError("Webull M1 bars missing result array")
-    if payload.get("symbol") not in (None,"SPY"):
+    # Official Webull stock-history response wraps individual symbol bars:
+    # {"result":[{"symbol":"SPY","result":[...completed bars...]}]}.
+    # Also tolerate the SDK's flattened documented one-symbol representation.
+    if rows and isinstance(rows[0],dict) and isinstance(rows[0].get("result"),list):
+        if len(rows)!=1 or rows[0].get("symbol")!="SPY":
+            raise ValueError("Webull M1 feed must contain SPY and only SPY")
+        rows=rows[0]["result"]
+    elif payload.get("symbol") not in (None,"SPY"):
         raise ValueError("underlying is not SPY")
     today=now.astimezone(ET).date()
     checked=[]
