@@ -144,4 +144,51 @@ class GlassDashboardTest {
         assertEquals(1, paperCalls)
     }
 
+
+    @Test fun fiveMinuteChartShowsFiveVerifiedCandles() {
+        val start = "2026-10-14T14:00:00+00:00"
+        val candles = (0 until 5).map { i ->
+            SpyCandle(start, 600.0 + i, 601.0 + i,
+                599.0 + i, 600.5 + i, 250L)
+        }
+        val chart = SpyChartState(state="CURRENT",asof="2026-10-14T14:05:00+00:00",
+            ageSeconds=2.0,candles=candles)
+        compose.setContent { GlassTheme {
+            GlassDashboard(fixture.copy(spyChart=chart), false, null, actions(), null)
+        } }
+        compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
+        compose.onNodeWithTag("spy_5min_chart").assertIsDisplayed()
+        compose.onNodeWithText("SPY · 5 MIN").assertIsDisplayed()
+        compose.onNodeWithText("SPY  $604.50").assertIsDisplayed()
+    }
+
+    @Test fun newsTabDisplaysThreeRealPublishersAndRefresh() {
+        compose.setContent { GlassTheme {
+            GlassDashboard(fixture, false, null, actions(), null)
+        } }
+        compose.onNodeWithTag("insight_NEWS").performScrollTo().performClick()
+        compose.onNodeWithText("MARKET NEWS").assertIsDisplayed()
+        compose.onNodeWithTag("news_source_CNBC_Markets").assertIsDisplayed()
+        compose.onNodeWithTag("news_source_NPR_Business").assertIsDisplayed()
+        compose.onNodeWithTag("news_source_Federal_Reserve").assertIsDisplayed()
+        compose.onNodeWithTag("refresh_market_news").assertExists()
+    }
+
+    @Test fun rssParserRejectsUntrustedUrlsAndDoesNotInventHeadlines() {
+        val source = MarketNewsRepository.publishers[0]
+        val fixtureRss = """
+            <rss version="2.0"><channel>
+              <item><title>SPY opens higher</title>
+              <link>https://www.cnbc.com/markets/real-update.html</link>
+              <pubDate>Wed, 14 Oct 2026 14:00:00 GMT</pubDate></item>
+              <item><title>Forged link</title><link>https://malicious.example/article</link></item>
+            </channel></rss>
+        """.trimIndent()
+        val rows = MarketNewsRepository.parseRss(fixtureRss, source)
+        assertEquals(1, rows.size)
+        assertEquals("SPY opens higher", rows.first().title)
+        org.junit.Assert.assertFalse(MarketNewsRepository.safeUrl("javascript:alert(1)"))
+        org.junit.Assert.assertFalse(MarketNewsRepository.safeUrl("https://cnbc.com.evil.example"))
+    }
+
 }
