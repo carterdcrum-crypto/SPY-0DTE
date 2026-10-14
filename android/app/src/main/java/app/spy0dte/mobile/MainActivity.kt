@@ -181,7 +181,7 @@ private class BackendClient(private val idToken: String) {
                 .put("daily_gain_limit", dailyGain)
                 .put("max_account_exposure_pct", maxExposurePct)
                 .put("max_contracts", maxContracts)
-                .put("confirmation", "ARM LIVE TODAY"),
+                .put("confirmation", "SAVE STANDING LIVE LIMITS"),
         )
     }
 
@@ -474,7 +474,7 @@ private fun LiveDashboard(status: LiveStatus, connectionError: String?, backend:
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("TODAY'S RISK ENVELOPE", fontWeight = FontWeight.Bold)
-                Text(if (status.risk.armedToday) "ARMED" else "NOT ARMED")
+                Text(if (status.risk.configured) "SAVED" else "NOT CONFIGURED")
                 Text("Loss stop: ${money(status.risk.dailyLossLimit)}")
                 Text("Gain stop: ${money(status.risk.dailyGainLimit)}")
                 Text("Max account exposure: ${status.risk.maxAccountExposurePct?.let { "%.1f%%".format(it * 100.0) } ?: "—"}")
@@ -564,8 +564,8 @@ private fun SettingsScreen(status: LiveStatus, backend: BackendClient) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Daily live limits", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("These limits expire at the end of the Eastern trading date. You arm them again the next day.")
+        Text("Standing safety settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Configure once. Settings persist across sessions; daily P&L stops reset automatically.")
 
         OutlinedTextField(
             value = lossText,
@@ -609,29 +609,18 @@ private fun SettingsScreen(status: LiveStatus, backend: BackendClient) {
                 } else {
                     scope.launch {
                         backend.armLiveRisk(loss, gain, exposure, contracts)
-                            .onSuccess { message = "Today's live limits are armed" }
+                            .onSuccess { message = "Standing safety settings saved" }
                             .onFailure { message = it.message ?: "Could not arm limits" }
                     }
                 }
             },
-        ) { Text(if (status.risk.armedToday) "Re-arm today's limits" else "Arm LIVE limits for today") }
-
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    backend.disarmLiveRisk()
-                        .onSuccess { message = "LIVE limits disarmed; backend returned to SHADOW if needed" }
-                        .onFailure { message = it.message ?: "Could not disarm" }
-                }
-            },
-            enabled = status.risk.configured,
-        ) { Text("Disarm") }
+        ) { Text("Save safety settings") }
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("Current", fontWeight = FontWeight.Bold)
-                Text("Date: ${status.risk.tradingDate ?: "—"}")
-                Text("Armed today: ${if (status.risk.armedToday) "yes" else "no"}")
+                Text("Settings persist until changed")
+                Text("Configured: ${if (status.risk.configured) "yes" else "no"}")
                 Text("Max open positions: 1")
             }
         }

@@ -857,8 +857,8 @@ private fun GlassSettingsScreen(
     val scope = rememberCoroutineScope()
     var loss by remember(status.risk.loss) { mutableStateOf(status.risk.loss?.toString() ?: "25") }
     var gain by remember(status.risk.gain) { mutableStateOf(status.risk.gain?.toString() ?: "40") }
-    var exposure by remember(status.risk.exposure) { mutableStateOf(status.risk.exposure?.let { (it * 100).toString() } ?: "20") }
-    var contracts by remember(status.risk.contracts) { mutableStateOf(status.risk.contracts?.toString() ?: "1") }
+    var exposure by remember(status.risk.exposure) { mutableStateOf(status.risk.exposure?.let { (it * 100).toString() } ?: "35") }
+    var contracts by remember(status.risk.contracts) { mutableStateOf(status.risk.contracts?.toString() ?: "3") }
     var message by remember { mutableStateOf<String?>(null) }
     var modeMessage by remember { mutableStateOf<String?>(null) }
     var paperMessage by remember { mutableStateOf<String?>(null) }

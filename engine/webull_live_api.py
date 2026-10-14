@@ -185,7 +185,7 @@ def status_payload() -> dict[str, Any]:
     payload["live_autonomy"] = live
     if live["configured"]:
         limits = LiveAutonomyStore(autonomy_db_path()).envelope(datetime.now(timezone.utc))
-        payload["live_risk"] = {**limits.as_dict(), "armed_today": live["enabled"], "standing_authorization": True}
+        payload["live_risk"] = {**limits.as_dict(), "armed_today": limits.is_complete, "standing_authorization": live["enabled"]}
         payload["live_alert"] = None
     if payload.get("mode") == "LIVE":
         payload["decision"] = {"state": live["state"], "reason": live["reason"]}
