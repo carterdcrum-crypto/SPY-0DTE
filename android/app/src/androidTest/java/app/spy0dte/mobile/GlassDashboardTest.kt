@@ -145,21 +145,21 @@ class GlassDashboardTest {
     }
 
 
-    @Test fun fiveMinuteChartShowsFiveVerifiedCandles() {
+    @Test fun thirtyMinuteChartShowsVerifiedCandlesAndFormingCandle() {
         val start = "2026-10-14T14:00:00+00:00"
-        val candles = (0 until 5).map { i ->
+        val candles = (0 until 30).map { i ->
             SpyCandle(start, 600.0 + i, 601.0 + i,
-                599.0 + i, 600.5 + i, 250L)
+                599.0 + i, 600.5 + i, 250L, forming = i == 29)
         }
-        val chart = SpyChartState(state="CURRENT",asof="2026-10-14T14:05:00+00:00",
-            ageSeconds=2.0,candles=candles)
+        val chart = SpyChartState(state="LIVE_FORMING",asof="2026-10-14T14:05:00+00:00",
+            ageSeconds=2.0,hasFormingCandle=true,candles=candles)
         compose.setContent { GlassTheme {
             GlassDashboard(fixture.copy(spyChart=chart), false, null, actions(), null)
         } }
         compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
         compose.onNodeWithTag("spy_5min_chart").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("SPY · LAST 5 MINUTES").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("5 MIN WINDOW · 1 MIN CANDLES").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("SPY · LAST 30 MINUTES").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("30 MIN WINDOW · 1 MIN CANDLES").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun newsTabDisplaysThreeRealPublishersAndRefresh() {
@@ -167,6 +167,7 @@ class GlassDashboardTest {
             GlassDashboard(fixture, false, null, actions(), null)
         } }
         compose.onNodeWithTag("insight_NEWS").performScrollTo().performClick()
+        compose.onNodeWithText("LATEST HEADLINES").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("TRUSTED MARKET NEWS").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("news_source_cnbc_markets").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("news_source_reuters_markets").performScrollTo().assertIsDisplayed()

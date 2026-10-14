@@ -150,30 +150,72 @@ def test_official_webull_nested_symbol_bars_parse():
 
 
 
-def test_chart_is_five_real_contiguous_completed_bars_with_source_and_staleness():
+
+def test_chart_is_thirty_real_completed_minute_bars_and_stale_later():
     b=bars()
-    v._store_spy_chart(b)
-    fresh=v.spy_chart_5m(b[-1].available_at+timedelta(seconds=2))
-    assert fresh["state"]=="CURRENT"
-    assert fresh["window_minutes"]==5 and fresh["interval"]=="1m"
-    assert len(fresh["candles"])==5
-    assert all(c["volume"]==200 for c in fresh["candles"])
-    assert [c["close"] for c in fresh["candles"]]==[i.close for i in b[-5:]]
-    stale=v.spy_chart_5m(b[-1].available_at+timedelta(minutes=30))
+    observed=b[-1].available_at+timedelta(seconds=2)
+    v._store_spy_chart(b,observed)
+    fresh=v.spy_chart_30m(observed)
+    assert fresh["state"]=="WAITING_FOR_NEXT_BAR"
+    assert fresh["window_minutes"]==30 and fresh["interval"]=="1m"
+    assert len(fresh["candles"])==30
+    assert all(not c["forming"] and c["volume"]==200 for c in fresh["candles"])
+    assert [c["close"] for c in fresh["candles"]]==[i.close for i in b[-30:]]
+    stale=v.spy_chart_30m(observed+timedelta(minutes=30))
     assert stale["state"]=="STALE"
     assert stale["candles"]==fresh["candles"]
+    assert len(v.spy_chart_5m(observed)["candles"])==5  # old APK compatibility
 
 
-def test_no_fabricated_chart_if_feed_returns_a_gap():
-    from engine import v4_operational as v
-    from threading import Lock
-    v._SPY_CHART.clear()
-    v._SPY_CHART.update({"candles":[],"source":"Webull OpenAPI · SPY M1","reason":"no bars"})
+def test_chart_in_progress_candle_updates_before_close_but_quant_excludes_it():
     b=bars()
-    v._store_spy_chart(b[-3:])
-    assert v.spy_chart_5m()["state"]=="UNAVAILABLE"
-    v._store_spy_chart(b)
-    prev=v.spy_chart_5m()["candles"]
-    # A transient denial does not invent replacement prices.
-    v._store_spy_chart([],reason="provider unavailable")
-    assert v.spy_chart_5m()["candles"]==prev
+    now=b[-1].available_at+timedelta(seconds=20)
+    t=now.replace(second=0,microsecond=0)
+    row={"time":t.isoformat(),"open":"603","high":"603.2","low":"602.9",
+         "close":"603.1","volume":"50"}
+    historical=[{"time":x.start.isoformat(),"open":x.open,"high":x.high,
+                 "low":x.low,"close":x.close,"volume":x.volume} for x in b]
+    response={"symbol":"SPY","result":historical+[row]}
+    closed=v.parse_webull_bars(response,now)
+    display=v.parse_webull_bars(response,now,include_forming=True)
+    assert len(display)==len(closed)+1
+    assert closed[-1]==b[-1]  # trading input never contains forming bar
+    v._store_spy_chart(display,now)
+    first=v.spy_chart_30m(now+timedelta(seconds=1))
+    assert first["state"]=="LIVE_FORMING"
+    assert first["has_forming_candle"]
+    assert len(first["candles"])==30
+    assert first["candles"][-1]["close"]==603.1
+    assert first["candles"][-1]["forming"]
+    row2={**row,"high":"603.4","close":"603.3","volume":"135"}
+    later=now+timedelta(seconds=5)
+    display2=v.parse_webull_bars(
+        {"symbol":"SPY","result":historical+[row2]},later,include_forming=True)
+    v._store_spy_chart(display2,later)
+    second=v.spy_chart_30m(later)
+    assert second["candles"][-1]["close"]==603.3
+    assert second["candles"][-1]["volume"]==135
+    assert second["candles"][-2]==first["candles"][-2]
+    # Observed producer ticks do not entitle inventing subsequent movements:
+    assert v.spy_chart_30m(later+timedelta(seconds=100))["state"]=="STALE"
+
+
+def test_chart_fails_closed_with_missing_provider_rows_and_real_gaps():
+    v._SPY_CHART.clear()
+    v._SPY_CHART.update({"candles":[],"source":"Webull OpenAPI · SPY M1",
+                         "reason":"no bars","observed_at":None})
+    b=bars()
+    observed=b[-1].available_at+timedelta(seconds=1)
+    v._store_spy_chart(b[-3:],observed)
+    assert len(v.spy_chart_30m(observed)["candles"])==3  # session warmup
+    v._store_spy_chart(b,observed)
+    prev=v.spy_chart_30m(observed)["candles"]
+    v._store_spy_chart([],observed+timedelta(seconds=5),
+                      reason="provider unavailable")
+    assert v.spy_chart_30m(observed+timedelta(seconds=5))["candles"]==prev
+    assert v.spy_chart_30m(observed+timedelta(minutes=4))["state"]=="STALE"
+    gap=b[-30:-20]+b[-16:]
+    v._store_spy_chart(gap,observed)
+    got=v.spy_chart_30m(observed)["candles"]
+    assert len(got)==14  # no invented four-minute OHLCV gap
+    assert got[0]["time"]==gap[10].start.isoformat()
