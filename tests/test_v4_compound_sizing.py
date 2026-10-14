@@ -41,7 +41,7 @@ def test_unrestricted_is_separate_research_only_stress():
 
 def test_adaptive_candidate_remains_real_quote_eligible(monkeypatch):
     from engine import v4_operational as v
-    from tests.test_v4_operational import bars, q, signal, NOW
+    from test_v4_operational import bars, q, signal, NOW
     b=bars()
     monkeypatch.setattr(v,"identify_setups",lambda frames:[signal(b)])
     proposal,why=v.candidate(NOW,b,[q(bid_size=20,ask_size=20)],
