@@ -1132,6 +1132,13 @@ private fun GlassSettingsScreen(
             }
             GlassKeyValue("Cash", money(status.brokerState.cashAvailable))
             GlassKeyValue("Day P&L", signedMoney(status.brokerState.dailyPnl), pnlColor(status.brokerState.dailyPnl))
+            if (status.brokerConnected && status.brokerState.cashAvailable == null) {
+                GlassNotice(
+                    "Webull account selected, but settled cash has not been verified yet. " +
+                        status.liveReason.take(160),
+                    danger = true,
+                )
+            }
             GlassKeyValue("Owner auth", if (preview) "LOCKED" else "ACTIVE", if (preview) GlassColors.Amber else GlassColors.Green)
             onSignOut?.let {
                 Spacer(Modifier.height(8.dp))
