@@ -293,7 +293,7 @@ private fun GlassLiveScreen(
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
-    var topTab by rememberSaveable { mutableStateOf("AI") }
+    var topTab by rememberSaveable { mutableStateOf("QUANT") }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -313,8 +313,8 @@ private fun GlassLiveScreen(
         message?.let { GlassNotice(it) }
         GlassTopTabs(topTab) { topTab = it }
         when (topTab) {
-            "AI" -> {
-                GlassAiConsensus(status.ai, status.alert)
+            "QUANT" -> {
+                GlassQuantSignals(status)
                 GlassSetupCard(status)
                 GlassPositionsCard(status, onPositions)
                 GlassTodayCard(status)
@@ -366,7 +366,7 @@ private fun GlassAutoTradeCard(status: ScreenStatus, preview: Boolean, saving: B
             Text("On: automatically opens and closes qualified live trades, even with your phone closed. Off: cancels pending buys and closes positions opened by Auto trade when executable.",
                 color = GlassColors.TextMuted, fontSize = 12.sp, lineHeight = 18.sp)
             Spacer(Modifier.height(8.dp))
-            Text("Your saved limits repeat each trading day until you switch it off.", color = GlassColors.TextMuted, fontSize = 12.sp)
+            Text("Saved safety settings persist. Daily protective stops reset automatically.", color = GlassColors.TextMuted, fontSize = 12.sp)
             if (status.connected) {
                 Spacer(Modifier.height(8.dp))
                 Text(status.liveReason, color = GlassColors.TextMuted, fontSize = 11.sp)
@@ -472,7 +472,7 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
 @Composable
 private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFE8EEEA)).padding(4.dp)) {
-        listOf("AI" to "Insights", "CHART" to "Chart", "OPTIONS" to "Options", "NEWS" to "News").forEach { (key, label) ->
+        listOf("QUANT" to "Quant", "CHART" to "Chart", "OPTIONS" to "Options").forEach { (key, label) ->
             val active = selected == key
             val color by animateColorAsState(if (active) GlassColors.White else Color.Transparent, label = "Segment color")
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(color)
@@ -486,31 +486,24 @@ private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
 }
 
 @Composable
-private fun GlassAiConsensus(ai: AiDecisionState, alert: LiveAlert?) {
+private fun GlassQuantSignals(status: ScreenStatus) {
     GlassPanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("MODEL CONSENSUS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold,
-                fontSize = 11.sp, letterSpacing = .8.sp, modifier = Modifier.weight(1f))
-            Text(if (ai.active) "Active" else "Waiting", color = GlassColors.TextMuted, fontSize = 10.sp)
-        }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GlassConsensusGauge(ai, alert, Modifier.size(122.dp))
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                GlassProbabilityRow("Quant", ai.quantProbabilityUp)
-                ai.providers.forEach { provider ->
-                    GlassProbabilityRow(providerDisplayName(provider.provider), provider.probabilityUp)
-                }
-                if (ai.providers.isEmpty()) GlassProbabilityRow("AI", ai.aiProbabilityUp)
-            }
-        }
+        Text("QUANT ENGINE · ORIGINAL V4 3X", color = GlassColors.Text,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .7.sp)
+        Spacer(Modifier.height(8.dp))
+        GlassKeyValue("Signal", "Trend / stretch reclaim")
+        GlassKeyValue("Entry", "Six-factor quality · 1–3 contracts")
+        GlassKeyValue("Exits", "30% trail / 35% hard / conditional 10m")
+        GlassKeyValue("Strategy", status.strategy)
+        GlassKeyValue("State", status.decision.replace('_', ' '))
+        Text("Quantitative rules only · no AI recommendations or generated trades.",
+            color = GlassColors.TextMuted, fontSize = 10.sp)
     }
 }
 
 @Composable
 private fun GlassConsensusGauge(ai: AiDecisionState, alert: LiveAlert?, modifier: Modifier = Modifier) {
-    val pUp = ai.hybridProbabilityUp ?: ai.aiProbabilityUp ?: ai.quantProbabilityUp
+    val pUp = ai.quantProbabilityUp
     val directionProbability = pUp
     val sweep = ((directionProbability ?: 0.0).coerceIn(0.0, 1.0) * 270.0).toFloat()
 
@@ -595,7 +588,7 @@ private fun GlassSetupCard(status: ScreenStatus) {
             else -> "OTM"
         }
     } else null
-    val pUp = status.ai.hybridProbabilityUp ?: status.ai.aiProbabilityUp ?: status.ai.quantProbabilityUp
+    val pUp = status.ai.quantProbabilityUp
     val directionProbability = when {
         pUp == null || alert == null -> null
         alert.right.equals("PUT", true) || alert.right.equals("P", true) -> 1.0 - pUp
@@ -827,7 +820,7 @@ private fun GlassAnalyticsScreen(status: ScreenStatus) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GlassSectionTitle("Analytics")
-        GlassAiConsensus(status.ai, status.alert)
+        GlassQuantSignals(status)
         GlassPanel {
             Text("ENGINE", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
@@ -925,17 +918,17 @@ private fun GlassSettingsScreen(
         GlassPanel {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("RISK CONTROLS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text(if (status.risk.armed) "ARMED" else "NOT ARMED", color = if (status.risk.armed) GlassColors.Green else GlassColors.Amber, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                Text(if (status.risk.armed) "SAVED" else "NOT CONFIGURED", color = if (status.risk.armed) GlassColors.Green else GlassColors.Amber, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(8.dp))
-            Text("Standing limits repeat each trading day. Turn Auto trade off before changing them.", color = GlassColors.TextMuted, fontSize = 11.sp)
+            Text("Save safety settings once. They persist every trading day; loss and gain stops reset automatically. Turn Auto trade off before changing.", color = GlassColors.TextMuted, fontSize = 11.sp)
             GlassTextField(loss, { loss = it }, "Daily loss stop ($)")
             GlassTextField(gain, { gain = it }, "Daily gain stop ($)")
             GlassTextField(exposure, { exposure = it }, "Max account exposure (%)")
             GlassTextField(contracts, { contracts = it }, "Max contracts")
             Spacer(Modifier.height(7.dp))
             GlassPrimaryButton(
-                text = "Save Live Limits",
+                text = "Save Safety Settings",
                 enabled = !preview && !status.liveEnabled,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
@@ -951,12 +944,6 @@ private fun GlassSettingsScreen(
                         }
                     }
                 },
-            )
-            Spacer(Modifier.height(7.dp))
-            GlassOutlineButton(
-                text = "Disarm Live",
-                onClick = { scope.launch { actions.disarmRisk().onSuccess { message = it }.onFailure { message = it.message } } },
-                modifier = Modifier.fillMaxWidth(),
             )
         }
 

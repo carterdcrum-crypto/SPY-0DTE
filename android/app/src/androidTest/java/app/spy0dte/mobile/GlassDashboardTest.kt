@@ -33,8 +33,7 @@ class GlassDashboardTest {
         decision = "WAITING", reason = "Watching for a qualified entry.",
         strategy = "Adaptive SPY", riskProfile = "Dynamic", exitProfile = "Adaptive",
         workerState = "RUNNING", liveState = "LIVE_LOCKED", liveReason = "Owner setup is required.",
-        ai = AiDecisionState(active = true, quantProbabilityUp = .56, aiProbabilityUp = .54,
-            hybridProbabilityUp = .55, providers = listOf(AiProviderState("openai", .54), AiProviderState("anthropic", .57))),
+        ai = AiDecisionState(quantProbabilityUp = .56),
     )
 
     private fun actions(onToggle: suspend (Boolean) -> Result<String> = { error("Unexpected broker action") }) = GlassActions(

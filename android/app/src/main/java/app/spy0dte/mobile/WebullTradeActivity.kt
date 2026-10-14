@@ -117,7 +117,7 @@ internal class TradeBackend(private val token: String) {
                     .put("daily_gain_limit", gain)
                     .put("max_account_exposure_pct", exposure)
                     .put("max_contracts", contracts)
-                    .put("confirmation", "ARM LIVE TODAY"),
+                    .put("confirmation", "SAVE STANDING LIVE LIMITS"),
             )
         }
 
@@ -346,7 +346,7 @@ private fun WebullTradeApp(activity: Activity) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
-            Text("GLASS · Railway AI + Webull")
+            Text("GLASS · V4 QUANT + WEBULL")
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 scope.launch {
@@ -438,7 +438,7 @@ private fun TradeConsole(
         }
     },
     armRisk = { loss, gain, exposure, contracts ->
-        backend.armRisk(loss, gain, exposure, contracts).map { "Live limits saved. Turn on Auto trade to use them each session." }
+        backend.armRisk(loss, gain, exposure, contracts).map { "Standing safety settings saved. No daily re-arming needed." }
     },
     disarmRisk = { backend.disarmRisk().map { "LIVE ENVELOPE · DISARMED" } },
 ),

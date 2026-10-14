@@ -166,7 +166,7 @@ private class RailwayBackend {
                 .put("daily_gain_limit", dailyGain)
                 .put("max_account_exposure_pct", exposureFraction)
                 .put("max_contracts", maxContracts)
-                .put("confirmation", "ARM LIVE TODAY"),
+                .put("confirmation", "SAVE STANDING LIVE LIMITS"),
         )
     }
 
@@ -345,7 +345,7 @@ private fun LiveTab(status: RailwayStatus, connectionError: String?) {
                 Text("Exit: ${status.exitProfile}")
                 Text("Execution now: ${status.execution}")
                 Text("Recovery: ${status.workerState} • ${status.workerRestarts} restart(s)")
-                Text(if (status.aiFallback == "quant_only") "Using quantitative models; AI advice unavailable" else "Using quantitative models + fresh AI advice")
+                Text("Original V4 quantitative signals only · no AI models")
                 Text("Runs on Railway while your phone is closed.")
             }
         }
@@ -377,7 +377,7 @@ private fun LiveTab(status: RailwayStatus, connectionError: String?) {
                     Text("LIVE STRATEGY ALERT", fontWeight = FontWeight.Bold)
                     Text(status.liveAlertSymbol)
                     Text("${status.liveAlertContracts} contract(s)")
-                    Text("Phone review required before any broker submission.")
+                    Text("Live Auto Trade requires owner authorization and verified broker data.")
                 }
             }
         }
@@ -385,8 +385,8 @@ private fun LiveTab(status: RailwayStatus, connectionError: String?) {
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("LIVE WORKSPACE", fontWeight = FontWeight.Bold)
-                Text("Tradier connection: ${if (status.tradierConfigured) "configured" else "not configured"}")
-                Text("Daily limits: ${if (status.risk.armedToday) "armed" else "not armed"}")
+                Text("Broker connection: ${if (status.tradierConfigured) "configured" else "not configured"}")
+                Text("Safety settings: ${if (status.risk.armedToday) "saved" else "not configured"}")
                 Text("Workflow: ${status.liveWorkflow.replace('_', ' ')}")
                 Text("Broker submission from the autonomous loop: ${if (status.liveOrderSubmission) "enabled" else "off"}")
                 Text("The same Railway strategy/risk engine drives this screen; Android does not run a second trading algorithm.")
@@ -478,8 +478,8 @@ private fun SettingsTab(status: RailwayStatus, backend: RailwayBackend) {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Daily live envelope", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("These are account-level limits for the live-review workflow and expire by Eastern trading date.")
+        Text("Standing safety settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text("Set your protective limits once. They persist; daily P&L stops reset automatically.")
 
         OutlinedTextField(
             value = loss,
@@ -523,27 +523,15 @@ private fun SettingsTab(status: RailwayStatus, backend: RailwayBackend) {
             } else {
                 scope.launch {
                     backend.armLiveRisk(lossValue, gainValue, exposureValue, contractValue)
-                        .onSuccess { message = "Today's live envelope is armed" }
+                        .onSuccess { message = "Standing safety settings saved" }
                         .onFailure { message = it.message }
                 }
             }
-        }) { Text(if (status.risk.armedToday) "Re-arm today's limits" else "Arm today's limits") }
-
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    backend.disarmLiveRisk()
-                        .onSuccess { message = "Live envelope disarmed" }
-                        .onFailure { message = it.message }
-                }
-            },
-            enabled = status.risk.armedToday,
-        ) { Text("Disarm live envelope") }
+        }) { Text("Save safety settings") }
 
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp)) {
                 Text("CURRENT LIMITS", fontWeight = FontWeight.Bold)
-                Text("Date: ${status.risk.tradingDate ?: "—"}")
                 Text("Loss: ${money(status.risk.lossLimit)}")
                 Text("Gain: ${money(status.risk.gainLimit)}")
                 Text("Exposure: ${status.risk.maxExposurePct?.let { "%.1f%%".format(it * 100.0) } ?: "—"}")
