@@ -377,13 +377,14 @@ def test_preview_cannot_authorize_autonomy(tmp_path, monkeypatch):
     assert not LiveAutonomyStore(tmp_path/"live.sqlite").policy()["enabled"]
 
 
-def test_v5_live_selected_model_order_keeps_owner_limits_and_real_depth(rig):
+def test_v5_live_selected_model_uses_settled_cash_and_real_depth_not_owner_limits(rig):
     from dataclasses import replace as dataclass_replace
     original=rig.provider.collect_once
     rig.provider.collect_once=lambda day: [
         dataclass_replace(x,bid_size=10,ask_size=10)
         for x in original(day)]
     rig.strategy.quantity=8
+    rig.strategy.unrestricted_v5_live=True
     rig.strategy.entry=lambda now, account, daily, limits: (
         {"symbol":f"SPY{now:%y%m%d}C00660000","cycle":now.isoformat(),
          "quantity":8,
@@ -392,11 +393,13 @@ def test_v5_live_selected_model_order_keeps_owner_limits_and_real_depth(rig):
     res=rig.executor.tick()
     assert res["state"]=="ORDER_SUBMITTED"
     assert len(rig.broker.submissions)==1
-    # Model was unconstrained at quantity 8, but user-authorized max is 3.
-    assert rig.broker.submissions[0].quantity==3
+    # The old configured max 3 / 20% exposure do NOT cap V5.
+    # Verified bid/ask depth and settled cash still do.
+    assert rig.broker.submissions[0].quantity==8
 
 
 def test_v5_live_rejects_fake_or_missing_market_depth_before_order(rig):
+    rig.strategy.unrestricted_v5_live=True
     rig.strategy.entry=lambda now,account,daily,limits: (
         {"symbol":f"SPY{now:%y%m%d}C00660000","cycle":now.isoformat(),
          "quantity":8,
@@ -405,3 +408,33 @@ def test_v5_live_rejects_fake_or_missing_market_depth_before_order(rig):
     res=rig.executor.tick()
     assert res["state"]=="RISK_BLOCKED"
     assert rig.broker.submissions==[]
+
+
+def test_v5_daily_loss_gain_and_stale_v4_halt_are_not_enforced(rig):
+    rig.strategy.unrestricted_v5_live=True
+    rig.broker.day_pnl=-1200
+    day=rig.store.daily(rig.clock[0],10000,-1200,rig.store.envelope(rig.clock[0]),
+                        unrestricted_v5=True)
+    assert day["halt_reason"] is None
+    rig.broker.day_pnl=1500
+    day=rig.store.daily(rig.clock[0],10000,1500,rig.store.envelope(rig.clock[0]),
+                        unrestricted_v5=True)
+    assert day["halt_reason"] is None
+
+
+def test_v5_limitless_owner_authorization_retains_owner_and_account_guard(tmp_path):
+    from engine.live_risk import LiveRiskEnvelope
+    store=LiveAutonomyStore(tmp_path/"v5_live.sqlite")
+    no_caps=LiveRiskEnvelope(None,None,None,None,None,None)
+    store.enable(owner="owner",limits=no_caps,
+                 confirmation=ARM_AUTONOMY,now=NOW,
+                 unrestricted_v5=True,account_id="acct")
+    assert store.policy()["enabled"]
+    assert not store.envelope(NOW).is_complete
+    assert store.envelope(NOW).max_contracts is None
+    assert store.envelope(NOW).daily_gain_limit is None
+    assert store.envelope(NOW).daily_loss_limit is None
+    with pytest.raises(ValueError,match="changed"):
+        store.pin_account("another")
+    store.disable(NOW)
+    assert not store.policy()["enabled"]
