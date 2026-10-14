@@ -438,3 +438,31 @@ def test_v5_limitless_owner_authorization_retains_owner_and_account_guard(tmp_pa
         store.pin_account("another")
     store.disable(NOW)
     assert not store.policy()["enabled"]
+
+
+def test_closed_market_reports_actual_cash_without_submitting_orders(rig):
+    rig.clock[0] = datetime(2026, 9, 28, 21, 0, tzinfo=timezone.utc)
+    rig.broker.cash = 812.34
+    rig.broker.equity = 845.11
+    rig.broker.day_pnl = -12.43
+    result = rig.executor.tick()
+    assert result["state"] == "MARKET_CLOSED"
+    assert result["broker_connected"] is True
+    assert result["account"] == {"settled_cash": 812.34, "equity": 845.11,
+                                  "daily_pnl": -12.43}
+    assert rig.executor.telemetry(result)["guard"] == {
+        "connected": True, "entry_allowed": False, "cash_available": 812.34,
+        "total_equity": 845.11, "daily_total_pnl": -12.43,
+    }
+    assert rig.broker.submissions == []
+
+
+def test_closed_market_balance_error_never_creates_a_fake_zero_cash_value(rig):
+    rig.clock[0] = datetime(2026, 9, 28, 21, 0, tzinfo=timezone.utc)
+    rig.broker.balances = lambda account: (_ for _ in ()).throw(RuntimeError("broker denied"))
+    result = rig.executor.tick()
+    assert result["state"] == "MARKET_CLOSED"
+    assert result["account"] is None
+    assert "unavailable" in result["reason"]
+    assert rig.executor.telemetry(result)["guard"] is None
+    assert rig.broker.submissions == []
