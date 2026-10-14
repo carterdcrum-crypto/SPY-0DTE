@@ -6,6 +6,7 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("SPY_API_BASE_URL")
     .orElse("https://spy-0dte-collector-production.up.railway.app")
     .get()
+val googleWebClientId = "" // Legacy activities compile but cannot authorize live.
 
 android {
     namespace = "app.spy0dte.mobile"
@@ -20,6 +21,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl}\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"\"")
     }
 
     buildFeatures {
@@ -47,6 +49,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
 
 
+    // Legacy non-launcher activities still reference these classes.
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
