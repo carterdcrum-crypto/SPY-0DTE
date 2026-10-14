@@ -16,7 +16,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocke
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import owner_auth
+from . import owner_auth  # Single-owner password sessions; no anonymous access.
 from .cadence import MarketCadencePolicy
 from .collector_runner import run_forever
 from .runtime import runtime_status, start_worker
