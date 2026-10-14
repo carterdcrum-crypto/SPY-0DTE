@@ -1,5 +1,12 @@
 package app.spy0dte.mobile
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -321,7 +328,8 @@ private fun GlassLiveScreen(
             }
             "CHART" -> GlassChartPanel(status)
             "OPTIONS" -> GlassSetupCard(status)
-            else -> GlassNewsPanel()
+            "NEWS" -> GlassNewsPanel()
+            else -> GlassQuantSignals(status)
         }
         Spacer(Modifier.height(4.dp))
     }
@@ -472,7 +480,7 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
 @Composable
 private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFE8EEEA)).padding(4.dp)) {
-        listOf("QUANT" to "Quant", "CHART" to "Chart", "OPTIONS" to "Options").forEach { (key, label) ->
+        listOf("QUANT" to "Quant", "CHART" to "Chart", "OPTIONS" to "Options", "NEWS" to "News").forEach { (key, label) ->
             val active = selected == key
             val color by animateColorAsState(if (active) GlassColors.White else Color.Transparent, label = "Segment color")
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(color)
@@ -746,43 +754,200 @@ private fun GlassDivider() {
 
 @Composable
 private fun GlassChartPanel(status: ScreenStatus) {
+    val chart = status.spyChart
+    val bars = chart.candles
+    val hasVerifiedWindow = bars.size == 5
+    val newest = bars.lastOrNull()
     GlassPanel {
-        Text("PRICE HISTORY", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            status.spot?.let { "SPY  %.2f".format(it) } ?: "SPY  —",
-            color = GlassColors.Text,
-            fontSize = 26.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(10.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(170.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color.White.copy(alpha = 0.38f))
-                .border(1.dp, GlassColors.Border, RoundedCornerShape(18.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Price history is not available yet", color = GlassColors.TextMuted, fontSize = 11.sp)
-                Text("The latest SPY quote appears above.", color = GlassColors.TextFaint, fontSize = 9.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                Text("SPY · 5 MIN", color = GlassColors.Text,
+                    fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text("Rolling five completed 1-minute candles", color = GlassColors.TextMuted,
+                    fontSize = 10.sp)
+            }
+            Text(if (chart.state == "CURRENT" && hasVerifiedWindow) "CURRENT" else if (hasVerifiedWindow) "LAST KNOWN" else "WAITING",
+                color = if (chart.state == "CURRENT" && hasVerifiedWindow) GlassColors.Green else GlassColors.Amber,
+                fontWeight = FontWeight.Bold, fontSize = 10.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(newest?.close?.let { "SPY  $" + "%.2f".format(it) } ?: "SPY  —",
+            color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 25.sp)
+        Spacer(Modifier.height(9.dp))
+        if (hasVerifiedWindow) {
+            val minPrice = bars.minOf { it.low }
+            val maxPrice = bars.maxOf { it.high }
+            val span = maxOf(.02, maxPrice - minPrice)
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .height(190.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White.copy(alpha = .45f))
+                    .border(1.dp, GlassColors.Border, RoundedCornerShape(18.dp))
+                    .padding(11.dp)
+                    .testTag("spy_5min_chart"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Canvas(Modifier.weight(1f).fillMaxHeight()) {
+                    val width = size.width
+                    val height = size.height
+                    fun y(price: Double): Float =
+                        (height * .08f + (maxPrice - price).toFloat() / span.toFloat() * height * .84f)
+                    for (i in 1..3) {
+                        val yy = height * i / 4f
+                        drawLine(GlassColors.Border.copy(alpha = .6f),
+                            start = Offset(0f, yy), end = Offset(width, yy), strokeWidth = 1.dp.toPx())
+                    }
+                    val gap = width / bars.size.toFloat()
+                    val bodyWidth = gap * .42f
+                    bars.forEachIndexed { i, bar ->
+                        val x = (i + .5f) * gap
+                        val tint = if (bar.close >= bar.open) GlassColors.Green else Color(0xFFE77877)
+                        drawLine(tint, Offset(x, y(bar.high)), Offset(x, y(bar.low)),
+                            strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round)
+                        val top = minOf(y(bar.open), y(bar.close))
+                        val bodyHeight = maxOf(2.dp.toPx(), kotlin.math.abs(y(bar.open) - y(bar.close)))
+                        drawRect(tint, topLeft = Offset(x - bodyWidth/2f, top),
+                            size = Size(bodyWidth, bodyHeight))
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxHeight()) {
+                    Text("%.2f".format(maxPrice), color = GlassColors.TextMuted, fontSize = 10.sp)
+                    Text("%.2f".format((maxPrice + minPrice) / 2), color = GlassColors.TextMuted, fontSize = 10.sp)
+                    Text("%.2f".format(minPrice), color = GlassColors.TextMuted, fontSize = 10.sp)
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            val local = runCatching {
+                Instant.parse(bars.last().time).atZone(ZoneId.of("America/New_York"))
+                    .format(DateTimeFormatter.ofPattern("h:mm a"))
+            }.getOrDefault("—")
+            Text("Latest completed candle: " + local + " ET  ·  " +
+                (chart.ageSeconds?.let { "%.0fs old".format(it) } ?: "age unknown"),
+                color = GlassColors.TextMuted, fontSize = 10.sp)
+            if (chart.state != "CURRENT") {
+                Spacer(Modifier.height(6.dp))
+                Text("Market closed, delayed, or data feed unavailable. Shown candles are historical, not live.",
+                    color = GlassColors.Amber, fontSize = 10.sp)
+            }
+        } else {
+            Box(Modifier.fillMaxWidth().height(180.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White.copy(alpha = .4f))
+                    .border(1.dp, GlassColors.Border, RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(14.dp)) {
+                    Text("Waiting for SPY 5-minute price history", color = GlassColors.Text, fontSize = 12.sp)
+                    Spacer(Modifier.height(5.dp))
+                    Text("Requires five genuine completed 1-minute OHLCV bars from Webull.",
+                        color = GlassColors.TextMuted, textAlign = TextAlign.Center, fontSize = 10.sp)
+                    chart.reason?.let {
+                        Text(it, color = GlassColors.Amber, textAlign = TextAlign.Center, fontSize = 9.sp)
+                    }
+                }
             }
         }
+        Spacer(Modifier.height(6.dp))
+        Text("Source: " + chart.source + " · Chart is informational; quant orders use independent risk checks.",
+            color = GlassColors.TextFaint, fontSize = 9.sp)
     }
 }
 
 @Composable
 private fun GlassNewsPanel() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var headlines by remember { mutableStateOf<List<MarketHeadline>>(emptyList()) }
+    var failedSources by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var actionError by remember { mutableStateOf<String?>(null) }
+
+    fun openUrl(url: String) {
+        if (!MarketNewsRepository.safeUrl(url)) {
+            actionError = "The publisher link was rejected as unsafe."
+            return
+        }
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addCategory(Intent.CATEGORY_BROWSABLE))
+        }.onFailure { actionError = "No browser is installed to open the publisher." }
+    }
+
+    suspend fun refresh(force: Boolean) {
+        loading = true
+        val result = runCatching { MarketNewsRepository.load(force) }
+        result.onSuccess {
+            headlines = it.stories
+            failedSources = it.failures
+            actionError = null
+        }.onFailure { actionError = "News sources could not be reached." }
+        loading = false
+    }
+
+    LaunchedEffect(Unit) { refresh(false) }
+
     GlassPanel {
-        Text("NEWS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("MARKET NEWS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp, modifier = Modifier.weight(1f))
+            OutlinedButton(
+                onClick = { scope.launch { refresh(true) } },
+                enabled = !loading,
+                modifier = Modifier.testTag("refresh_market_news"),
+            ) { Text(if (loading) "Loading…" else "Refresh", fontSize = 10.sp) }
+        }
+        Spacer(Modifier.height(3.dp))
+        Text("Direct from publishers · news does not influence quant decisions",
+            color = GlassColors.TextMuted, fontSize = 10.sp)
         Spacer(Modifier.height(8.dp))
-        Text(
-            "No news feed is connected yet. Insights currently reflect market data only.",
-            color = GlassColors.TextMuted,
-            fontSize = 11.sp,
-        )
+        Text("SOURCES", color = GlassColors.TextMuted, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+        MarketNewsRepository.publishers.forEach { source ->
+            Text(source.name + "  ↗",
+                color = GlassColors.GreenDark, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
+                modifier = Modifier.fillMaxWidth()
+                    .heightIn(min = 42.dp).clip(RoundedCornerShape(8.dp))
+                    .clickable { openUrl(source.website) }.padding(vertical = 11.dp)
+                    .testTag("news_source_" + source.name.replace(' ', '_')))
+        }
+        Spacer(Modifier.height(6.dp))
+        if (loading && headlines.isEmpty()) {
+            Text("Loading publisher headlines…", color = GlassColors.TextMuted, fontSize = 11.sp)
+        }
+        if (headlines.isEmpty() && !loading) {
+            Text("No live headlines available. Open a source above to read its latest stories.",
+                color = GlassColors.Amber, fontSize = 11.sp)
+        }
+        headlines.forEach { story ->
+            Column(modifier = Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { openUrl(story.url) }
+                .padding(vertical = 11.dp, horizontal = 7.dp)) {
+                Text(story.source, color = GlassColors.GreenDark,
+                    fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(story.title, color = GlassColors.Text, fontSize = 12.sp,
+                    lineHeight = 17.sp, fontWeight = FontWeight.Medium, maxLines = 3)
+                if (story.publishedAt > 0) {
+                    val publishedText = runCatching {
+                        Instant.ofEpochMilli(story.publishedAt).atZone(ZoneId.of("America/New_York"))
+                            .format(DateTimeFormatter.ofPattern("MMM d · h:mm a 'ET'"))
+                    }.getOrDefault("")
+                    if (publishedText.isNotBlank()) {
+                        Text(publishedText, color = GlassColors.TextFaint, fontSize = 9.sp)
+                    }
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(GlassColors.Border))
+        }
+        if (failedSources.isNotEmpty()) {
+            Spacer(Modifier.height(7.dp))
+            Text("Unavailable feeds: " + failedSources.joinToString(", ") + ". Tap Refresh to retry.",
+                color = GlassColors.Amber, fontSize = 10.sp)
+        }
+        actionError?.let { GlassNotice(it, danger = true) }
     }
 }
 
