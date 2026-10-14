@@ -37,6 +37,8 @@ class GlassDashboardTest {
     )
 
     private fun actions(onToggle: suspend (Boolean) -> Result<String> = { error("Unexpected broker action") }) = GlassActions(
+        listCashAccounts = { Result.success(emptyList()) },
+        selectCashAccount = { error("Unexpected account selection") },
         saveCredentials = { _, _ -> error("Unexpected credentials action") },
         setLiveAutonomy = onToggle,
         setMode = { Result.success(it) },
@@ -123,7 +125,9 @@ class GlassDashboardTest {
         var saved: List<Any>? = null
         var paperCalls = 0
         val actionSet = GlassActions(
-            saveCredentials = { _, _ -> Result.success("Saved") },
+            listCashAccounts = { Result.success(emptyList()) },
+        selectCashAccount = { error("Unexpected account selection") },
+        saveCredentials = { _, _ -> Result.success("Saved") },
             setLiveAutonomy = { Result.success("Saved") },
             setMode = { Result.success(it) },
             setPaperAutonomy = { paperCalls++; Result.success("Paper saved") },
