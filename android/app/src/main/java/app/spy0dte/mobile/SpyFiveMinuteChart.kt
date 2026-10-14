@@ -62,7 +62,8 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus){
                  " · C "+"%.2f".format(last.close)+
                  " · Vol "+last.volume,
                  color=GlassColors.TextMuted,fontSize=10.sp)
-            if(state!="LIVE_FORMING")Text("Live minute unavailable. Showing verified bars; the quant uses only closed candles.",
+            if(state!="LIVE_FORMING")Text(status.spyChart.reason
+                    ?: "The source has not supplied an in-progress SPY minute. The quant uses only completed candles.",
                 color=GlassColors.Amber,fontSize=10.sp)
         }else{
             Box(Modifier.fillMaxWidth().height(165.dp)

@@ -101,7 +101,7 @@ def _store_spy_chart(bars:list[Bar],now:datetime|None=None,reason:str|None=None)
         if observations:
             _SPY_CHART["candles"]=observations
             _SPY_CHART["observed_at"]=clock.isoformat()
-            _SPY_CHART["reason"]=None
+            _SPY_CHART["reason"]=reason
         elif not _SPY_CHART["candles"]:
             _SPY_CHART["reason"]=reason or "Webull has no current authenticated SPY OHLCV"
 
@@ -403,19 +403,38 @@ class WebullMinuteBarCache:
         try:
             if client is None or not hasattr(client.market_data,"get_history_bar"):
                 raise ValueError("Webull M1 OHLCV entitlement/provider is unavailable")
-            # Webull's latest-bars mode can contain an unfinished candle.
-            # Fetch it, then strictly exclude unfinished minutes before
-            # any quantitative signal can observe them.
-            response=client.market_data.get_history_bar(
+            # TWO Webull stock-M1 modes are intentionally separate:
+            # false supplies the finished minute bars for the QUANT, while
+            # true requests the provider's unfinished real-time current bar
+            # for DISPLAY ONLY (Webull documents this option explicitly).
+            # Never let the real-time chart entitlement decide V4 order risk.
+            closed_response=client.market_data.get_history_bar(
                 "SPY","US_STOCK","M1",count="90",
                 real_time_required=False,trading_sessions="RTH",
             )
-            chart_bars=parse_webull_bars(response,now,include_forming=True)
-            _store_spy_chart(chart_bars,now)
-            # Trade decisions use only CONFIRMED completed bars. A forming
-            # chart candle can update every 5 seconds but may never leak
-            # into signal generation, risk management, or backtesting.
-            fresh=parse_webull_bars(response,now)
+            fresh=parse_webull_bars(closed_response,now)
+            # The chart can update inside the minute iff Webull grants its
+            # real-time stock data subscription. A 403 is not paper data.
+            chart_reason=None
+            chart_bars=fresh
+            try:
+                live_response=client.market_data.get_history_bar(
+                    "SPY","US_STOCK","M1",count="30",
+                    real_time_required=True,trading_sessions="RTH",
+                )
+                live_rows=parse_webull_bars(live_response,now,include_forming=True)
+                if live_rows:
+                    chart_bars=live_rows
+                if not live_rows or not any(
+                    b.start+timedelta(minutes=1)>now-timedelta(seconds=2)
+                    for b in live_rows[-1:]
+                ):
+                    chart_reason="Webull returned completed candles only; no live 1-minute bar"
+            except Exception:
+                chart_reason=("Live 1-minute candle unavailable: Webull "
+                              "realtime stock-data subscription/permission needed")
+            _store_spy_chart(chart_bars,now,reason=chart_reason)
+            # Trade decisions use only FINISHED bars (never live_rows).
             if not last_spy_bar_is_fresh(fresh,now) or len(fresh)<55:
                 raise ValueError("Webull did not return 55 fresh completed SPY M1 RTH bars")
             self.bars=fresh

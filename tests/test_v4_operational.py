@@ -219,3 +219,55 @@ def test_chart_fails_closed_with_missing_provider_rows_and_real_gaps():
     got=v.spy_chart_30m(observed)["candles"]
     assert len(got)==16  # no invented four-minute OHLCV gap
     assert got[0]["time"]==gap[10].start.isoformat()
+
+
+
+def test_webull_history_requests_realtime_forming_bar_separately_from_quant():
+    from engine.v4_operational import WebullMinuteBarCache
+    data=bars()
+    now=data[-1].available_at+timedelta(seconds=20)
+    sample=[{"time":b.start.isoformat(),"open":b.open,"high":b.high,
+             "low":b.low,"close":b.close,"volume":b.volume} for b in data]
+    next_at=data[-1].available_at
+    forming={"time":next_at.isoformat(),"open":"603","high":"603.2",
+             "low":"602.9","close":"603.1","volume":"80"}
+    seen=[]
+    def history(*args,**kwargs):
+        seen.append(kwargs.get("real_time_required"))
+        return {"symbol":"SPY","result":sample+([forming] if kwargs["real_time_required"] else [])}
+    provider=SimpleNamespace(client=SimpleNamespace(
+        market_data=SimpleNamespace(get_history_bar=history)))
+    cache=WebullMinuteBarCache()
+    finished=cache.refresh(provider,now)
+    assert seen==[False,True]
+    assert len(finished)==len(data) and not any(b.start==next_at for b in finished)
+    chart=v.spy_chart_30m(now)
+    assert len(chart["candles"])==30
+    assert chart["state"]=="LIVE_FORMING"
+    assert chart["candles"][-1]["forming"] and chart["candles"][-1]["close"]==603.1
+    # Sub-minute updates overwrite only current forming candle, not quant bars.
+    forming["close"]="603.3"
+    newer=now+timedelta(seconds=5)
+    cache.refresh(provider,newer)
+    assert len(cache.bars)==len(data)
+    assert v.spy_chart_30m(newer)["candles"][-1]["close"]==603.3
+
+
+def test_webull_realtime_denial_cannot_block_valid_completed_quant_bars():
+    from engine.v4_operational import WebullMinuteBarCache
+    data=bars()
+    now=data[-1].available_at+timedelta(seconds=20)
+    sample=[{"time":b.start.isoformat(),"open":b.open,"high":b.high,
+             "low":b.low,"close":b.close,"volume":b.volume} for b in data]
+    def history(*args,**kwargs):
+        if kwargs["real_time_required"]:
+            return SimpleNamespace(status_code=403)
+        return {"symbol":"SPY","result":sample}
+    provider=SimpleNamespace(client=SimpleNamespace(
+        market_data=SimpleNamespace(get_history_bar=history)))
+    cache=WebullMinuteBarCache()
+    assert len(cache.refresh(provider,now))==80
+    chart=v.spy_chart_30m(now)
+    assert chart["state"]=="WAITING_FOR_NEXT_BAR"
+    assert "subscription" in chart["reason"]
+    assert chart["has_forming_candle"] is False
