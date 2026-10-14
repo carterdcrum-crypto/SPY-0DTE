@@ -250,7 +250,18 @@ class LiveExecutor:
             return {"state": "ORDER_PENDING" if pending[0]["status"] != "UNKNOWN" else "ORDER_UNKNOWN",
                     "reason": "waiting for broker confirmation of the original order", "broker_connected": True}
         if not in_session:
-            return {"state": "MARKET_CLOSED", "reason": "waiting for the next exchange session", "broker_connected": True}
+            # Read-only broker balances remain useful after the market closes.
+            # A closed session must never create a new order or imply data
+            # readiness. If Webull denies balance access, leave it unknown.
+            account = None
+            try:
+                account = self._account(profile.account_id)
+            except Exception as exc:
+                log.warning("closed-session live balance unavailable type=%s", type(exc).__name__)
+            return {"state": "MARKET_CLOSED",
+                    "reason": "waiting for the next exchange session" if account is not None
+                              else "market closed; Webull balance data unavailable",
+                    "broker_connected": True, "account": account}
 
         # Account reads occur only here, at a two-second cadence, never per phone.
         inventory, foreign = broker_inventory(self.broker.positions(profile.account_id))
