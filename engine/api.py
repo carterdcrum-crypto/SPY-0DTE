@@ -14,10 +14,9 @@ from typing import Any, Mapping
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from google.auth.transport.requests import Request as GoogleRequest
-from google.oauth2 import id_token
 from pydantic import BaseModel, Field
 
+from . import owner_auth
 from .cadence import MarketCadencePolicy
 from .collector_runner import run_forever
 from .runtime import runtime_status, start_worker
@@ -180,39 +179,16 @@ def _cipher() -> Fernet:
         raise HTTPException(status_code=503, detail="credential encryption key is invalid") from exc
 
 
-def _allowed_emails() -> set[str]:
-    raw = os.environ.get("APP_ALLOWED_EMAILS", "")
-    return {item.strip().lower() for item in raw.split(",") if item.strip()}
-
-
-def _verify_google_bearer(authorization: str | None) -> UserIdentity:
+def _verify_owner_bearer(authorization: str | None) -> UserIdentity:
     if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=401, detail="missing Google ID token")
-    token = authorization.split(" ", 1)[1].strip()
-    client_id = os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip()
-    if not client_id:
-        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
-
-    try:
-        claims = id_token.verify_oauth2_token(token, GoogleRequest(), client_id)
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail="invalid Google ID token") from exc
-
-    email = str(claims.get("email", "")).lower()
-    subject = str(claims.get("sub", ""))
-    if not email or not subject or not claims.get("email_verified", False):
-        raise HTTPException(status_code=403, detail="verified Google account required")
-
-    allowed = _allowed_emails()
-    if not allowed:
-        raise HTTPException(status_code=503, detail="owner Google account allowlist is not configured")
-    if email not in allowed:
-        raise HTTPException(status_code=403, detail="Google account is not authorized for this app")
-    return UserIdentity(subject=subject, email=email)
+        raise HTTPException(status_code=401, detail="missing owner session")
+    session = authorization.split(" ", 1)[1].strip()
+    owner = owner_auth.verify(session)
+    return UserIdentity(subject="owner:1", email=owner.username)
 
 
 def require_user(authorization: str | None = Header(default=None)) -> UserIdentity:
-    return _verify_google_bearer(authorization)
+    return _verify_owner_bearer(authorization)
 
 
 def _market_status() -> dict[str, Any]:
@@ -355,26 +331,49 @@ def health():
     return JSONResponse({"status": "ok" if healthy else "recovering"}, status_code=200 if healthy else 503)
 
 
-@app.get("/v1/auth/config")
-def owner_auth_config() -> JSONResponse:
-    """Public Google OAuth *client ID* only. An OAuth client ID is not a secret.
+class OwnerSignupRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=14, max_length=256)
+    setup_code: str = Field(min_length=32, max_length=256)
 
-    The Android APK reads this at sign-in time so a newly configured Google
-    project does not require rebuilding the entire phone application.
-    Never expose the owner email allowlist or the broker credentials here.
-    """
-    client_id = os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip()
-    enabled = bool(client_id and _allowed_emails() and not _env_bool("APP_PREVIEW_MODE"))
-    return JSONResponse(
-        {"google_web_client_id": client_id if enabled else "", "owner_login_ready": enabled},
-        headers={"Cache-Control": "no-store"},
-    )
+
+class OwnerLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=256)
+
+
+@app.get("/v1/auth/setup-status")
+def owner_setup_status() -> JSONResponse:
+    return JSONResponse(owner_auth.signup_available(), headers={"Cache-Control": "no-store"})
+
+
+@app.post("/v1/auth/signup")
+def owner_signup(request: OwnerSignupRequest) -> JSONResponse:
+    # A one-time, secret-protected and atomic enrollment; no second account.
+    token = owner_auth.signup(request.username, request.password, request.setup_code)
+    return JSONResponse({"access_token": token, "token_type": "bearer",
+                         "expires_in": owner_auth.SESSION_SECONDS},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.post("/v1/auth/login")
+def owner_login(request: OwnerLoginRequest) -> JSONResponse:
+    token = owner_auth.login(request.username, request.password)
+    return JSONResponse({"access_token": token, "token_type": "bearer",
+                         "expires_in": owner_auth.SESSION_SECONDS},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.post("/v1/auth/logout")
+def owner_logout(authorization: str | None = Header(default=None),
+                 _: UserIdentity = Depends(require_user)) -> dict[str, bool]:
+    owner_auth.logout(authorization.split(" ", 1)[1].strip())
+    return {"logged_out": True}
 
 
 @app.get("/v1/auth/me")
 def owner_auth_me(user: UserIdentity = Depends(require_user)) -> dict[str, Any]:
-    """Prove this Google ID token belongs to a verified allowlisted owner."""
-    return {"authenticated": True, "owner": True, "email": user.email}
+    return {"authenticated": True, "owner": True, "username": user.email}
 
 
 @app.get("/v1/status")
@@ -433,7 +432,7 @@ def save_webull_profile(
 @app.websocket("/v1/live")
 async def live(websocket: WebSocket) -> None:
     try:
-        _verify_google_bearer(websocket.headers.get("authorization"))
+        _verify_owner_bearer(websocket.headers.get("authorization"))
     except HTTPException as exc:
         await websocket.close(code=4401, reason=str(exc.detail))
         return

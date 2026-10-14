@@ -6,8 +6,6 @@ plugins {
 val apiBaseUrl = providers.gradleProperty("SPY_API_BASE_URL")
     .orElse("https://spy-0dte-collector-production.up.railway.app")
     .get()
-val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
-    .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID")).orElse("").get()
 
 android {
     namespace = "app.spy0dte.mobile"
@@ -17,12 +15,11 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.3.2"
+        versionCode = 16
+        versionName = "0.3.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl}\"")
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${googleWebClientId}\"")
     }
 
     buildFeatures {
@@ -49,9 +46,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
 
-    implementation("androidx.credentials:credentials:1.6.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
