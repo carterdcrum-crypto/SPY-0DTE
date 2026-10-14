@@ -310,7 +310,19 @@ class LiveExecutor:
                     and position["target_requested"] and target_remaining
                     and q.bid * 100.0 - fee >= entry_value * 2.0):
                 reason = "take_profit"
-            reason = reason or self.strategy.exit(position, now)
+            if reason is None and str(position.get("entry_reason","")).startswith(
+                    "v5_close_only_unrestricted_research;"):
+                # Preserve V5 trailing/reversal exits even if operator switches
+                # the entry profile back to V4 while this position is held.
+                from .v5_close_only_operational import paper_exit_reason
+                from .v4_operational import FEE
+                bars=getattr(getattr(self.strategy,"bar_cache",None),"bars",[])
+                reason=paper_exit_reason(
+                    {**position,"average_cost":
+                     position["average_price"]*100+FEE},
+                    self.market.quotes.get(position["symbol"]),bars,now)
+            else:
+                reason = reason or self.strategy.exit(position, now)
             if reason is None:
                 return {**common, "state": "POSITION_OPEN", "reason": "managing confirmed broker position"}
             close_quantity = target_remaining if reason == "take_profit" else position["quantity"]
