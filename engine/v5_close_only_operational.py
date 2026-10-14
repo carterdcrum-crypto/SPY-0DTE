@@ -12,7 +12,6 @@ import statistics
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
-from .regime_hold_sensitivity import MAX_FIXED_MIN
 from .v5_archive_proxy import close_proxy_signals
 from .v4_operational import (
     ET, FEE, SLIPPAGE_PER_SHARE, MAX_SOURCE_DELAY_SECONDS,
@@ -142,9 +141,10 @@ def paper_exit_reason(position,quote,bars,now):
         return None
     if not last_spy_bar_is_fresh(bars,now) or len(bars)<5:
         return "v5_missing_complete_m1"
-    direction=1 if position["symbol"][-9:].find("C")>=0 else -1
-    # Use recorded options right, NOT symbol-string guessing.
-    direction=1 if getattr(quote,"right",None)=="call" else -1
+    # The observed option right is authoritative, not symbol-string guessing.
+    if getattr(quote,"right",None) not in ("call","put"):
+        return "v5_unknown_contract_right"
+    direction=1 if quote.right=="call" else -1
     if direction*(bars[-1].close/bars[-4].close-1)<0:
         return "v5_spy_close_reversal"
     if age>=18*60:
