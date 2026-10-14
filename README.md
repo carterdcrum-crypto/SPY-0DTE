@@ -122,6 +122,28 @@ not independently validated and cannot be promised.
 [Detailed archival study](docs/v4_quality_sizing_backtest_2026_10_12.md).
 [Operational comparison notes](docs/v4_3x_forward_selection.md).
 
+## 30-minute SPY chart and news update (v0.3.1)
+
+Price History presents the most recent **30 one-minute SPY candles**, with
+the last candle updating as an explicitly labelled **forming** candle
+only if Webull actually supplies an in-progress 1-minute bar. The chart's
+source is the provider's OHLCV, requested approximately every five seconds;
+the app's server status updates every second. No interpolated or invented
+prices, ticks, volume, or inferred latest bid are produced. Completed bars
+remain the only inputs to V4's entry and exit algorithm. If Webull delays
+or omits real-time in-progress stock bars, the chart shows
+"last closed"/"stale" rather than pretending a live candle.
+
+The News tab presents **Latest Headlines first** and **Trusted Market News
+publisher buttons below**, including Reuters, AP Business, CNBC Markets,
+MarketWatch and Federal Reserve. Feed fetch failures are visible and do
+not affect any quant trading decision.
+
+The historical **$1,000 to $5,109.50** research result covered **128
+trading sessions** (April 1 to October 6, 2026), approximately six months,
+not 128 calendar days; those were modeled retrospective fills, not verified
+live execution.
+
 ## Current state
 
 The system has three distinct operating layers:
