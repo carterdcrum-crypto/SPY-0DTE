@@ -132,8 +132,9 @@ def _webull_live_gate(_: base.ControlStore) -> dict[str, Any]:
         reasons.append("webull_production_credentials_missing")
 
     envelope = api_v2._live_risk_store().snapshot()
-    v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
-    if not envelope.armed_today() and not v5_unrestricted:
+    if not envelope.armed_today():
+        # Legacy CONFIRMED trade-button remains V4-limits-only.
+        # The independent V5 autonomous owner-toggle path skips these limits.
         reasons.append("standing_live_safety_not_configured")
     reasons.extend(_market_reasons())
 
