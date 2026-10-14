@@ -24,90 +24,90 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val chartUp=Color(0xFF13805A)
-private val chartDown=Color(0xFFD35651)
-private val chartGrid=Color(0xFFDDE5E0)
-private val priceLabelFormat=DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.of("America/New_York"))
+private val CHART_GREEN=Color(0xFF13805A)
+private val CHART_RED=Color(0xFFD35651)
+private val CHART_GRID=Color(0xFFDDE5E0)
+private val candleLabel=DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.of("America/New_York"))
 
-private fun candleEtTime(raw:String):String = runCatching{
-    priceLabelFormat.format(OffsetDateTime.parse(raw).toInstant())
-}.getOrElse { "—" }
+private fun asEt(iso:String)=runCatching{
+    candleLabel.format(OffsetDateTime.parse(iso).toInstant())
+}.getOrDefault("—")
 
-/** Five *completed* real SPY one-minute candles; no seeded demo/mock prices. */
+/** Exactly five authentic completed 1m stock bars spanning a rolling 5m window. */
 @Composable
 internal fun SpyFiveMinuteChart(status:ScreenStatus){
     val bars=status.spyChart.candles
-    Column(Modifier.fillMaxWidth().testTag("spy_5min_chart"),
-        verticalArrangement=Arrangement.spacedBy(7.dp)){
+    val state=status.spyChart.state
+    Column(modifier=Modifier.fillMaxWidth().testTag("spy_5min_chart"),
+        verticalArrangement=Arrangement.spacedBy(8.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            Text("5 MIN WINDOW · 1 MIN CANDLES",color=GlassColors.TextMuted,
-                fontSize=10.sp,fontWeight=FontWeight.SemiBold)
-            Text(when(status.spyChart.state){
-                "CURRENT"->"●  LIVE DATA"
-                "STALE"->"●  STALE"
-                else->"NO MARKET DATA"
-            },color=if(status.spyChart.state=="CURRENT")chartUp else GlassColors.Amber,fontSize=9.sp)
+            Text("5 MIN WINDOW · 1 MIN CANDLES",fontSize=10.sp,
+                color=GlassColors.TextMuted,fontWeight=FontWeight.SemiBold)
+            Text(if(state=="CURRENT")"●  LIVE DATA"
+                else if(state=="STALE")"●  STALE" else "NO MARKET DATA",
+                fontSize=9.sp,color=if(state=="CURRENT") CHART_GREEN else GlassColors.Amber)
         }
-        if(bars.size!=5){
-            Box(Modifier.fillMaxWidth().height(190.dp).background(Color.White.copy(alpha=.58f),
-                RoundedCornerShape(17.dp)).padding(16.dp)){
+        if(bars.size==5){
+            ChartCanvas(bars)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                Text(asEt(bars.first().time)+" ET",color=GlassColors.TextMuted,fontSize=9.sp)
+                Text("5 real candles",color=GlassColors.TextMuted,fontSize=9.sp)
+                Text(asEt(bars.last().time)+" ET",color=GlassColors.TextMuted,fontSize=9.sp)
+            }
+            val last=bars.last()
+            Text("Latest completed: O "+ "%.2f".format(last.open)+
+                 " · H "+"%.2f".format(last.high)+
+                 " · L "+"%.2f".format(last.low)+
+                 " · C "+"%.2f".format(last.close)+
+                 " · Vol "+last.volume,
+                 color=GlassColors.TextMuted,fontSize=10.sp)
+            if(state!="CURRENT")Text("Data is stale. Trading never uses stale chart candles.",
+                color=GlassColors.Amber,fontSize=10.sp)
+        }else{
+            Box(Modifier.fillMaxWidth().height(165.dp)
+                .background(Color.White.copy(alpha=.55f),RoundedCornerShape(17.dp))
+                .padding(15.dp)){
                 Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Text("Waiting for 5 real completed SPY candles",
-                        color=GlassColors.Text,fontSize=12.sp,fontWeight=FontWeight.SemiBold)
-                    Text(status.spyChart.reason?.take(140)
-                        ?: "The broker must provide current SPY 1-minute OHLCV bars. No prices are simulated.",
+                    Text("Waiting for 5 completed SPY candles",color=GlassColors.Text,
+                        fontWeight=FontWeight.SemiBold,fontSize=12.sp)
+                    Text(status.spyChart.reason?.take(160)
+                        ?: "Authentic Webull 1-minute stock OHLCV required. No demo prices.",
                         color=GlassColors.TextMuted,fontSize=10.sp)
                 }
             }
-            return
         }
-        val top=bars.maxOf{it.high}
-        val bottom=bars.minOf{it.low}
-        val span=(top-bottom).coerceAtLeast(.01)
-        val padded=span*1.16
-        val floor=bottom-(padded-span)/2.
-        Canvas(Modifier.fillMaxWidth().height(210.dp)
-            .background(Color.White.copy(alpha=.58f),RoundedCornerShape(17.dp))
-            .testTag("spy_chart_candles")){
-            val w=size.width
-            val h=size.height
-            val xStep=w/bars.size
-            val padY=19.dp.toPx()
-            val usableH=h-2*padY
-            fun y(price:Double):Float=padY +
-                (1.0-((price-floor)/padded).coerceIn(0.0,1.0)).toFloat()*usableH
-            repeat(4){index->
-                val gridY=padY+usableH*index/3f
-                drawLine(chartGrid,Offset(0f,gridY),Offset(w,gridY),strokeWidth=1.dp.toPx())
-            }
-            bars.forEachIndexed{index,candle->
-                val center=xStep*(index+.5f)
-                val ink=if(candle.close>=candle.open)chartUp else chartDown
-                drawLine(ink,Offset(center,y(candle.high)),Offset(center,y(candle.low)),
-                    strokeWidth=2.dp.toPx())
-                val topBody=minOf(y(candle.open),y(candle.close))
-                val bodyHeight= kotlin.math.abs(y(candle.close)-y(candle.open))
-                    .coerceAtLeast(2.dp.toPx())
-                drawRect(ink,topLeft=Offset(center-xStep*.22f,topBody),
-                    size=Size(xStep*.44f,bodyHeight))
-            }
+    }
+}
+
+@Composable
+private fun ChartCanvas(bars:List<SpyCandle>){
+    val highest=bars.maxOf{it.high}
+    val lowest=bars.minOf{it.low}
+    val spread=(highest-lowest).coerceAtLeast(0.01)
+    Canvas(modifier=Modifier.fillMaxWidth().height(200.dp)
+        .background(Color.White.copy(alpha=.55f),RoundedCornerShape(17.dp))
+        .testTag("spy_chart_candles")){
+        val availableHeight=size.height-30.dp.toPx()
+        val topPadding=15.dp.toPx()
+        val paddedMin=lowest-spread*0.09
+        val paddedRange=spread*1.18
+        fun chartY(value:Double):Float=topPadding+
+            ((paddedMin+paddedRange-value)/paddedRange).toFloat()*availableHeight
+        for(index in 0..3){
+            val y=topPadding+index*availableHeight/3f
+            drawLine(CHART_GRID,Offset(0f,y),Offset(size.width,y),1.dp.toPx())
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-            Text(candleEtTime(bars.first().time)+" ET",color=GlassColors.TextMuted,fontSize=10.sp)
-            Text("Low "+ "%.2f".format(bottom)+"  ·  High "+"%.2f".format(top),
-                color=GlassColors.TextMuted,fontSize=10.sp)
-            Text(candleEtTime(bars.last().time)+" ET",color=GlassColors.TextMuted,fontSize=10.sp)
-        }
-        val end=bars.last()
-        Text("Last completed candle: O "+ "%.2f".format(end.open)+
-            "  H "+"%.2f".format(end.high)+
-            "  L "+"%.2f".format(end.low)+
-            "  C "+"%.2f".format(end.close)+
-            "  Vol "+end.volume,
-            color=GlassColors.TextMuted,fontSize=10.sp)
-        if(status.spyChart.state!="CURRENT"){
-            Text("Market data is stale. Chart is informational only; no false live price is shown.",
-                color=GlassColors.Amber,fontSize=10.sp)
+        val width=size.width/bars.size.toFloat()
+        bars.forEachIndexed{index,bar->
+            val center=(index+0.5f)*width
+            val color=if(bar.close>=bar.open)CHART_GREEN else CHART_RED
+            val upper=chartY(maxOf(bar.open,bar.close))
+            val lower=chartY(minOf(bar.open,bar.close))
+            drawLine(color,Offset(center,chartY(bar.high)),Offset(center,chartY(bar.low)),
+                strokeWidth=2.dp.toPx())
+            drawRect(color,
+                topLeft=Offset(center-width*0.23f,upper),
+                size=Size(width*0.46f,(lower-upper).coerceAtLeast(2.dp.toPx())))
         }
     }
 }
