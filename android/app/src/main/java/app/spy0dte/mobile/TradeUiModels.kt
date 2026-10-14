@@ -46,6 +46,24 @@ internal data class LiveAlert(
     val maxDebit: Double?,
 )
 
+internal data class SpyCandle(
+    val time: String,
+    val open: Double,
+    val high: Double,
+    val low: Double,
+    val close: Double,
+    val volume: Long,
+)
+
+internal data class SpyChartState(
+    val state: String = "UNAVAILABLE",
+    val source: String = "Webull OpenAPI · SPY M1",
+    val reason: String? = null,
+    val asof: String? = null,
+    val ageSeconds: Double? = null,
+    val candles: List<SpyCandle> = emptyList(),
+)
+
 internal data class ScreenStatus(
     val mode: String = "PAPER",
     val connected: Boolean = false,
@@ -54,6 +72,7 @@ internal data class ScreenStatus(
     val strategy: String = "—",
     val riskProfile: String = "—",
     val exitProfile: String = "—",
+    val spyChart: SpyChartState = SpyChartState(),
     val spot: Double? = null,
     val dataAge: Double? = null,
     val feedDelay: Double? = null,

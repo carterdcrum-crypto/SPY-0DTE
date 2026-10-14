@@ -164,6 +164,37 @@ internal fun parseStatus(text: String): ScreenStatus {
     val market = if (root.optString("mode") == "LIVE") {
         root.optJSONObject("live_autonomy")?.optJSONObject("market") ?: JSONObject()
     } else root.optJSONObject("market") ?: JSONObject()
+    val chartJson = root.optJSONObject("spy_chart_5m") ?: JSONObject()
+    val verifiedCandles = buildList {
+        chartJson.optJSONArray("candles")?.let { data ->
+            for (i in 0 until data.length()) {
+                val bar = data.optJSONObject(i) ?: continue
+                fun finite(key: String): Double? =
+                    if (bar.isNull(key) || !bar.has(key)) null
+                    else bar.optDouble(key).takeIf { it.isFinite() && it > 0.0 }
+                val open = finite("open")
+                val high = finite("high")
+                val low = finite("low")
+                val close = finite("close")
+                val volume = bar.optLong("volume", -1L)
+                val time = bar.optString("time").trim()
+                if (open != null && high != null && low != null && close != null &&
+                    high >= maxOf(open, close, low) && low <= minOf(open, close, high) &&
+                    volume > 0 && time.isNotEmpty()
+                ) add(SpyCandle(time, open, high, low, close, volume))
+            }
+        }
+    }
+    val spyChart = SpyChartState(
+        state = chartJson.optString("state", "UNAVAILABLE"),
+        source = chartJson.optString("source", "Webull OpenAPI · SPY M1"),
+        reason = chartJson.optString("reason").takeIf { it.isNotBlank() },
+        asof = chartJson.optString("asof").takeIf { it.isNotBlank() },
+        ageSeconds = chartJson.optDouble("age_seconds").takeIf {
+            chartJson.has("age_seconds") && !chartJson.isNull("age_seconds") && it.isFinite()
+        },
+        candles = if (verifiedCandles.size == 5) verifiedCandles else emptyList(),
+    )
     val gate = root.optJSONObject("live_gate") ?: JSONObject()
     val broker = root.optJSONObject("live_broker") ?: JSONObject()
     val risk = root.optJSONObject("live_risk") ?: JSONObject()
@@ -239,6 +270,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         strategy = automation.optString("strategy", "—"),
         riskProfile = automation.optString("risk_profile", "—"),
         exitProfile = automation.optString("exit_profile", "—"),
+        spyChart = spyChart,
         spot = number(market, "spot"),
         dataAge = number(market, "data_age_seconds"),
         feedDelay = number(market, "feed_delay_seconds"),
