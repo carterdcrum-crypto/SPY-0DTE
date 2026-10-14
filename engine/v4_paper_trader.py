@@ -130,6 +130,12 @@ class V4QualityPaperTrader(PaperAutoTrader):
         self.bar_cache.refresh(self.bar_provider,current)
         quotes=self._quotes(current,position)
         if position:
+            if position.get("strategy")=="v5_close_only_unrestricted_research":
+                # Keep managing existing V5 paper holdings correctly even
+                # after selecting original V4 for NEW paper entries.
+                from .v5_close_only_paper import manage_v5_position
+                result=manage_v5_position(self,position,current,mode,eastern,quotes,released)
+                return self._finish(current,{**result,"strategy":"v5_close_only_unrestricted_research"})
             if position.get("strategy")!=IDENTIFIER:
                 result=super()._manage_position(position,current,mode)
                 result["settled_released"]=released
