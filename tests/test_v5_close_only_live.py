@@ -66,7 +66,7 @@ def test_live_profile_generates_only_real_quote_verified_candidates():
     assert p["reason"].startswith(PROFILE+";")
     assert p["quantity"]>3 # executor enforces owner maximum 3
     assert p["model_proposed_cash_depth_quantity"]==p["quantity"]
-    assert d["broker_risk_limits_enforced"] is True
+    assert d["broker_settled_cash_and_nbbo_depth_enforced"] is True
 
 
 def test_delayed_quote_fails_closed_before_live():
@@ -94,7 +94,7 @@ def test_v5_live_existing_position_uses_price_hard_stop_and_observed_trail():
     assert reason=="v5_paper_stop_35pct"
 
 
-def test_not_permitted_to_order_when_live_switch_or_account_rules_block():
+def test_v5_ignores_legacy_daily_stop_without_bypassing_broker_cash():
     data=bars()
     now=data[-1].available_at+timedelta(seconds=1)
     q=quote(now,data)
@@ -105,4 +105,5 @@ def test_not_permitted_to_order_when_live_switch_or_account_rules_block():
     p,d=live.entry(now,{"equity":1000,"settled_cash":1000},
                    {"high_watermark":1000,"halt_reason":"daily_loss_stop"},
                    SimpleNamespace(max_contracts=100,max_account_exposure_pct=.35))
-    assert p is None and d["state"]=="DAILY_HALT"
+    assert p is not None and d["state"]=="SIGNAL"
+    assert p["quantity"]>0
