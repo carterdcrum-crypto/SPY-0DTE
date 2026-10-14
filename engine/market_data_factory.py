@@ -43,9 +43,14 @@ def _tradier_token() -> str:
 
 
 def _webull_provider(*, production: bool) -> Any:
-    app_key = _required("WEBULL_APP_KEY")
-    app_secret = _required("WEBULL_APP_SECRET")
-    if not production:
+    # The delayed sandbox collector and LIVE broker use different key pairs.
+    # Never accidentally authenticate a production feed with sandbox keys.
+    if production:
+        app_key = _required("WEBULL_LIVE_APP_KEY")
+        app_secret = _required("WEBULL_LIVE_APP_SECRET")
+    else:
+        app_key = _required("WEBULL_APP_KEY")
+        app_secret = _required("WEBULL_APP_SECRET")
         return WebullFreeDataProvider(app_key=app_key, app_secret=app_secret)
 
     try:
@@ -57,6 +62,12 @@ def _webull_provider(*, production: bool) -> Any:
     api_client = ApiClient(app_key, app_secret, "us")
     api_client.set_stream_logger(log_level=logging.CRITICAL)
     api_client.add_endpoint("us", PRODUCTION_API_HOST)
+    # Use the same persistent SDK authentication cache as LIVE trading, but
+    # only make market-data reads in this collector. Never place orders here.
+    token_dir = os.environ.get("WEBULL_OPENAPI_TOKEN_DIR", "/data/webull-openapi")
+    from pathlib import Path
+    Path(token_dir).mkdir(parents=True, exist_ok=True)
+    api_client.set_token_dir(token_dir)
     provider = WebullFreeDataProvider(
         data_client=DataClient(api_client),
         active_contract_limit=int(os.environ.get("WEBULL_ACTIVE_CONTRACT_LIMIT", "20")),
@@ -72,8 +83,10 @@ def provider_from_env() -> Any:
       auto              Prefer Tradier production real-time when a production
                         Tradier token exists, otherwise use Webull sandbox.
       tradier           Require a Tradier Brokerage production token.
-      webull-production Try Webull's production OpenAPI market-data host. Real-time
-                        options still require the user's OpenAPI OPRA entitlement.
+      webull-production Use WEBULL_LIVE_APP_KEY / WEBULL_LIVE_APP_SECRET on
+                        Webull's production OpenAPI host. Fresh options require
+                        entitlement to live OpenAPI OPRA quotes; no simulated
+                        timestamps or sandbox fallback.
       webull-sandbox    Explicit delayed sandbox fallback.
 
     The normal Tradier setup uses TRADIER_ACCESS_TOKEN for both account access and
