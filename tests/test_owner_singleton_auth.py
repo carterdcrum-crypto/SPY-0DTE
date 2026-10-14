@@ -14,7 +14,7 @@ def test_only_one_proof_of_ownership_signup_and_sessions(monkeypatch, tmp_path):
         assert client.get("/v1/status").status_code == 401
         wrong = client.post("/v1/auth/signup", json={
             "username": "owner", "password": "a-long-private-passphrase",
-            "setup_code": "not-correct-enrollment-code-abc"
+            "setup_code": "not-correct-enrollment-code-abcdefghijk"
         })
         assert wrong.status_code == 403
         created = client.post("/v1/auth/signup", json={
