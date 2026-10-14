@@ -65,6 +65,25 @@ class GlassDashboardTest {
         bitmap.recycle()
     }
 
+    @Test fun liveV5AnalyticsShowsSelectedEngineAndCorrectRiskNotLegacyV4() {
+        val v5 = fixture.copy(
+            mode = "LIVE",
+            liveStrategyProfile = "v5_close_only_unrestricted_research",
+            strategy = "v5_close_only_unrestricted_research",
+            decision = "MARKET_CLOSED",
+            riskProfile = "NO_OWNER_DAILY_GAIN_LOSS_CONTRACT_EXPOSURE_CAPS_cash_depth_only",
+            exitProfile = "35pct_hard_25pct_trailing_close_reversal_18min",
+        )
+        assertEquals("V5 Close-Only · Unrestricted", engineDisplayName(v5))
+        compose.setContent { GlassTheme { GlassDashboard(v5, false, null, actions(), null) } }
+        compose.onNodeWithTag("nav_ANALYTICS").performClick()
+        compose.onNodeWithText("QUANT ENGINE · V5 CLOSE-ONLY").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Dynamic · settled cash and displayed market depth").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("35% loss trigger / 25% trail / reversal / 18 min").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("V5 Close-Only · Unrestricted", substring = true).assertExists()
+        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertDoesNotExist()
+    }
+
     @Test fun navigationAndPreviewControlsRemainFunctional() {
         compose.setContent { GlassTheme { GlassDashboard(fixture, true, null, actions(), null) } }
         compose.onNodeWithTag("auto_trade_switch").assertIsNotEnabled().assertIsOff()
