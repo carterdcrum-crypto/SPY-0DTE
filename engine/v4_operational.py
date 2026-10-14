@@ -28,6 +28,46 @@ from .v4_quality_sizing import score_at_entry, size as quality_size
 from .weekly_options_data import Bar
 from .session_calendar import session_close
 
+from threading import Lock
+
+_SPY_CHART_LOCK=Lock()
+_SPY_CHART={"candles":[],"source":"Webull OpenAPI · SPY M1","reason":"Waiting for completed authentic SPY candles"}
+
+
+def spy_chart_5m(now:datetime|None=None)->dict:
+    """Most recent five *completed* 1m OHLCV candles (rolling 5min view).
+
+    Publishes actual broker bars only. No sandbox approximations, no guessed
+    values. The chart is informational; never participates in the quant signal.
+    """
+    clock=now or datetime.now(timezone.utc)
+    with _SPY_CHART_LOCK:
+        state={**_SPY_CHART, "candles":[dict(x) for x in _SPY_CHART["candles"]]}
+    candles=state["candles"]
+    if not candles:
+        return {**state,"state":"UNAVAILABLE","window_minutes":5,"interval":"1m",
+                "asof":None,"age_seconds":None}
+    last=datetime.fromisoformat(candles[-1]["end"])
+    age=max(0.,(clock-last).total_seconds())
+    return {**state,"state":"CURRENT" if age<=120 else "STALE",
+            "window_minutes":5,"interval":"1m","asof":last.isoformat(),
+            "age_seconds":round(age,1)}
+
+
+def _store_spy_chart(bars:list[Bar],reason:str|None=None):
+    valid=bars[-5:] if len(bars)>=5 else []
+    if valid and any((b.start-a.start).total_seconds()!=60 for a,b in zip(valid,valid[1:])):
+        valid=[]
+    candles=[{"time":b.start.isoformat(),"end":b.available_at.isoformat(),
+              "open":b.open,"high":b.high,"low":b.low,"close":b.close,
+              "volume":b.volume} for b in valid]
+    with _SPY_CHART_LOCK:
+        if candles:
+            _SPY_CHART["candles"]=candles
+            _SPY_CHART["reason"]=None
+        elif not _SPY_CHART["candles"]:
+            _SPY_CHART["reason"]=reason or "Five contiguous completed SPY candles unavailable"
+
 ET=ZoneInfo("America/New_York")
 IDENTIFIER="v4_original_3x"
 FEE=0.65
@@ -335,8 +375,10 @@ class WebullMinuteBarCache:
                 raise ValueError("Webull did not return 55 fresh completed SPY M1 RTH bars")
             self.bars=fresh
             self.error=None
+            _store_spy_chart(fresh)
         except Exception as exc:
             # Any uncertain history result is no permission to enter.
             self.bars=[]
             self.error=f"{type(exc).__name__}: no valid SPY M1 bar entitlement/data"
+            _store_spy_chart([],self.error)
         return self.bars

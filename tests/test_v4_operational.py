@@ -147,3 +147,33 @@ def test_official_webull_nested_symbol_bars_parse():
     assert all(x.volume==220 for x in parsed)
     with pytest.raises(ValueError,match="SPY"):
         v.parse_webull_bars({"result":[{"symbol":"AAPL","result":rows}]},NOW)
+
+
+
+def test_chart_is_five_real_contiguous_completed_bars_with_source_and_staleness():
+    b=bars()
+    v._store_spy_chart(b)
+    fresh=v.spy_chart_5m(b[-1].available_at+timedelta(seconds=2))
+    assert fresh["state"]=="CURRENT"
+    assert fresh["window_minutes"]==5 and fresh["interval"]=="1m"
+    assert len(fresh["candles"])==5
+    assert all(c["volume"]==200 for c in fresh["candles"])
+    assert [c["close"] for c in fresh["candles"]]==[i.close for i in b[-5:]]
+    stale=v.spy_chart_5m(b[-1].available_at+timedelta(minutes=30))
+    assert stale["state"]=="STALE"
+    assert stale["candles"]==fresh["candles"]
+
+
+def test_no_fabricated_chart_if_feed_returns_a_gap():
+    from engine import v4_operational as v
+    from threading import Lock
+    v._SPY_CHART.clear()
+    v._SPY_CHART.update({"candles":[],"source":"Webull OpenAPI · SPY M1","reason":"no bars"})
+    b=bars()
+    v._store_spy_chart(b[-3:])
+    assert v.spy_chart_5m()["state"]=="UNAVAILABLE"
+    v._store_spy_chart(b)
+    prev=v.spy_chart_5m()["candles"]
+    # A transient denial does not invent replacement prices.
+    v._store_spy_chart([],reason="provider unavailable")
+    assert v.spy_chart_5m()["candles"]==prev

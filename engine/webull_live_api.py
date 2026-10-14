@@ -182,6 +182,8 @@ def status_payload() -> dict[str, Any]:
         "owner_auth_required": _env_bool("APP_PREVIEW_MODE", False),
         "guard": None if guard is None else guard.as_dict(),
     }
+    from .v4_operational import spy_chart_5m
+    payload["spy_chart_5m"] = spy_chart_5m()
     payload["live_autonomy"] = live
     if live["configured"]:
         limits = LiveAutonomyStore(autonomy_db_path()).envelope(datetime.now(timezone.utc))
