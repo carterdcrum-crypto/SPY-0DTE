@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -311,6 +313,31 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def owner_auth_input_validation(request: Request, exc: RequestValidationError):
+    """Never echo a signup password or one-time owner setup code in 422 responses."""
+    if request.url.path not in {"/v1/auth/signup", "/v1/auth/login"}:
+        return await request_validation_exception_handler(request, exc)
+    errors = []
+    for issue in exc.errors():
+        location = issue.get("loc", ())
+        field = str(location[-1]) if location else "request"
+        if field not in {"username", "password", "setup_code"}:
+            field = "request"
+        kind = str(issue.get("type", ""))
+        if kind == "string_too_short":
+            length = int(issue.get("ctx", {}).get("min_length", 0))
+            message = f"{field.replace('_', ' ').title()} must be at least {length} characters."
+        elif kind == "string_too_long":
+            length = int(issue.get("ctx", {}).get("max_length", 0))
+            message = f"{field.replace('_', ' ').title()} must be {length} characters or fewer."
+        else:
+            message = f"Invalid {field.replace('_', ' ')}."
+        errors.append({"field": field, "message": message})
+    return JSONResponse({"detail": errors}, status_code=422,
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/ready")
