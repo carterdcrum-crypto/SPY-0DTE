@@ -17,7 +17,7 @@ from .live_market import LiveDataProvider, LiveMarketReader, parse_occ_symbol, p
 from .live_risk import EASTERN
 from .paper_runner import execution_lock
 from .session_calendar import session_bounds
-from .webull_live import WebullLiveClient, _balance_object, _number, _usd_asset, webull_env_status, production_credentials
+from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _number, _usd_asset, webull_env_status, production_credentials
 
 log = logging.getLogger("spy0dte.live")
 _status_lock = threading.Lock()
@@ -457,10 +457,22 @@ def run_forever(mode_getter, context):
                 context.heartbeat(last_error=None)
             except Exception as exc:
                 failures += 1
-                publish(state="RECOVERING", reason=f"{type(exc).__name__}: retrying broker reconciliation automatically",
-                        broker_connected=False)
+                # WebullLiveError strings are produced from fixed, sanitized
+                # adapter messages (never the broker response body or keys).
+                # Let the owner see which account/API step actually failed.
+                if isinstance(exc, WebullLiveError):
+                    description = str(exc)
+                    if description.startswith(("Webull ", "broker ", "multiple Webull", "WEBULL_ACCOUNT_ID")):
+                        detail = description[:140]
+                    else:
+                        detail = "Webull account reconciliation was rejected"
+                    owner_reason = detail + "; no new entries until connected"
+                else:
+                    owner_reason = f"{type(exc).__name__}: retrying broker reconciliation automatically"
+                publish(state="RECOVERING", reason=owner_reason, broker_connected=False)
                 context.heartbeat(state="RECOVERING", last_error=type(exc).__name__)
-                log.warning("live reconciliation failed type=%s", type(exc).__name__)
+                log.warning("live reconciliation failed type=%s stage=%s",
+                            type(exc).__name__, "webull" if isinstance(exc, WebullLiveError) else "worker")
                 if failures >= 5:
                     raise
             context.wait(max(0.1, (2.0 if not failures else min(30, 2**failures)) - (time.monotonic()-started)))
