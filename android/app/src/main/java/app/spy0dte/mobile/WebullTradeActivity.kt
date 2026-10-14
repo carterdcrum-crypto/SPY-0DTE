@@ -258,6 +258,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         }
     }
     return ScreenStatus(
+        liveStrategyProfile = root.optString("live_strategy_profile", "v4_original_3x"),
         liveEnabled = liveAuto.optBoolean("enabled", false),
         liveState = if (liveAuto.optBoolean("worker_current", false)) liveAuto.optString("state", "STARTING") else "RECOVERING",
         liveReason = liveAuto.optString("reason", "Waiting for live worker"),
