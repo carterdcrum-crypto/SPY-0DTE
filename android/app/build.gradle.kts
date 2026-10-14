@@ -15,7 +15,7 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
-        versionCode = 16
+        versionCode = 16 // Owner-only login build
         versionName = "0.3.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
