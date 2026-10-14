@@ -31,42 +31,79 @@ from .session_calendar import session_close
 from threading import Lock
 
 _SPY_CHART_LOCK=Lock()
-_SPY_CHART={"candles":[],"source":"Webull OpenAPI · SPY M1","reason":"Waiting for completed authentic SPY candles"}
+_SPY_CHART={"candles":[],"source":"Webull OpenAPI · SPY M1",
+            "reason":"Waiting for authenticated SPY 1-minute market data",
+            "observed_at":None}
 
 
-def spy_chart_5m(now:datetime|None=None)->dict:
-    """Most recent five *completed* 1m OHLCV candles (rolling 5min view).
+def spy_chart_30m(now:datetime|None=None)->dict:
+    """A 30-minute rolling view, including a broker-reported *forming* 1m bar.
 
-    Publishes actual broker bars only. No sandbox approximations, no guessed
-    values. The chart is informational; never participates in the quant signal.
+    This display-only cache never enters the quant model. Price updates are
+    pushed every few seconds if Webull actually returns an unclosed candle.
+    A completed candle remains immutable until its close. Missing/stale
+    provider observations must not be presented as live or synthesized.
     """
     clock=now or datetime.now(timezone.utc)
     with _SPY_CHART_LOCK:
-        state={**_SPY_CHART, "candles":[dict(x) for x in _SPY_CHART["candles"]]}
-    candles=state["candles"]
-    if not candles:
-        return {**state,"state":"UNAVAILABLE","window_minutes":5,"interval":"1m",
-                "asof":None,"age_seconds":None}
-    last=datetime.fromisoformat(candles[-1]["end"])
-    age=max(0.,(clock-last).total_seconds())
-    return {**state,"state":"CURRENT" if age<=120 else "STALE",
-            "window_minutes":5,"interval":"1m","asof":last.isoformat(),
-            "age_seconds":round(age,1)}
+        state={**_SPY_CHART,"candles":[dict(x) for x in _SPY_CHART["candles"]]}
+    rows=state["candles"]
+    if not rows:
+        return {**state,"state":"UNAVAILABLE","window_minutes":30,"interval":"1m",
+                "asof":None,"age_seconds":None,"has_forming_candle":False}
+    forming=bool(rows[-1].get("forming"))
+    observed=state.get("observed_at")
+    if observed:
+        snapshot_age=max(0.0,(clock-datetime.fromisoformat(observed)).total_seconds())
+    else:
+        snapshot_age=float("inf")
+    last_bar_end=datetime.fromisoformat(rows[-1]["end"])
+    market_age=max(0.0,(clock-last_bar_end).total_seconds())
+    # An unfinished bar is visibly LIVE only while an up-to-date response is
+    # being observed. No arrival-time stamping can resurrect an OLD bar.
+    market_is_current=forming and snapshot_age<=15 and market_age<=60
+    is_recent_closed=not forming and market_age<=90
+    status=("LIVE_FORMING" if market_is_current else
+            "WAITING_FOR_NEXT_BAR" if is_recent_closed else "STALE")
+    return {**state,"state":status,"window_minutes":30,"interval":"1m",
+            "asof":observed if forming else last_bar_end.isoformat(),
+            "age_seconds":round(snapshot_age if forming else market_age,1),
+            "has_forming_candle":forming and market_is_current}
 
 
-def _store_spy_chart(bars:list[Bar],reason:str|None=None):
-    valid=bars[-5:] if len(bars)>=5 else []
-    if valid and any((b.start-a.start).total_seconds()!=60 for a,b in zip(valid,valid[1:])):
-        valid=[]
-    candles=[{"time":b.start.isoformat(),"end":b.available_at.isoformat(),
-              "open":b.open,"high":b.high,"low":b.low,"close":b.close,
-              "volume":b.volume} for b in valid]
+def spy_chart_5m(now:datetime|None=None)->dict:
+    """Compatibility endpoint for earlier installed Android APKs."""
+    result=spy_chart_30m(now)
+    result["candles"]=result["candles"][-5:]
+    result["window_minutes"]=5
+    return result
+
+
+def _store_spy_chart(bars:list[Bar],now:datetime|None=None,reason:str|None=None):
+    """Stock OHLCV from Webull only; unfinished latest minute is flagged."""
+    clock=now or datetime.now(timezone.utc)
+    window=bars[-30:]
+    # Preserve only contiguous bars from the end (e.g., RTH session start).
+    contiguous=[]
+    for b in reversed(window):
+        if contiguous and (contiguous[-1].start-b.start).total_seconds()!=60:
+            break
+        contiguous.append(b)
+    contiguous.reverse()
+    observations=[]
+    for b in contiguous:
+        forming=b.start+timedelta(minutes=1)>clock-timedelta(seconds=2)
+        observations.append({"time":b.start.isoformat(),
+             "end":(b.start+timedelta(minutes=1)).isoformat(),
+             "open":b.open,"high":b.high,"low":b.low,"close":b.close,
+             "volume":b.volume,"forming":forming})
     with _SPY_CHART_LOCK:
-        if candles:
-            _SPY_CHART["candles"]=candles
+        if observations:
+            _SPY_CHART["candles"]=observations
+            _SPY_CHART["observed_at"]=clock.isoformat()
             _SPY_CHART["reason"]=None
         elif not _SPY_CHART["candles"]:
-            _SPY_CHART["reason"]=reason or "Five contiguous completed SPY candles unavailable"
+            _SPY_CHART["reason"]=reason or "Webull has no current authenticated SPY OHLCV"
 
 ET=ZoneInfo("America/New_York")
 IDENTIFIER="v4_original_3x"
@@ -91,8 +128,8 @@ def _time(raw):
     return t.astimezone(timezone.utc)
 
 
-def parse_webull_bars(payload, now:datetime)->list[Bar]:
-    """Strictly accept completed RTH M1 OHLCV, never running bars/synthetic ticks.
+def parse_webull_bars(payload, now:datetime,*,include_forming:bool=False)->list[Bar]:
+    """Strictly parse authenticated RTH M1 OHLCV without synthetic ticks.
 
     Webull bars are timestamped with a period start (examples sometimes carry
     nonzero seconds). Coerce within a minute to that period and reject
@@ -130,7 +167,10 @@ def parse_webull_bars(payload, now:datetime)->list[Bar]:
         local=start.astimezone(ET)
         if local.date()!=today or not time(9,30)<=local.time()<time(16,0):
             continue
-        if start+timedelta(minutes=1)>now.astimezone(timezone.utc)-timedelta(seconds=2):
+        if start>now.astimezone(timezone.utc):
+            continue
+        if (not include_forming and
+                start+timedelta(minutes=1)>now.astimezone(timezone.utc)-timedelta(seconds=2)):
             continue
         values=[float(row[k]) for k in ("open","high","low","close")]
         volume=int(float(row["volume"]))
@@ -342,7 +382,7 @@ def exit_reason(position, quote, bars:list[Bar], now:datetime, *, fee:float=FEE)
 
 
 class WebullMinuteBarCache:
-    """Entitled Webull M1 OHLCV reader, checked at 20-second intervals.
+    """Entitled Webull M1 OHLCV reader, checked at 5-second intervals.
 
     No reconstructed OHLCV from 2-second option snapshots. Fail closed if
     the broker's stock-minute bars subscription is denied or out of date.
@@ -356,7 +396,7 @@ class WebullMinuteBarCache:
     def refresh(self,provider,now:datetime):
         if self.last_attempt is not None:
             age=(now-self.last_attempt).total_seconds()
-            if 0<=age<20:
+            if 0<=age<5:
                 return self.bars
         self.last_attempt=now
         client=getattr(provider,"client",None) or getattr(getattr(provider,"provider",None),"client",None)
@@ -370,15 +410,19 @@ class WebullMinuteBarCache:
                 "SPY","US_STOCK","M1",count="90",
                 real_time_required=False,trading_sessions="RTH",
             )
+            chart_bars=parse_webull_bars(response,now,include_forming=True)
+            _store_spy_chart(chart_bars,now)
+            # Trade decisions use only CONFIRMED completed bars. A forming
+            # chart candle can update every 5 seconds but may never leak
+            # into signal generation, risk management, or backtesting.
             fresh=parse_webull_bars(response,now)
             if not last_spy_bar_is_fresh(fresh,now) or len(fresh)<55:
                 raise ValueError("Webull did not return 55 fresh completed SPY M1 RTH bars")
             self.bars=fresh
             self.error=None
-            _store_spy_chart(fresh)
         except Exception as exc:
             # Any uncertain history result is no permission to enter.
             self.bars=[]
             self.error=f"{type(exc).__name__}: no valid SPY M1 bar entitlement/data"
-            _store_spy_chart([],self.error)
+            _store_spy_chart([],now,reason=self.error)
         return self.bars
