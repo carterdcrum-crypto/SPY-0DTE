@@ -1,0 +1,176 @@
+{
+  "railway_deployment_id": "2646ee20-c2f6-4e42-97a0-fa422606270f",
+  "source_git_sha": "78b5bf4e797a2fe8bdc32f5ceccf481ceabd9760",
+  "archive_has_verified_ohlcv": false,
+  "caveats": [
+    "These are NOT the full QuantConnect V5 signals. Missing high/low bars are NOT reconstructed.",
+    "V5 close-range trend/compression signals use observed closes ONLY and are separately identified.",
+    "Legacy archive has no executable event-time NBBO or bid/ask depth. Gross fills and high quantities may be unachievable.",
+    "No reliable intraday drawdown or forward risk-of-ruin probability.",
+    "Compare historical variants as hypotheses; do not promote any V5 variant to LIVE."
+  ],
+  "contracts": "option multiplier 100; no NBBO size, quantity is a hypothetical proxy only",
+  "cost_stress": "summary modeled_pnl_after_extra_2usd_each_contract_usd",
+  "data_gaps": {
+    "event_nbbo_not_verified": true,
+    "missing_completed_spy_volume": true,
+    "missing_option_bid_ask_sizes": true,
+    "missing_spy_high": true,
+    "missing_spy_low": true,
+    "strict_v5_quote_fills_executable": false
+  },
+  "entry_execution": "option ASK+0.01/share+$0.65/contract; simulated exit sampled BID-0.01/share-$0.65/contract",
+  "first_day": "2026-04-01",
+  "independence": "No genuinely independent holdout; entire archive repeatedly inspected",
+  "last_day": "2026-10-06",
+  "lookahead": "closed SPY observations only; subsequent minute-bucket option quotes",
+  "max_drawdown": "EOD equity only; intraday NBBO unavailable",
+  "no_broker_orders": true,
+  "no_paid_data": true,
+  "results": {
+    "v4_quality_3x": {
+      "contracts_traded": 265,
+      "drawdown_peak_day": "2026-09-09",
+      "drawdown_trough_day": "2026-09-24",
+      "ending_equity_usd": 5109.5,
+      "exit_reasons": {
+        "extended_momentum_or_profit_faded": 10,
+        "independent_hard_stop_35pct": 3,
+        "standard_10min_exit": 93,
+        "trailing_stop": 40
+      },
+      "first_5k_session": 121,
+      "max_contracts_in_one_trade": 3,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 4.81,
+      "max_end_of_day_drawdown_usd": 238.9,
+      "mean_contracts_per_scored_trade": 1.815,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 3579.5,
+      "net_profit_usd": 4109.5,
+      "profit_factor": 2.544,
+      "return_pct": 410.95,
+      "rolling_42_session_proxy": {
+        "5x_windows": 0,
+        "fivefold_pct": 0,
+        "halving_windows": 0,
+        "windows": 87
+      },
+      "scored_positions": 146,
+      "skipped_entries_by_reason": {
+        "BUSY": 34
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 53.42
+    },
+    "v5_close_proxy_challenger": {
+      "contracts_traded": 280,
+      "drawdown_peak_day": "2026-07-10",
+      "drawdown_trough_day": "2026-07-17",
+      "ending_equity_usd": 6165,
+      "exit_reasons": {
+        "trailing_stop": 35,
+        "underlying_reversal_close_proxy": 37
+      },
+      "first_5k_session": 54,
+      "max_contracts_in_one_trade": 21,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 8.46,
+      "max_end_of_day_drawdown_usd": 569.6,
+      "mean_contracts_per_scored_trade": 3.889,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 4605,
+      "net_profit_usd": 5165,
+      "profit_factor": 3.241,
+      "return_pct": 516.5,
+      "rolling_42_session_proxy": {
+        "5x_windows": 0,
+        "fivefold_pct": 0,
+        "halving_windows": 0,
+        "windows": 87
+      },
+      "scored_positions": 72,
+      "skipped_entries_by_reason": {
+        "BUSY": 83,
+        "CASH_QUALITY_OR_SIZE": 159,
+        "LATE_ENTRY": 1
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 55.56
+    },
+    "v5_close_proxy_current": {
+      "contracts_traded": 13,
+      "drawdown_peak_day": "2026-04-07",
+      "drawdown_trough_day": "2026-04-10",
+      "ending_equity_usd": 1514.1,
+      "exit_reasons": {
+        "hard_stop_35pct": 1,
+        "trailing_stop": 3,
+        "underlying_reversal_close_proxy": 2
+      },
+      "first_5k_session": null,
+      "max_contracts_in_one_trade": 6,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 8.27,
+      "max_end_of_day_drawdown_usd": 136.5,
+      "mean_contracts_per_scored_trade": 2.167,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 488.1,
+      "net_profit_usd": 514.1,
+      "profit_factor": 4.766,
+      "return_pct": 51.41,
+      "rolling_42_session_proxy": {
+        "5x_windows": 0,
+        "fivefold_pct": 0,
+        "halving_windows": 0,
+        "windows": 87
+      },
+      "scored_positions": 6,
+      "skipped_entries_by_reason": {
+        "BUSY": 3,
+        "CASH_QUALITY_OR_SIZE": 192,
+        "LATE_ENTRY": 1
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 50
+    },
+    "v5_close_proxy_unrestricted_RESEARCH_ONLY": {
+      "contracts_traded": 45505,
+      "drawdown_peak_day": "2026-07-10",
+      "drawdown_trough_day": "2026-09-08",
+      "ending_equity_usd": 507706.5,
+      "exit_reasons": {
+        "trailing_stop": 44,
+        "underlying_reversal_close_proxy": 46
+      },
+      "first_5k_session": 4,
+      "max_contracts_in_one_trade": 7350,
+      "max_end_of_day_drawdown_pct_of_preceding_peak": 92.93,
+      "max_end_of_day_drawdown_usd": 168898.5,
+      "mean_contracts_per_scored_trade": 505.611,
+      "modeled_pnl_after_extra_2usd_each_contract_usd": 415696.5,
+      "net_profit_usd": 506706.5,
+      "profit_factor": 2.017,
+      "return_pct": 50670.65,
+      "rolling_42_session_proxy": {
+        "5x_windows": 34,
+        "fivefold_pct": 39.08,
+        "halving_windows": 20,
+        "windows": 87
+      },
+      "scored_positions": 90,
+      "skipped_entries_by_reason": {
+        "BUSY": 83,
+        "CASH_QUALITY_OR_SIZE": 141,
+        "LATE_ENTRY": 1
+      },
+      "start_equity_usd": 1000,
+      "unscorable_positions": 0,
+      "win_rate_pct": 54.44
+    }
+  },
+  "sessions": 128,
+  "settlement": "one-session proceeds delay; no intraday option sale reuse",
+  "source": "Previously inspected SPY close/volume-ratio and CBBO-1m archive",
+  "start_cash_usd": 1000,
+  "status": "REUSED_IN_SAMPLE_CBBO_MINUTE_CLOSE_ONLY_PROXY_NOT_TRUE_V5",
+  "study": "Railway V5 close-only exploratory proxies versus original V4 3x",
+  "truthful_strict_v5_status": "BLOCKED_MISSING_REAL_SPY_OHLCV_AND_OPTION_DEPTH"
+}
