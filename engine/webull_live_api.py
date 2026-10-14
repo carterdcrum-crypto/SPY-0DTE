@@ -132,7 +132,8 @@ def _webull_live_gate(_: base.ControlStore) -> dict[str, Any]:
         reasons.append("webull_production_credentials_missing")
 
     envelope = api_v2._live_risk_store().snapshot()
-    if not envelope.armed_today():
+    v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
+    if not envelope.armed_today() and not v5_unrestricted:
         reasons.append("standing_live_safety_not_configured")
     reasons.extend(_market_reasons())
 
@@ -186,9 +187,21 @@ def status_payload() -> dict[str, Any]:
     payload["spy_chart_30m"] = spy_chart_30m()
     payload["spy_chart_5m"] = spy_chart_5m()
     payload["live_autonomy"] = live
+    v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
+    payload["live_strategy_profile"]="v5_close_only_unrestricted_research" if v5_unrestricted else "v4_original_3x"
     if live["configured"]:
         limits = LiveAutonomyStore(autonomy_db_path()).envelope(datetime.now(timezone.utc))
-        payload["live_risk"] = {**limits.as_dict(), "armed_today": limits.is_complete, "standing_authorization": live["enabled"]}
+        if v5_unrestricted:
+            payload["live_risk"] = {
+                **limits.as_dict(), "armed_today": True, "configured": True,
+                "standing_safety_limits": False,
+                "daily_loss_limit": None, "daily_gain_limit": None,
+                "max_contracts": None, "max_account_exposure_pct": None,
+                "standing_authorization": live["enabled"],
+                "sizing": "SETTLED_CASH_AND_VERIFIED_NBBO_DEPTH_ONLY",
+            }
+        else:
+            payload["live_risk"] = {**limits.as_dict(), "armed_today": limits.is_complete, "standing_authorization": live["enabled"]}
         payload["live_alert"] = None
     if payload.get("mode") == "LIVE":
         payload["decision"] = {"state": live["state"], "reason": live["reason"]}
@@ -229,10 +242,13 @@ def set_live_autonomy(request: LiveAutonomyRequest, user: base.UserIdentity = De
     store = LiveAutonomyStore(autonomy_db_path())
     now = datetime.now(timezone.utc)
     if request.enabled:
-        if not api_v2._live_risk_store().snapshot().is_complete:
+        v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
+        saved_limits=api_v2._live_risk_store().snapshot()
+        if not v5_unrestricted and not saved_limits.is_complete:
             raise HTTPException(status_code=400, detail="Save live limits in Settings before turning Auto trade on")
         try:
-            store.enable(owner=user.subject, limits=api_v2._live_risk_store().snapshot(),
+            store.enable(owner=user.subject, limits=saved_limits,
+                         unrestricted_v5=v5_unrestricted,
                          confirmation=request.confirmation, now=now,
                          account_id=os.environ.get("WEBULL_ACCOUNT_ID", "").strip())
         except ValueError as exc:
