@@ -63,3 +63,21 @@ def test_signup_denied_without_server_only_enrollment_secret(monkeypatch, tmp_pa
             "username": "owner", "password": "a-long-private-passphrase",
             "setup_code": "wrong-setup-code-with-at-least-32-characters",
         }).status_code == 503
+
+
+def test_signup_length_error_does_not_echo_password_or_setup_code(monkeypatch, tmp_path):
+    monkeypatch.setenv("START_COLLECTOR_IN_API", "false")
+    monkeypatch.setenv("OWNER_AUTH_DB_PATH", str(tmp_path / "owner.sqlite"))
+    with TestClient(app) as client:
+        response = client.post("/v1/auth/signup", json={
+            "username": "owner",
+            "password": "too-short",
+            "setup_code": "short-code",
+        })
+        assert response.status_code == 422
+        fields = {item["field"]: item["message"] for item in response.json()["detail"]}
+        assert "14" in fields["password"]
+        assert "32" in fields["setup_code"]
+        assert "too-short" not in response.text
+        assert "short-code" not in response.text
+        assert response.headers["cache-control"] == "no-store"
