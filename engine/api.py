@@ -355,6 +355,28 @@ def health():
     return JSONResponse({"status": "ok" if healthy else "recovering"}, status_code=200 if healthy else 503)
 
 
+@app.get("/v1/auth/config")
+def owner_auth_config() -> JSONResponse:
+    """Public Google OAuth *client ID* only. An OAuth client ID is not a secret.
+
+    The Android APK reads this at sign-in time so a newly configured Google
+    project does not require rebuilding the entire phone application.
+    Never expose the owner email allowlist or the broker credentials here.
+    """
+    client_id = os.environ.get("GOOGLE_WEB_CLIENT_ID", "").strip()
+    enabled = bool(client_id and _allowed_emails() and not _env_bool("APP_PREVIEW_MODE"))
+    return JSONResponse(
+        {"google_web_client_id": client_id if enabled else "", "owner_login_ready": enabled},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/v1/auth/me")
+def owner_auth_me(user: UserIdentity = Depends(require_user)) -> dict[str, Any]:
+    """Prove this Google ID token belongs to a verified allowlisted owner."""
+    return {"authenticated": True, "owner": True, "email": user.email}
+
+
 @app.get("/v1/status")
 def status(_: UserIdentity = Depends(require_user)) -> dict[str, Any]:
     return status_payload()
