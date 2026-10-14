@@ -247,6 +247,7 @@ def test_webull_history_requests_realtime_forming_bar_separately_from_quant():
     assert chart["candles"][-1]["forming"] and chart["candles"][-1]["close"]==603.1
     # Sub-minute updates overwrite only current forming candle, not quant bars.
     forming["close"]="603.3"
+    forming["high"]="603.4"  # maintain authentic OHLC consistency on refresh
     newer=now+timedelta(seconds=5)
     cache.refresh(provider,newer)
     assert len(cache.bars)==len(data)
