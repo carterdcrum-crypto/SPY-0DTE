@@ -81,14 +81,21 @@ class LiveAutonomyStore:
         return {**dict(row), "enabled": bool(row["enabled"]), "configured": True, "limits": json.loads(row["limits"])}
 
     def enable(self, *, owner: str, limits: LiveRiskEnvelope, confirmation: str,
-               now: datetime, account_id: str = "") -> None:
+               now: datetime, account_id: str = "", unrestricted_v5: bool = False) -> None:
         if confirmation != ARM_AUTONOMY or not owner or owner == "preview":
             raise ValueError("authenticated owner and explicit live authorization required")
-        values = (limits.daily_loss_limit, limits.daily_gain_limit, limits.max_account_exposure_pct, limits.max_contracts)
-        if not limits.is_complete or any(not math.isfinite(float(v)) for v in values):
-            raise ValueError("complete finite live limits required")
-        if limits.max_contracts > 100 or limits.daily_loss_limit > 1_000_000 or limits.daily_gain_limit > 1_000_000:
-            raise ValueError("live limits exceed supported bounds")
+        if not unrestricted_v5:
+            values = (limits.daily_loss_limit, limits.daily_gain_limit,
+                      limits.max_account_exposure_pct, limits.max_contracts)
+            if not limits.is_complete or any(not math.isfinite(float(v)) for v in values):
+                raise ValueError("complete finite live limits required")
+            if (limits.max_contracts > 100 or limits.daily_loss_limit > 1_000_000
+                    or limits.daily_gain_limit > 1_000_000):
+                raise ValueError("live limits exceed supported bounds")
+        else:
+            # V5 no discretionary contract/daily-loss/gain/exposure settings.
+            # Persist an explicit null envelope rather than stale V4 limits.
+            limits = LiveRiskEnvelope(None, None, None, None, None, None)
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             old = db.execute("SELECT * FROM live_authorization WHERE id=1").fetchone()
@@ -217,11 +224,23 @@ class LiveAutonomyStore:
         with self.connect() as db:
             db.execute("UPDATE live_journal SET cancel_at=? WHERE client_id=?", (utc_text(now), client_id))
 
-    def daily(self, now: datetime, equity: float, pnl: float, limits: LiveRiskEnvelope) -> dict[str, Any]:
+    def daily(self, now: datetime, equity: float, pnl: float,
+              limits: LiveRiskEnvelope | None, *,
+              unrestricted_v5: bool = False) -> dict[str, Any]:
         day = now.astimezone(EASTERN).date().isoformat()
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("INSERT OR IGNORE INTO live_days VALUES(?,?,?,NULL)", (day, max(0.01, equity-pnl), equity))
+            if unrestricted_v5:
+                # V5 removes owner-set daily gain/loss stops. Keep any old V4
+                # halt stored so reverting V4 cannot silently bypass its stop.
+                db.execute("UPDATE live_days SET high_watermark=MAX(high_watermark,?) WHERE trading_date=?",
+                           (equity, day))
+                return {**dict(db.execute(
+                    "SELECT * FROM live_days WHERE trading_date=?", (day,)).fetchone()),
+                    "halt_reason": None, "owner_daily_stops": False}
+            if limits is None or not limits.is_complete:
+                raise ValueError("V4 requires complete risk limits")
             reason = "daily_loss_stop_reached" if pnl <= -limits.daily_loss_limit else (
                 "daily_gain_stop_reached" if pnl >= limits.daily_gain_limit else None)
             db.execute("UPDATE live_days SET high_watermark=MAX(high_watermark,?), halt_reason=COALESCE(halt_reason,?) WHERE trading_date=?", (equity, reason, day))
