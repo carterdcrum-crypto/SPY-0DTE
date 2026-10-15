@@ -139,7 +139,7 @@ def proxy_candidates(frames, *, challenger):
     return sorted(entries,key=lambda x:(x["entry_at"], x["quote"].symbol))
 
 
-def proxy_size(arm, *, equity, settled, peak, debit, score):
+def proxy_size(arm, *, equity, settled, peak, debit, score, starting_cash=START_CASH):
     """Cash-premium research budget only; NBBO sizes missing in legacy CSV.
 
     All returned quantities are NON-EXECUTABLE fill hypotheses.
@@ -161,7 +161,7 @@ def proxy_size(arm, *, equity, settled, peak, debit, score):
         fraction*=.25
     elif drawdown>=.02:
         fraction*=.50
-    riskable=max(0.,equity-.25*max(0.,equity-START_CASH))
+    riskable=max(0.,equity-.25*max(0.,equity-starting_cash))
     return max(0,min(cash,int((min(.35*equity,fraction*riskable)+1e-8)//debit)))
 
 
@@ -210,13 +210,13 @@ def proxy_exit(arm,entry,frames,cutoff):
     return None
 
 
-def first_hit(s):
+def first_hit(s, target=5000.):
     return next((i for i,day in enumerate(s["daily"],1)
-                 if day["equity_usd"]>=5000),None)
+                 if day["equity_usd"]>=target),None)
 
 
-def rolling_42(s):
-    eq=[START_CASH]+[x["equity_usd"] for x in s["daily"]]
+def rolling_42(s, starting_cash=START_CASH):
+    eq=[starting_cash]+[x["equity_usd"] for x in s["daily"]]
     windows=[]
     for start in range(0,len(eq)-42):
         opening=eq[start]
@@ -229,13 +229,17 @@ def rolling_42(s):
                 if windows else None}
 
 
-def run(data_dir:Path, output_dir:Path):
+def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
+    if not math.isfinite(starting_cash) or starting_cash <= 0 or round(starting_cash, 2) != starting_cash:
+        raise ValueError("starting_cash must be a positive dollar-and-cent amount")
+    if not arms or any(arm not in ARMS for arm in arms):
+        raise ValueError("unknown or missing research arm")
     paths=_research_files(data_dir)
     if not paths:
         raise ValueError("Railway research archive absent; no fabricated history")
-    states={name:{"settled":START_CASH,"pending":0.,"daily":[],
+    states={name:{"settled":starting_cash,"pending":0.,"daily":[],
                   "trades":[],"skips":Counter(),"exits":Counter()}
-            for name in ARMS}
+            for name in arms}
     names=[]
     diagnostic={"missing_spy_high":True,"missing_spy_low":True,
                 "missing_completed_spy_volume":True,
@@ -258,7 +262,7 @@ def run(data_dir:Path, output_dir:Path):
             s["settled"]+=s["pending"]
             s["pending"]=0.
             opening=s["settled"]
-            peak=max([START_CASH]+[d["equity_usd"] for d in s["daily"]])
+            peak=max([starting_cash]+[d["equity_usd"] for d in s["daily"]])
             busy=None
             candidates=(original if arm=="v4_quality_3x" else
                         proxy_regular if arm=="v5_close_proxy_current" else
@@ -280,7 +284,7 @@ def run(data_dir:Path, output_dir:Path):
                 else:
                     score=item["score"]
                     qty=proxy_size(arm,equity=opening,settled=s["settled"],
-                                   peak=peak,debit=debit,score=score)
+                                   peak=peak,debit=debit,score=score,starting_cash=starting_cash)
                 if qty<=0:
                     s["skips"]["CASH_QUALITY_OR_SIZE"]+=1
                     continue
@@ -314,14 +318,16 @@ def run(data_dir:Path, output_dir:Path):
                 "equity_usd":round(s["settled"]+s["pending"],4)})
     reports={}
     for arm,s in states.items():
-        reports[arm]={**summary(s),"first_5k_session":first_hit(s),
-                      "rolling_42_session_proxy":rolling_42(s)}
+        reports[arm]={**summary(s,starting_cash=starting_cash),"first_5k_session":first_hit(s),
+                      "first_5x_session":first_hit(s,target=round(starting_cash*5,2)),
+                      "rolling_42_session_proxy":rolling_42(s,starting_cash=starting_cash)}
     report={
         "study":"Railway V5 close-only exploratory proxies versus original V4 3x",
         "status":"REUSED_IN_SAMPLE_CBBO_MINUTE_CLOSE_ONLY_PROXY_NOT_TRUE_V5",
         "truthful_strict_v5_status":"BLOCKED_MISSING_REAL_SPY_OHLCV_AND_OPTION_DEPTH",
         "sessions":len(names),"first_day":min(names),"last_day":max(names),
-        "start_cash_usd":START_CASH,
+        "start_cash_usd":starting_cash,
+        "tested_arms":list(arms),
         "source":"Previously inspected SPY close/volume-ratio and CBBO-1m archive",
         "entry_execution":"option ASK+0.01/share+$0.65/contract; simulated exit sampled BID-0.01/share-$0.65/contract",
         "settlement":"one-session proceeds delay; no intraday option sale reuse",
@@ -361,10 +367,13 @@ def run(data_dir:Path, output_dir:Path):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--data-dir",type=Path,default=Path("/data/research"))
+    p.add_argument("--starting-cash",type=float,default=START_CASH)
+    p.add_argument("--arm",choices=ARMS,help="run only one profile; defaults to all four")
     p.add_argument("--output-dir",type=Path,
                    default=Path("/data/research/v5_archive_2026_10_14"))
     args=p.parse_args()
-    run(args.data_dir,args.output_dir)
+    run(args.data_dir,args.output_dir,starting_cash=args.starting_cash,
+        arms=(args.arm,) if args.arm else ARMS)
 
 
 if __name__=="__main__":
