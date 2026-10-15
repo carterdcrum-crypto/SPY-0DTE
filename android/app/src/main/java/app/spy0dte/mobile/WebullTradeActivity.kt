@@ -220,9 +220,9 @@ internal class TradeBackend(private val token: String) {
 
 internal fun parseStatus(text: String): ScreenStatus {
     val root = JSONObject(text)
-    val market = if (root.optString("mode") == "LIVE") {
-        root.optJSONObject("live_autonomy")?.optJSONObject("market") ?: JSONObject()
-    } else root.optJSONObject("market") ?: JSONObject()
+    val market = root.optJSONObject("market")
+        ?: root.optJSONObject("live_autonomy")?.optJSONObject("market")
+        ?: JSONObject()
     val chartJson = root.optJSONObject("spy_chart_30m")
         ?: root.optJSONObject("spy_chart_5m") ?: JSONObject()
     val verifiedCandles = buildList {
