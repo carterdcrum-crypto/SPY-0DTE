@@ -191,12 +191,12 @@ def choose_size(
                             decision.raw_kelly_fraction)
 
 
-def summary(state:dict)->dict:
+def summary(state:dict, *, starting_cash: float = START_CASH)->dict:
     days=state["daily"]
-    equity=[START_CASH]+[d["equity_usd"] for d in days]
-    peak=START_CASH
+    equity=[starting_cash]+[d["equity_usd"] for d in days]
+    peak=starting_cash
     worst_dd=0.0
-    worst_peak=START_CASH
+    worst_peak=starting_cash
     peak_day="initial_capital"
     drawdown_peak_day=None
     trough_day=None
@@ -216,10 +216,10 @@ def summary(state:dict)->dict:
     totalqty=sum(x["contracts"] for x in trades)
     ending=round(state["settled"]+state["pending"],2)
     return {
-        "start_equity_usd":START_CASH,
+        "start_equity_usd":starting_cash,
         "ending_equity_usd":ending,
-        "net_profit_usd":round(ending-START_CASH,2),
-        "return_pct":round(100*(ending/START_CASH-1),2),
+        "net_profit_usd":round(ending-starting_cash,2),
+        "return_pct":round(100*(ending/starting_cash-1),2),
         "max_end_of_day_drawdown_usd":round(worst_dd,2),
         "max_end_of_day_drawdown_pct_of_preceding_peak":
             round(100*worst_dd/worst_peak,2) if worst_peak>0 else None,
