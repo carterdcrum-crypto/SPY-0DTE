@@ -32,6 +32,11 @@ ARMS = ("v4_quality_3x", "v5_close_proxy_current",
         "v5_close_proxy_challenger", "v5_close_proxy_unrestricted_RESEARCH_ONLY")
 FEE = .65
 SLIP = .01
+SETUP_SPLITS = {
+    "momentum_ignition": "momentum_ignition_CLOSE_PROXY",
+    "liquidity_reversal": "liquidity_reversal_CLOSE_PROXY",
+    "volatility_expansion": "volatility_expansion_CLOSE_PROXY",
+}
 
 
 def close_proxy_signals(frames, i, *, challenger=False):
@@ -229,17 +234,24 @@ def rolling_42(s, starting_cash=START_CASH):
                 if windows else None}
 
 
-def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
+def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, split_setups=False):
     if not math.isfinite(starting_cash) or starting_cash <= 0 or round(starting_cash, 2) != starting_cash:
         raise ValueError("starting_cash must be a positive dollar-and-cent amount")
     if not arms or any(arm not in ARMS for arm in arms):
         raise ValueError("unknown or missing research arm")
+    if split_setups and tuple(arms)!=(ARMS[-1],):
+        raise ValueError("split_setups requires only unrestricted V5 research arm")
+    # Fully separate accounts, not profit attribution within the combined arm.
+    policies={arm:(arm,None) for arm in arms}
+    if split_setups:
+        policies.update({f"{ARMS[-1]}__{label}":(ARMS[-1],setup)
+                         for label,setup in SETUP_SPLITS.items()})
     paths=_research_files(data_dir)
     if not paths:
         raise ValueError("Railway research archive absent; no fabricated history")
     states={name:{"settled":starting_cash,"pending":0.,"daily":[],
                   "trades":[],"skips":Counter(),"exits":Counter()}
-            for name in arms}
+            for name in policies}
     names=[]
     diagnostic={"missing_spy_high":True,"missing_spy_low":True,
                 "missing_completed_spy_volume":True,
@@ -258,7 +270,8 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
         original=selection(frames)
         proxy_regular=proxy_candidates(frames,challenger=False)
         proxy_challenger=proxy_candidates(frames,challenger=True)
-        for arm,s in states.items():
+        for label,s in states.items():
+            arm,setup_filter=policies[label]
             s["settled"]+=s["pending"]
             s["pending"]=0.
             opening=s["settled"]
@@ -268,6 +281,8 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
                         proxy_regular if arm=="v5_close_proxy_current" else
                         proxy_challenger)
             for item in candidates:
+                if setup_filter is not None and item["signal"]["setup"]!=setup_filter:
+                    continue
                 at=item["entry_at"]
                 if at>=cutoff-timedelta(minutes=MAX_FIXED_MIN+1):
                     s["skips"]["LATE_ENTRY"]+=1
@@ -298,7 +313,7 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
                 else:
                     outcome=proxy_exit(arm,item,frames,cutoff)
                 s["settled"]=round(s["settled"]-qty*debit,8)
-                row={"day":str(day),"arm":arm,"setup":item["signal"]["setup"],
+                row={"day":str(day),"arm":label,"setup":item["signal"]["setup"],
                      "contracts":qty,"quality_score":score,
                      "entry_time":at.isoformat(),"symbol":q.symbol,
                      "entry_debit_usd":debit}
@@ -317,8 +332,8 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
             s["daily"].append({"day":str(day),
                 "equity_usd":round(s["settled"]+s["pending"],4)})
     reports={}
-    for arm,s in states.items():
-        reports[arm]={**summary(s,starting_cash=starting_cash),"first_5k_session":first_hit(s),
+    for label,s in states.items():
+        reports[label]={**summary(s,starting_cash=starting_cash),"first_5k_session":first_hit(s),
                       "first_5x_session":first_hit(s,target=round(starting_cash*5,2)),
                       "rolling_42_session_proxy":rolling_42(s,starting_cash=starting_cash)}
     report={
@@ -327,7 +342,9 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS):
         "truthful_strict_v5_status":"BLOCKED_MISSING_REAL_SPY_OHLCV_AND_OPTION_DEPTH",
         "sessions":len(names),"first_day":min(names),"last_day":max(names),
         "start_cash_usd":starting_cash,
-        "tested_arms":list(arms),
+        "tested_arms":list(policies),
+        "split_setups":split_setups,
+        "split_method":"Independent all-cash T+1 replays with only that entry signal; no changes to shared exits, spreads, slippage or contract selection." if split_setups else None,
         "source":"Previously inspected SPY close/volume-ratio and CBBO-1m archive",
         "entry_execution":"option ASK+0.01/share+$0.65/contract; simulated exit sampled BID-0.01/share-$0.65/contract",
         "settlement":"one-session proceeds delay; no intraday option sale reuse",
@@ -369,11 +386,12 @@ def main():
     p.add_argument("--data-dir",type=Path,default=Path("/data/research"))
     p.add_argument("--starting-cash",type=float,default=START_CASH)
     p.add_argument("--arm",choices=ARMS,help="run only one profile; defaults to all four")
+    p.add_argument("--split-setups",action="store_true",help="compare all three V5 entry signals independently against combined V5; requires unrestricted --arm")
     p.add_argument("--output-dir",type=Path,
                    default=Path("/data/research/v5_archive_2026_10_14"))
     args=p.parse_args()
     run(args.data_dir,args.output_dir,starting_cash=args.starting_cash,
-        arms=(args.arm,) if args.arm else ARMS)
+        arms=(args.arm,) if args.arm else ARMS,split_setups=args.split_setups)
 
 
 if __name__=="__main__":
