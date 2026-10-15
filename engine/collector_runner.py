@@ -78,6 +78,31 @@ def _backoff_seconds(settings: CollectorRunnerSettings, consecutive_failures: in
     return min(settings.maximum_backoff_seconds, settings.interval_seconds * multiplier)
 
 
+def _safe_provider_error_fields(exc: Exception) -> str:
+    """Expose numeric HTTP/provider codes without leaking SDK request details.
+
+    Never log exception text, headers, URLs, response bodies, or credentials.
+    SDKs use different names for these fields, so inspect only known scalar
+    attributes and strictly constrain their printable form.
+    """
+    import re
+
+    fields = []
+    for name in ("status_code", "http_status", "http_status_code", "code", "error_code"):
+        try:
+            value = getattr(exc, name, None)
+        except Exception:
+            continue
+        if isinstance(value, int) and not isinstance(value, bool):
+            safe = str(value)
+        elif isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,32}", value):
+            safe = value
+        else:
+            continue
+        fields.append(f"{name}={safe}")
+    return " ".join(fields) if fields else "provider_code=unavailable"
+
+
 def run_forever(context: WorkerContext | None = None) -> None:
     logging.basicConfig(
         level=os.environ.get("LOG_LEVEL", "INFO").upper(),
@@ -142,9 +167,10 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     last_error = type(exc).__name__
                     sleep_seconds = _backoff_seconds(settings, consecutive_failures)
                     log.warning(
-                        "collection cycle failed source=%s type=%s retry_in=%ss failures=%d",
+                        "collection cycle failed source=%s type=%s %s retry_in=%ss failures=%d",
                         source,
                         type(exc).__name__,
+                        _safe_provider_error_fields(exc),
                         sleep_seconds,
                         consecutive_failures,
                     )
