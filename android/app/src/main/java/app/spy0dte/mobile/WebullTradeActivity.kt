@@ -292,11 +292,12 @@ internal fun parseStatus(text: String): ScreenStatus {
 
     val guard = if (liveAuto.optBoolean("configured", false)) liveAuto.optJSONObject("guard") ?: JSONObject()
         else broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
+    val accountGuard = broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
     val brokerState = BrokerState(
         connected = guard.optBoolean("connected", broker.optBoolean("connected", false)),
         entryAllowed = guard.optBoolean("entry_allowed", false),
-        cashAvailable = number(guard, "cash_available"),
-        totalEquity = number(guard, "total_equity"),
+        cashAvailable = number(guard, "cash_available") ?: number(accountGuard, "cash_available"),
+        totalEquity = number(guard, "total_equity") ?: number(accountGuard, "total_equity"),
         dailyPnl = number(guard, "daily_total_pnl"),
         openPnl = number(guard, "daily_open_pnl"),
         openPositions = liveAuto.optJSONArray("positions")?.length() ?: guard.optInt("open_positions", 0),
