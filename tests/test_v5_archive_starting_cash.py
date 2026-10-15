@@ -56,3 +56,25 @@ def test_rolling_42_uses_new_account_starting_balance():
     assert result["windows"] == 2
     assert result["5x_windows"] == 0
     assert result["halving_windows"] == 0
+
+
+def test_setup_split_requires_unrestricted_research_arm(tmp_path):
+    with pytest.raises(ValueError, match="unrestricted V5"):
+        run(tmp_path,tmp_path/"out",starting_cash=151.22,
+            arms=("v5_close_proxy_challenger",),split_setups=True)
+
+
+def test_all_three_close_proxy_setups_have_distinct_labels():
+    from engine.v5_archive_proxy import SETUP_SPLITS
+    assert SETUP_SPLITS == {
+        "momentum_ignition":"momentum_ignition_CLOSE_PROXY",
+        "liquidity_reversal":"liquidity_reversal_CLOSE_PROXY",
+        "volatility_expansion":"volatility_expansion_CLOSE_PROXY",
+    }
+
+
+def test_split_never_fabricates_archive_history(tmp_path):
+    with pytest.raises(ValueError, match="archive absent"):
+        run(tmp_path,tmp_path/"out",starting_cash=151.22,
+            arms=("v5_close_proxy_unrestricted_RESEARCH_ONLY",),
+            split_setups=True)
