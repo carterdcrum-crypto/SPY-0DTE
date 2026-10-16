@@ -21,7 +21,7 @@ class CollectorRunnerSettings:
     db_path: Path = Path("/data/spy_0dte.sqlite")
     interval_seconds: int = 2
     idle_sleep_seconds: int = 300
-    market_open: time = time(9, 45)
+    market_open: time = time(9, 30)
     market_close: time = time(16, 0)
     maximum_backoff_seconds: int = 120
 
@@ -54,7 +54,7 @@ def settings_from_env(env: Mapping[str, str] | None = None) -> CollectorRunnerSe
             values.get("COLLECTOR_IDLE_SLEEP_SECONDS", "300"),
             name="COLLECTOR_IDLE_SLEEP_SECONDS",
         ),
-        market_open=_parse_hhmm(values.get("COLLECTOR_MARKET_OPEN_ET", "09:45")),
+        market_open=_parse_hhmm(values.get("COLLECTOR_MARKET_OPEN_ET", "09:30")),
         market_close=_parse_hhmm(values.get("COLLECTOR_MARKET_CLOSE_ET", "16:00")),
         maximum_backoff_seconds=_positive_int(
             values.get("COLLECTOR_MAX_BACKOFF_SECONDS", "120"),
