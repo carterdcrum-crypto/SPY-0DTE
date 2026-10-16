@@ -255,6 +255,8 @@ def _market_status() -> dict[str, Any]:
             )
         except ValueError:
             pass
+    if result["data_age_seconds"] is None or result["data_age_seconds"] > 60.0:
+        result["spot"] = None
     return result
 
 
