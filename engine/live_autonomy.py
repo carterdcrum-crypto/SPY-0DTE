@@ -28,6 +28,13 @@ def publish(**values):
     with _status_lock:
         _status.clear()
         _status.update(values, updated_at=datetime.now(timezone.utc).isoformat())
+    # A protected, bounded decision trail makes every missing V5 entry
+    # explainable after the fact. Never make execution depend on audit writes.
+    try:
+        from .live_decision_audit import record_decision
+        record_decision(values)
+    except (OSError, ValueError, TypeError, __import__("sqlite3").Error) as exc:
+        log.warning("live decision audit unavailable type=%s", type(exc).__name__)
 
 
 def live_status() -> dict[str, Any]:
