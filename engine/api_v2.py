@@ -278,6 +278,14 @@ def paper_account(_: base.UserIdentity = Depends(base.require_user)) -> dict[str
     return _paper_store().snapshot().as_dict()
 
 
+@app.get("/v1/paper/daily-pnl")
+def paper_daily_pnl(
+    limit: int = Query(default=30, ge=1, le=365),
+    _: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    return {"days": _paper_store().daily_realized_pnl(limit)}
+
+
 @app.get("/v1/paper/positions")
 def paper_positions(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
     return {"positions": _paper_store().positions()}
