@@ -207,7 +207,7 @@ def status_payload() -> dict[str, Any]:
             payload["live_risk"] = {**limits.as_dict(), "armed_today": limits.is_complete, "standing_authorization": live["enabled"]}
         payload["live_alert"] = None
     if payload.get("mode") == "LIVE":
-        payload["decision"] = {"state": live["state"], "reason": live["reason"]}
+        payload["decision"] = {"state": live.get("state", "RECOVERING"), "reason": live.get("reason") or "awaiting live worker decision"}
     return payload
 
 
