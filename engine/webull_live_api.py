@@ -234,6 +234,14 @@ class LiveAutonomyRequest(BaseModel):
     confirmation: Literal["ENABLE AUTONOMOUS LIVE", "STOP AUTONOMOUS LIVE"]
 
 
+@app.get("/v1/live/decisions")
+def get_live_decisions(
+    limit: int = 100, _: base.UserIdentity = Depends(base.require_user)
+):
+    from .live_decision_audit import recent_decisions
+    return {"decisions": recent_decisions(limit)}
+
+
 @app.get("/v1/live/autonomy")
 def get_live_autonomy(_: base.UserIdentity = Depends(base.require_user)):
     return live_status()
