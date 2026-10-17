@@ -466,3 +466,24 @@ def test_closed_market_balance_error_never_creates_a_fake_zero_cash_value(rig):
     assert "unavailable" in result["reason"]
     assert rig.executor.telemetry(result)["guard"] is None
     assert rig.broker.submissions == []
+
+
+def test_production_executor_consumes_shared_collector_and_never_repolls_webull(rig, monkeypatch):
+    # Production MUST share the single trusted collector's snapshots. The
+    # injected fake provider used elsewhere in this suite still works as-is.
+    direct = rig.provider
+    provider = object.__new__(LiveDataProvider)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("duplicate Webull option snapshot call")
+    provider.collect_once = forbidden
+    rig.executor.provider = provider
+    from engine import shared_live_quotes
+    collected = []
+    def from_collector(path, now, **kwargs):
+        collected.append(now)
+        return direct.collect_once(now.date())
+    monkeypatch.setattr(shared_live_quotes, "collector_live_quotes", from_collector)
+    result = rig.executor.tick()
+    assert result["state"] == "ORDER_SUBMITTED"
+    assert len(collected) == 1
+    assert len(rig.broker.submissions) == 1
