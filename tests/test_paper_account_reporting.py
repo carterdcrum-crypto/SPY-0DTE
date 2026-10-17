@@ -61,3 +61,21 @@ def test_snapshot_cannot_mix_old_pnl_with_new_execution_count(monkeypatch, tmp_p
     assert after.trade_count == 1
     assert after.realized_pnl == pytest.approx(-18.9)
     assert after.open_positions == 0
+
+
+def test_daily_pnl_and_cash_settlement_do_not_double_count(tmp_path):
+    account = PaperAccountStore(tmp_path / "paper.sqlite", default_starting_cash=1000)
+    open_position(account)
+    account.close_long(symbol="SPY260925C00670000", quantity=3, fill_price=60,
+                       closed_at=datetime(2026, 9, 25, 15, 1, tzinfo=timezone.utc),
+                       trade_date=date(2026, 9, 25), reason="trailing")
+    assert account.daily_realized_pnl() == [
+        {"date": "2026-09-25", "realized_pnl": 30.0, "exits": 1}]
+    snap = account.snapshot()
+    assert snap.realized_pnl == pytest.approx(30)
+    assert snap.settled_cash + snap.unsettled_cash == pytest.approx(1030)
+    account.settle_due(date(2026, 9, 28))
+    snap = account.snapshot()
+    assert snap.settled_cash == pytest.approx(1030)
+    assert snap.unsettled_cash == pytest.approx(0)
+    assert snap.realized_pnl == pytest.approx(30)
