@@ -496,6 +496,27 @@ class PaperAccountStore:
             ).fetchall()
         return [self._position_dict(row) for row in rows]
 
+    def daily_realized_pnl(self, limit: int = 30) -> list[dict[str, Any]]:
+        """Daily realized paper P&L from confirmed SELL fills (UTC dates).
+
+        The account ledger already credits sale proceeds to unsettled cash,
+        then moves them to settled cash on T+1; do not credit P&L twice.
+        """
+        safe_limit = max(1, min(int(limit), 365))
+        with self._connect() as connection:
+            rows = connection.execute(
+                """SELECT substr(timestamp, 1, 10) AS trade_date,
+                          ROUND(SUM(realized_pnl), 2) AS realized_pnl,
+                          COUNT(*) AS exits
+                   FROM paper_trades WHERE side = 'SELL'
+                   GROUP BY substr(timestamp, 1, 10)
+                   ORDER BY trade_date DESC LIMIT ?""",
+                (safe_limit,),
+            ).fetchall()
+        return [{"date": str(row["trade_date"]),
+                 "realized_pnl": float(row["realized_pnl"]),
+                 "exits": int(row["exits"])} for row in rows]
+
     def recent_trades(self, limit: int = 20) -> list[dict[str, Any]]:
         safe_limit = max(1, min(int(limit), 100))
         with self._connect() as connection:
