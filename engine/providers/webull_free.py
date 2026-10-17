@@ -88,6 +88,9 @@ class WebullFreeDataProvider:
         self._contract_cache_date: date | None = None
         self._contract_cache_at: datetime | None = None
         self._contract_cache: Tuple[Mapping[str, Any], ...] = ()
+        # The archival quote owner must never drop an open LIVE contract when
+        # its strike moves outside the nearest-money selection.
+        self.pinned_symbols: set[str] = set()
 
     def list_zero_dte_contracts(self, trade_date: date) -> Tuple[Mapping[str, Any], ...]:
         now = datetime.now(timezone.utc)
@@ -268,7 +271,13 @@ class WebullFreeDataProvider:
         )
 
     def select_contracts(self, contracts, spot):
-        return _nearest_contracts(contracts, spot=spot, limit=self.active_contract_limit)
+        pinned = tuple(row for row in contracts
+                       if str(_first(row, "symbol", "option_symbol", "optionSymbol"))
+                       in self.pinned_symbols)
+        remaining = tuple(row for row in contracts if row not in pinned)
+        return (*pinned, *_nearest_contracts(
+            remaining, spot=spot,
+            limit=max(0, self.active_contract_limit-len(pinned))))
 
 
 def _nearest_contracts(
