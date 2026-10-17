@@ -484,6 +484,8 @@ def run_forever(mode_getter, context):
                             mode_getter=mode_getter)
                         active_credentials = credentials
                         active_account_id = selection
+                        log.info("live executor initialized strategy=%s quote_source=shared_collector",
+                                 profile)
                     publish(**executor.telemetry(executor.tick()))
                 failures = 0
                 context.heartbeat(last_error=None)
