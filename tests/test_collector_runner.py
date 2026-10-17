@@ -15,8 +15,9 @@ def test_collection_window_uses_eastern_market_time():
     settings = CollectorRunnerSettings()
     # 2026-09-22 is a Tuesday; 14:00 UTC is 10:00 ET during daylight time.
     assert is_collection_window(datetime(2026, 9, 22, 14, 0, tzinfo=timezone.utc), settings)
-    # 13:44 UTC is 09:44 ET, one minute before the delayed-data window opens.
-    assert not is_collection_window(datetime(2026, 9, 22, 13, 44, tzinfo=timezone.utc), settings)
+    # 13:29 UTC is 09:29 ET, one minute before regular market open.
+    assert not is_collection_window(datetime(2026, 9, 22, 13, 29, tzinfo=timezone.utc), settings)
+    assert is_collection_window(datetime(2026, 9, 22, 13, 30, tzinfo=timezone.utc), settings)
     # Saturday must never collect.
     assert not is_collection_window(datetime(2026, 9, 26, 14, 0, tzinfo=timezone.utc), settings)
 
