@@ -64,6 +64,11 @@ class SnapshotStore:
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute(SCHEMA)
         self._migrate_if_needed()
+        # The LIVE reader accesses the newest complete collector cycle every tick.
+        # Indexing receive time avoids a full historical scan on each read.
+        self.connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_option_snapshots_received_at ON option_snapshots(received_at)"
+        )
         self.connection.commit()
 
     def _migrate_if_needed(self) -> None:
