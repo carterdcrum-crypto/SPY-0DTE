@@ -154,7 +154,7 @@ class LiveExecutor:
         now = self.clock()
         # At most one balance request per second (Webull permits two per two
         # seconds). A fast model pass can reuse the same sub-second snapshot.
-        if self._account_read_at is None or (now-self._account_read_at).total_seconds() >= 1.05:
+        if self._account_read_at is None or (now-self._account_read_at).total_seconds() >= 3.0:
             self._last_account = account_values(self.broker.balances(account_id))
             self._account_read_at = now
         return self._last_account
@@ -295,7 +295,18 @@ class LiveExecutor:
         # snapshots; never block owned-position exits on a denied bar feed.
         if hasattr(self.strategy,"refresh_bars"):
             self.strategy.refresh_bars(self.provider,now)
-        snapshots = self.provider.collect_once(eastern.date())
+        # The collector is the only high-frequency Webull option quote owner.
+        # Sharing its validated SQLite cycle eliminates duplicate production
+        # snapshot requests, which previously saturated per-app API quotas.
+        if isinstance(self.provider, LiveDataProvider):
+            from .shared_live_quotes import collector_live_quotes
+            snapshots = collector_live_quotes(
+                os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"),
+                self.clock(),
+            )
+        else:
+            # Preserve injected test/sandbox providers for deterministic E2E.
+            snapshots = self.provider.collect_once(eastern.date())
         now = self.clock()
         self.market.ingest(snapshots, now)
         if positions:
@@ -487,6 +498,7 @@ def run_forever(mode_getter, context):
                 context.heartbeat(state="RECOVERING", last_error=type(exc).__name__)
                 log.warning("live reconciliation failed type=%s stage=%s",
                             type(exc).__name__, "webull" if isinstance(exc, WebullLiveError) else "worker")
-                if failures >= 5:
-                    raise
-            context.wait(max(0.1, (2.0 if not failures else min(30, 2**failures)) - (time.monotonic()-started)))
+                # A Webull 429 can persist for minutes. Keep the single owner
+                # reconciler alive rather than thrashing its SDK/session after
+                # five failures; the watchdog still detects a stalled worker.
+            context.wait(max(0.1, (3.0 if not failures else min(30, 2**failures)) - (time.monotonic()-started)))
