@@ -120,6 +120,12 @@ def run_forever(context: WorkerContext | None = None) -> None:
     provider = provider_from_env()
     source = provider_source(provider)
     store = SnapshotStore(settings.db_path)
+    # Keep the broker-held contract in the collector's single production
+    # quote batch even after SPY moves away from the entry strike.
+    live_positions_store = None
+    if source == "webull_production":
+        from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
+        live_positions_store = LiveAutonomyStore(autonomy_db_path())
     consecutive_failures = 0
     last_error = None
 
@@ -140,6 +146,12 @@ def run_forever(context: WorkerContext | None = None) -> None:
             if is_collection_window(now, settings):
                 trade_date = now.astimezone(EASTERN).date()
                 try:
+                    if live_positions_store is not None:
+                        actual_provider = getattr(provider, "provider", provider)
+                        if hasattr(actual_provider, "pinned_symbols"):
+                            actual_provider.pinned_symbols = {
+                                p["symbol"] for p in live_positions_store.positions()
+                            }
                     snapshots = collect_and_store(
                         provider,
                         store,
