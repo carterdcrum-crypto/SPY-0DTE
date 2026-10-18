@@ -363,13 +363,17 @@ def run_forever(context):
                 payload=run_once(settings.db_path,output,now=now)
                 last_run=key
                 from logging import getLogger
+                day_result = payload["results"][0]
+                coverage = {arm: {"scored": v.get("scorable_events", 0),
+                                   "blocked": v.get("unscorable_reasons", {})}
+                            for arm, v in day_result.get("results", {}).items()}
                 getLogger("spy0dte.intrabar").info(
-                    "research finished session=%s status=%s valid_cycles=%s candidate_events=%s matched_events=%s orders=0",
-                    key,
-                    payload["results"][0].get("status"),
-                    payload["results"][0].get("data_quality",{}).get("fresh_usable_cycles",0),
-                    payload["results"][0].get("candidate_events",0),
-                    payload["results"][0].get("all_arm_matched_events",0),
+                    "research finished session=%s status=%s valid_cycles=%s candidate_events=%s matched_events=%s per_arm=%s orders=0",
+                    key, day_result.get("status"),
+                    day_result.get("data_quality",{}).get("fresh_usable_cycles",0),
+                    day_result.get("candidate_events",0),
+                    day_result.get("all_arm_matched_events",0),
+                    json.dumps(coverage, sort_keys=True),
                 )
                 context.heartbeat(state="RUNNING",last_error=None,
                                   latest_researched_session=key,
