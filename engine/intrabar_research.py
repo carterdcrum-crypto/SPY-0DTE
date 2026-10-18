@@ -62,14 +62,19 @@ def _tradable(q: Quote) -> bool:
 
 
 def _cycles(path: str | Path, day: date):
-    """Load a bounded day of genuinely timestamped production option snapshots."""
+    """Stream a bounded day of verified snapshots, never buffer the full DB."""
+    from itertools import groupby
+
     if not Path(path).exists():
         return [], {"status": "BLOCKED_MISSING_COLLECTOR_SQLITE"}
     uri = f"file:{Path(path).resolve()}?mode=ro"
+    cycles = []
+    invalid = 0
+    row_count = 0
     try:
         with sqlite3.connect(uri, uri=True, timeout=3.0) as db:
             db.row_factory = sqlite3.Row
-            rows = db.execute(
+            cursor = db.execute(
                 """SELECT received_at,timestamp,underlying_timestamp,
                           option_symbol,expiration,right,bid,ask,bid_size,
                           ask_size,delta,underlying_price,timestamp_quality
@@ -79,55 +84,53 @@ def _cycles(path: str | Path, day: date):
                    ORDER BY received_at ASC LIMIT ?""",
                 (day.isoformat(), (day+timedelta(days=1)).isoformat(),
                  MAX_ROWS_PER_DAY+1),
-            ).fetchall()
+            )
+            for timestamp, batch in groupby(cursor, key=lambda r: r["received_at"]):
+                try:
+                    at = _utc(timestamp)
+                    if at.astimezone(ET).date() != day:
+                        for _ in batch:
+                            row_count += 1
+                        continue
+                    valid = []
+                    for r in batch:
+                        row_count += 1
+                        if row_count > MAX_ROWS_PER_DAY:
+                            return [], {"status": "BLOCKED_DAY_EXCEEDS_BOUNDED_RESEARCH_ROWS",
+                                        "row_limit": MAX_ROWS_PER_DAY}
+                        try:
+                            if (r["timestamp_quality"] != "option_quote_timestamp"
+                                or not r["underlying_timestamp"]
+                                or r["expiration"] != day.isoformat()):
+                                continue
+                            option_at = _utc(r["timestamp"])
+                            stock_at = _utc(r["underlying_timestamp"])
+                            if not all(-.25 <= (at-t).total_seconds() <= MAX_QUOTE_AGE
+                                       for t in (option_at, stock_at)):
+                                continue
+                            spot = float(r["underlying_price"])
+                            q = Quote(
+                                str(r["option_symbol"]), str(r["right"]).lower(),
+                                float(r["bid"]), float(r["ask"]),
+                                int(r["bid_size"]), int(r["ask_size"]),
+                                float(r["delta"]),
+                            )
+                            if not math.isfinite(spot) or spot <= 0 or not _tradable(q):
+                                continue
+                            valid.append((spot,q))
+                        except (ValueError, TypeError, OverflowError):
+                            invalid += 1
+                    if valid:
+                        cycles.append(Cycle(at, valid[0][0],
+                                            {q.symbol:q for _,q in valid}))
+                except (TypeError, ValueError):
+                    invalid += 1
+                    # Consume the group so the SQL cursor can advance safely.
+                    for _ in batch:
+                        row_count += 1
     except sqlite3.Error:
         return [], {"status": "BLOCKED_COLLECTOR_DATABASE_UNREADABLE"}
-    if len(rows) > MAX_ROWS_PER_DAY:
-        return [], {"status": "BLOCKED_DAY_EXCEEDS_BOUNDED_RESEARCH_ROWS",
-                    "row_limit": MAX_ROWS_PER_DAY}
-    bundles = defaultdict(list)
-    for r in rows:
-        bundles[r["received_at"]].append(r)
-    cycles = []
-    invalid = 0
-    for timestamp, batch in sorted(bundles.items()):
-        try:
-            at = _utc(timestamp)
-            if at.astimezone(ET).date() != day:
-                continue
-            # Verify quote *and* underlying source timestamps independently;
-            # receive time by itself is not a market-data freshness proof.
-            valid = []
-            for r in batch:
-                try:
-                    if (r["timestamp_quality"] != "option_quote_timestamp"
-                        or not r["underlying_timestamp"]
-                        or r["expiration"] != day.isoformat()):
-                        continue
-                    option_at, stock_at = _utc(r["timestamp"]), _utc(r["underlying_timestamp"])
-                    if not all(-.25 <= (at-t).total_seconds() <= MAX_QUOTE_AGE
-                               for t in (option_at, stock_at)):
-                        continue
-                    spot = float(r["underlying_price"])
-                    q = Quote(
-                        str(r["option_symbol"]), str(r["right"]).lower(),
-                        float(r["bid"]), float(r["ask"]),
-                        int(r["bid_size"]), int(r["ask_size"]),
-                        float(r["delta"]),
-                    )
-                    if not math.isfinite(spot) or spot <= 0 or not _tradable(q):
-                        continue
-                    valid.append((spot, q))
-                except (ValueError, TypeError, OverflowError):
-                    invalid += 1
-            if not valid:
-                continue
-            # One SPY stock snapshot is common to the whole batch.
-            spot = valid[0][0]
-            cycles.append(Cycle(at, spot, {q.symbol:q for _,q in valid}))
-        except (TypeError, ValueError):
-            invalid += 1
-    return cycles, {"status":"LOADED","db_rows":len(rows),
+    return cycles, {"status":"LOADED","db_rows":row_count,
                     "fresh_usable_cycles":len(cycles),
                     "untrusted_or_invalid_rows":invalid}
 
@@ -155,9 +158,6 @@ def _candidate_events(cycles: list[Cycle]):
     closed = _completed_closes(cycles)
     events=[]
     last_event=None
-    recent_by_minute=defaultdict(list)
-    for c in cycles:
-        recent_by_minute[_minute(c.at)].append(c)
     for c in cycles:
         m=_minute(c.at)
         local=c.at.astimezone(ET)
