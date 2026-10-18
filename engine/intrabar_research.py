@@ -349,12 +349,30 @@ def run_forever(context):
             context.wait(300)
             continue
         today_et=now.astimezone(ET)
-        key=today_et.date().isoformat()
+        latest=today_et.date()
+        close=session_close(latest)
+        if close is None or today_et < datetime.combine(latest,close,ET)+timedelta(minutes=20):
+            latest-=timedelta(days=1)
+        while session_close(latest) is None:
+            latest-=timedelta(days=1)
+        key=latest.isoformat()
+        # A run at midnight must not suppress the new completed session
+        # after 16:20 ET that same day.
         if last_run != key:
             try:
                 payload=run_once(settings.db_path,output,now=now)
                 last_run=key
+                from logging import getLogger
+                getLogger("spy0dte.intrabar").info(
+                    "research finished session=%s status=%s valid_cycles=%s candidate_events=%s matched_events=%s orders=0",
+                    key,
+                    payload["results"][0].get("status"),
+                    payload["results"][0].get("data_quality",{}).get("fresh_usable_cycles",0),
+                    payload["results"][0].get("candidate_events",0),
+                    payload["results"][0].get("all_arm_matched_events",0),
+                )
                 context.heartbeat(state="RUNNING",last_error=None,
+                                  latest_researched_session=key,
                                   complete_days=len(payload["results"]))
             except (OSError,ValueError,sqlite3.Error) as exc:
                 context.heartbeat(state="RECOVERING",last_error=type(exc).__name__)
