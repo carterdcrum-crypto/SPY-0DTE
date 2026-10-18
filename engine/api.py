@@ -303,9 +303,17 @@ def status_payload() -> dict[str, Any]:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     worker = start_worker("collector", run_forever) if _env_bool("START_COLLECTOR_IN_API", True) else None
+    # Strictly separate READ-ONLY after-hours experiment. No strategy or
+    # brokerage execution code is imported/modified by the research worker.
+    research_worker = None
+    if _env_bool("START_INTRABAR_RESEARCH", False):
+        from .intrabar_research import run_forever as run_intrabar_research
+        research_worker = start_worker("intrabar_research", run_intrabar_research)
     try:
         yield
     finally:
+        if research_worker:
+            research_worker.close()
         if worker:
             worker.close()
 
@@ -340,6 +348,22 @@ async def owner_auth_input_validation(request: Request, exc: RequestValidationEr
         errors.append({"field": field, "message": message})
     return JSONResponse({"detail": errors}, status_code=422,
                         headers={"Cache-Control": "no-store"})
+
+
+@app.get("/v1/research/intrabar")
+def intrabar_research_status(_: UserIdentity = Depends(require_user)) -> dict[str, Any]:
+    """Owner-authenticated result from read-only price-only Railway study."""
+    import json
+    path = Path(os.environ.get("INTRABAR_RESEARCH_REPORT",
+                               "/data/intrabar_research/report.json"))
+    if not path.is_file():
+        return {"status":"PENDING_SAMPLED_MARKET_RESEARCH",
+                "broker_orders":0,"live_v5_unchanged":True,"results":[]}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"status":"RESEARCH_REPORT_UNAVAILABLE","broker_orders":0,
+                "live_v5_unchanged":True,"results":[]}
 
 
 @app.get("/ready")
