@@ -42,12 +42,13 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     from .live_market import LiveDataProvider
     from .webull_live import production_credentials
     from .market_data_factory import provider_from_env
-    option_provider=None
+    # PAPER quotes come ONLY from the same collector SQLite snapshots used
+    # by LIVE. Giving PAPER its own Webull option provider would double REST
+    # snapshot requests and recreate production 429 rate-limit outages.
     bar_provider=None
     try:
         key,secret=production_credentials()
-        option_provider=LiveDataProvider(key,secret)
-        bar_provider=option_provider
+        bar_provider=LiveDataProvider(key,secret)
     except Exception:
         # PAPER must stay operational but fail closed for V4 signals
         # when the broker has not supplied valid market-data access.
@@ -68,7 +69,7 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
         mode_getter=mode_getter,
         market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),
         account_store=PaperAccountStore(_paper_db_path(),default_starting_cash=_paper_starting_cash()),
-        settings=settings,production_provider=option_provider,
+        settings=settings,production_provider=None,
         bar_provider=bar_provider,
     )
 
