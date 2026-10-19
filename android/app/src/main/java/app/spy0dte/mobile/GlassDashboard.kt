@@ -358,7 +358,7 @@ private fun GlassAutoTradeCard(status: ScreenStatus, preview: Boolean, saving: B
                 saving -> "Saving your preference…"
                 !status.connected -> "Offline · last confirmed state"
                 preview -> "Sign in to enable live trading"
-                status.liveEnabled -> "On · ${status.liveState.replace('_', ' ').lowercase()}"
+                status.liveEnabled -> "On · ${status.liveReason.ifBlank { status.liveState.replace('_', ' ').lowercase() }}"
                 else -> "Off · no new live entries"
             }, color = GlassColors.TextMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
         }
