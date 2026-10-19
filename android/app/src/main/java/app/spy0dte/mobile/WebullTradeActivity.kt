@@ -290,6 +290,24 @@ internal fun parseStatus(text: String): ScreenStatus {
         )
     }
 
+    val entryJson = liveAuto.optJSONObject("entry_diagnostics")
+    val counts = mutableMapOf<String, Int>()
+    entryJson?.optJSONObject("rejection_counts")?.let { obj ->
+        obj.keys().forEach { key ->
+            val count = obj.optInt(key, 0)
+            if (count > 0) counts[key] = count
+        }
+    }
+    val liveEntryDiagnostics = LiveEntryDiagnostics(
+        signalDetected = entryJson?.let { if (it.has("signal_detected") && !it.isNull("signal_detected")) it.optBoolean("signal_detected") else null },
+        spyCandleDataReady = entryJson?.let { if (it.has("data_ready") && !it.isNull("data_ready")) it.optBoolean("data_ready") else null },
+        settledCashUsd = number(entryJson, "settled_cash_usd"),
+        cheapestQualifiedContractUsd = number(entryJson, "cheapest_qualified_contract_usd"),
+        quotesObserved = entryJson?.takeIf { it.has("quotes_observed") }?.optInt("quotes_observed"),
+        rejectionCode = entryJson?.optString("rejection_code")?.takeIf { it.isNotBlank() },
+        rejectionCounts = counts.toMap(),
+    )
+
     val guard = if (liveAuto.optBoolean("configured", false)) liveAuto.optJSONObject("guard") ?: JSONObject()
         else broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
     val accountGuard = broker.optJSONObject("guard") ?: gate.optJSONObject("guard") ?: JSONObject()
@@ -322,6 +340,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         liveEnabled = liveAuto.optBoolean("enabled", false),
         liveState = if (liveAuto.optBoolean("worker_current", false)) liveAuto.optString("state", "STARTING") else "RECOVERING",
         liveReason = liveAuto.optString("reason", "Waiting for live worker"),
+        liveEntryDiagnostics = liveEntryDiagnostics,
         livePositions = livePositions,
         workerState = if (isLive) liveAuto.optString("state", "STARTING") else autonomy.optJSONObject("worker")?.optString("state", "STARTING") ?: "STARTING",
         paperBuys = paper.optInt("buy_count", 0),
