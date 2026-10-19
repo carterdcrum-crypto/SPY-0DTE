@@ -367,6 +367,29 @@ def check_live_execution(
     return result
 
 
+@app.get("/v1/alerts/status")
+def get_alerts_status(_: base.UserIdentity = Depends(base.require_user)) -> dict[str, Any]:
+    """Safe owner status: never return Slack webhook URLs or tokens."""
+    from .slack_alerts import VARS
+    from .runtime import runtime_status
+    destinations = {name: bool(os.environ.get(var, "").strip())
+                    for name, var in VARS.items()}
+    worker = runtime_status()["workers"].get("slack")
+    return {
+        "configured_channels": destinations,
+        "enabled": _env_bool("START_SLACK_ALERTS", False),
+        "ready": bool(worker and worker.get("healthy")) and all(destinations.values()),
+        "worker": None if worker is None else {
+            "state": worker.get("state"),
+            "healthy": bool(worker.get("healthy")),
+            "last_heartbeat": worker.get("last_heartbeat"),
+            "last_error_type": worker.get("last_error"),
+        },
+        "observational_only": True,
+        "submits_real_orders": False,
+    }
+
+
 @app.get("/v1/live/autonomy")
 def get_live_autonomy(_: base.UserIdentity = Depends(base.require_user)):
     return live_status()
