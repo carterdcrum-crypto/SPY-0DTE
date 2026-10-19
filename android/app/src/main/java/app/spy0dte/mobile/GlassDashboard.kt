@@ -814,7 +814,62 @@ private fun GlassPositionsScreen(status: ScreenStatus) {
             GlassKeyValue("Pending broker orders", if (live) status.brokerState.pendingOrders.toString() else "—")
             GlassKeyValue("Open P&L", signedMoney(if (live) status.brokerState.openPnl else status.paperUnrealizedPnl), pnlColor(if (live) status.brokerState.openPnl else status.paperUnrealizedPnl))
             GlassKeyValue(if (live) "Day P&L" else "Realized since reset", if (live) signedMoney(status.brokerState.dailyPnl) else signedMoney(status.paperPnl), pnlColor(if (live) status.brokerState.dailyPnl else status.paperPnl))
-            GlassKeyValue("New entry eligible", if (status.brokerState.entryAllowed) "YES" else "NO", if (status.brokerState.entryAllowed) GlassColors.Green else GlassColors.Amber)
+            if (live) {
+                GlassKeyValue("Executable order now",
+                    if (status.brokerState.entryAllowed) "YES" else "NO",
+                    if (status.brokerState.entryAllowed) GlassColors.Green else GlassColors.Amber)
+            }
+        }
+        if (status.mode == "LIVE" &&
+            status.liveStrategyProfile == "v5_close_only_unrestricted_research") {
+            GlassPanel {
+                Text("V5 · ENTRY CHECKS", color = GlassColors.Text,
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                val checks = status.liveEntryDiagnostics
+                GlassKeyValue("Auto trade", if (status.liveEnabled) "ON" else "OFF",
+                    if (status.liveEnabled) GlassColors.Green else GlassColors.Amber)
+                GlassKeyValue("SPY candle data", when (checks.spyCandleDataReady) {
+                    true -> "READY"
+                    false -> "NOT READY"
+                    null -> "NOT VERIFIED"
+                }, if (checks.spyCandleDataReady == true) GlassColors.Green else GlassColors.Amber)
+                GlassKeyValue("V5 signal detected", when (checks.signalDetected) {
+                    true -> "YES"
+                    false -> "NO"
+                    null -> "NOT EVALUATED"
+                }, if (checks.signalDetected == true) GlassColors.Green else GlassColors.Amber)
+                GlassKeyValue("Settled buying power",
+                    money(checks.settledCashUsd ?: status.brokerState.cashAvailable))
+                GlassKeyValue("Cheapest fully qualified contract",
+                    money(checks.cheapestQualifiedContractUsd))
+                if (checks.signalDetected == true) {
+                    GlassKeyValue("Option quotes examined",
+                        checks.quotesObserved?.toString() ?: "—")
+                }
+                if (status.liveEnabled && !status.brokerState.entryAllowed) {
+                    Spacer(Modifier.height(10.dp))
+                    Text("WHY NO NEW ORDER", color = GlassColors.Text,
+                        fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(status.liveReason.ifBlank {
+                        status.liveState.replace('_', ' ').lowercase()
+                    }, color = GlassColors.TextMuted, fontSize = 12.sp, lineHeight = 18.sp)
+                    val blockers = checks.rejectionCounts.entries
+                        .filter { it.value > 0 }
+                        .sortedByDescending { it.value }
+                        .take(4)
+                    if (blockers.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        blockers.forEach { (code, count) ->
+                            GlassKeyValue(v5RejectionLabel(code), count.toString())
+                        }
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
+                Text("Quote checks are a momentary snapshot. A signal is not an executed order.",
+                    color = GlassColors.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+            }
         }
         status.livePositions.forEach { position ->
             GlassPanel {
@@ -824,6 +879,20 @@ private fun GlassPositionsScreen(status: ScreenStatus) {
             }
         }
     }
+}
+
+private fun v5RejectionLabel(code: String): String = when (code) {
+    "wrong_expiration_or_side" -> "Wrong expiry / direction"
+    "untrusted_source" -> "Unverified option quotes"
+    "stale_quote" -> "Stale option / SPY quotes"
+    "invalid_bid_ask" -> "Invalid bid or ask"
+    "missing_depth" -> "No bid / ask size"
+    "missing_greeks" -> "Missing delta / volatility"
+    "delta_out_of_range" -> "Delta outside 0.40–0.60"
+    "iv_out_of_range" -> "Implied volatility too high"
+    "wide_spread" -> "Spread above 3%"
+    "insufficient_settled_cash" -> "Not enough settled cash"
+    else -> "Other quote check"
 }
 
 @Composable
