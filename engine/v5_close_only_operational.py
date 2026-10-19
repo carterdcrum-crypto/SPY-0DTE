@@ -70,41 +70,115 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
     rv=_rv(bars,len(bars)-3)
     if rv<=0:
         return None, {"state":"MISSING_REALIZED_VOLATILITY"}
+    # Diagnostics use the EXACT SAME screening sequence as execution.
+    # They are observational only: do not loosen delta, spread, freshness,
+    # depth, or cash rules just to create an order.
+    quotes=tuple(quotes)
+    checks = {
+        "wrong_expiration_or_side": 0, "untrusted_source": 0,
+        "stale_quote": 0, "invalid_bid_ask": 0,
+        "missing_depth": 0, "missing_greeks": 0,
+        "delta_out_of_range": 0, "iv_out_of_range": 0,
+        "wide_spread": 0, "insufficient_settled_cash": 0,
+    }
+    cheapest=None
+    cheapest_ask=None
     choices=[]
     for sig in setups:
         for q in quotes:
             try:
+                if q.expiration!=local.date() or q.right!=sig.side:
+                    checks["wrong_expiration_or_side"] += 1
+                    continue
                 if (q.source!="webull_production"
                     or q.timestamp_quality!="option_quote_timestamp"
-                    or q.underlying_timestamp is None
-                    or q.expiration!=local.date() or q.right!=sig.side):
+                    or q.underlying_timestamp is None):
+                    checks["untrusted_source"] += 1
                     continue
                 if any(not 0 <= (now-at).total_seconds() <= MAX_SOURCE_DELAY_SECONDS
                        for at in (q.timestamp,q.received_at,q.underlying_timestamp)):
+                    checks["stale_quote"] += 1
                     continue
                 bid=float(q.bid); ask=float(q.ask)
                 bs=int(q.bid_size); a_s=int(q.ask_size)
+                if not (math.isfinite(bid) and math.isfinite(ask) and ask>bid>0):
+                    checks["invalid_bid_ask"] += 1
+                    continue
+                if bs<1 or a_s<1:
+                    checks["missing_depth"] += 1
+                    continue
+                if q.greeks is None:
+                    checks["missing_greeks"] += 1
+                    continue
                 delta=float(q.greeks.delta); iv=float(q.greeks.implied_volatility)
-                if (not all(math.isfinite(x) for x in (bid,ask,delta,iv))
-                    or not ask>bid>0 or bs<1 or a_s<1
-                    or not .40<=abs(delta)<=.60 or iv<=0 or iv/rv>1.5):
+                if not (math.isfinite(delta) and math.isfinite(iv)):
+                    checks["missing_greeks"] += 1
+                    continue
+                if not .40<=abs(delta)<=.60:
+                    checks["delta_out_of_range"] += 1
+                    continue
+                if not (iv>0 and iv/rv<=1.5):
+                    checks["iv_out_of_range"] += 1
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
                 if spread>MAX_PREMIUM_SPREAD:
+                    checks["wide_spread"] += 1
                     continue
                 debit=round((ask+SLIPPAGE_PER_SHARE)*100+FEE,2)
+                # Show the CHEAPEST quote which passes ALL non-cash gates.
+                # A lower ask from a stale/wide/untrusted quote is not eligible.
+                if cheapest is None or debit<cheapest:
+                    cheapest=debit
+                    cheapest_ask=ask
                 # Fully unrestricted premium budgeting IN PAPER, but strictly
                 # bound by real displayed bid/ask depth and settled cash.
                 n=min(int((settled+1e-8)//debit),bs,a_s)
                 if n<1:
+                    checks["insufficient_settled_cash"] += 1
                     continue
                 score=quality_score(sig,spread,delta,iv,rv)
                 choices.append((abs(abs(delta)-.5),spread,str(q.option_symbol),
                     sig,q,n,debit,score))
             except (AttributeError,TypeError,ValueError,ZeroDivisionError,OverflowError):
+                checks["missing_greeks"] += 1
                 continue
+    reason_codes = {
+        "wrong_expiration_or_side": "No matching same-day call/put contract",
+        "untrusted_source": "Option quote source or timestamp unverified",
+        "stale_quote": "Option or underlying quote older than 3 seconds",
+        "invalid_bid_ask": "Invalid option bid/ask prices",
+        "missing_depth": "No executable size on both sides of the quote",
+        "missing_greeks": "Option delta or implied volatility unavailable",
+        "delta_out_of_range": "Option delta outside 0.40–0.60",
+        "iv_out_of_range": "Option implied volatility exceeds the V5 threshold",
+        "wide_spread": "Option bid/ask spread exceeds 3%",
+        "insufficient_settled_cash": "Settled cash cannot cover one qualifying contract",
+    }
+    blocking = "eligible" if choices else next(
+        (name for name in (
+            "insufficient_settled_cash", "wide_spread", "iv_out_of_range",
+            "delta_out_of_range", "missing_greeks", "missing_depth",
+            "invalid_bid_ask", "stale_quote", "untrusted_source",
+            "wrong_expiration_or_side",
+        ) if checks[name]), "no_option_quotes")
+    details={
+        "signal_detected":True,
+        "data_ready":True,
+        "settled_cash_usd":round(float(settled),2),
+        "cheapest_qualified_contract_usd":cheapest,
+        "cheapest_qualified_ask":cheapest_ask,
+        "rejection_code":blocking,
+        "rejection_counts":checks,
+        "quotes_observed":len(quotes),
+        "signals_found":len(setups),
+        "asof":now.isoformat(),
+    }
     if not choices:
-        return None, {"state":"NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE"}
+        return None, {
+            "state":"NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE",
+            "reason":reason_codes.get(blocking,"No current option quotes"),
+            "entry_diagnostics":details,
+        }
     _,_,_,sig,q,n,debit,score=min(choices,key=lambda x:x[:3])
     return {"symbol":q.option_symbol,"quantity":n,"side":sig.side,
         "quality_score":score,"setup":sig.setup,
@@ -115,6 +189,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "reason":f"{PROFILE}; {sig.setup}; long0dte; paper-research-only",
         "no_live_order":True}, {"state":"PAPER_RESEARCH_SIGNAL","contracts":n,
                                  "full_premium_risk_usd":round(n*debit,2),
+                                 "entry_diagnostics":details,
                                  "no_live_order":True}
 
 
