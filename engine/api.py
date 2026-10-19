@@ -107,6 +107,33 @@ class ControlStore:
             )
             connection.commit()
 
+    def paper_armed(self) -> bool:
+        """Independent persisted PAPER switch, separate from LIVE mode.
+
+        Migration: accounts that were already in PAPER mode keep their legacy
+        authorization. Existing LIVE accounts default to OFF until owner arms.
+        """
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT value FROM app_state WHERE key = 'paper_autonomy_armed'"
+            ).fetchone()
+        if row is None:
+            return self.get_mode() is TradingMode.PAPER
+        return str(row[0]) == "1"
+
+    def set_paper_armed(self, armed: bool) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO app_state(key, value, updated_at)
+                VALUES('paper_autonomy_armed', ?, ?)
+                ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at
+                """,
+                ("1" if armed else "0", now),
+            )
+            connection.commit()
+
     def save_webull_credentials(
         self,
         environment: str,
@@ -444,6 +471,12 @@ def set_mode(request: ModeRequest, _: UserIdentity = Depends(require_user)) -> d
         if request.confirmation != "ENABLE LIVE TRADING":
             raise HTTPException(status_code=400, detail="explicit live-trading confirmation required")
     store.set_mode(request.mode)
+    # Keep legacy PAPER/SHADOW mode selection meaningful while ensuring LIVE
+    # selection never silently disarms the separate paper simulator.
+    if request.mode is TradingMode.PAPER:
+        store.set_paper_armed(True)
+    elif request.mode is TradingMode.SHADOW:
+        store.set_paper_armed(False)
     if request.mode is not TradingMode.LIVE:
         from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
         LiveAutonomyStore(autonomy_db_path()).disable(datetime.now(timezone.utc))
