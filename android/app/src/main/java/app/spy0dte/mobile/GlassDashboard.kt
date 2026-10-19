@@ -84,6 +84,7 @@ internal data class GlassActions(
     val listCashAccounts: suspend () -> Result<List<WebullAccountChoice>>,
     val selectCashAccount: suspend (String) -> Result<String>,
     val setLiveAutonomy: suspend (Boolean) -> Result<String>,
+    val verifyLiveExecution: suspend () -> Result<String>,
     val setMode: suspend (String) -> Result<String>,
     val setPaperAutonomy: suspend (Boolean) -> Result<String>,
     val resetPaperAccount: suspend (Double) -> Result<String>,
@@ -981,6 +982,8 @@ private fun GlassSettingsScreen(
     var contracts by remember(status.risk.contracts) { mutableStateOf(status.risk.contracts?.toString() ?: "3") }
     var message by remember { mutableStateOf<String?>(null) }
     var modeMessage by remember { mutableStateOf<String?>(null) }
+    var executionCheck by remember { mutableStateOf<String?>(null) }
+    var previewRunning by remember { mutableStateOf(false) }
     var paperMessage by remember { mutableStateOf<String?>(null) }
     var paperLimit by remember(status.paperStartingCash) {
         mutableStateOf(status.paperStartingCash?.let(::trimNumber) ?: status.paperCash?.let(::trimNumber) ?: "1000")
@@ -1101,6 +1104,31 @@ private fun GlassSettingsScreen(
 
         }
 
+        GlassPanel {
+            Text("WEBULL · NON-EXECUTING ORDER CHECK", color = GlassColors.Text,
+                fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            Text("Tests current buying power, fresh option quotes, order format, and Webull's order PREVIEW endpoint. Never sends an order, and cannot guarantee a later fill.",
+                color = GlassColors.TextMuted, fontSize = 11.sp, lineHeight = 16.sp)
+            Spacer(Modifier.height(7.dp))
+            GlassOutlineButton(
+                text = if (previewRunning) "Checking Webull…" else "Verify Order Capability (No Trade)",
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    previewRunning = true
+                    scope.launch {
+                        actions.verifyLiveExecution()
+                            .onSuccess { executionCheck = it }
+                            .onFailure { executionCheck = it.message ?: "Could not complete Webull preview" }
+                        previewRunning = false
+                    }
+                },
+            )
+            executionCheck?.let {
+                Spacer(Modifier.height(7.dp))
+                Text(it, color = GlassColors.TextMuted, fontSize = 11.sp, lineHeight = 16.sp)
+            }
+        }
         GlassPanel {
             Text("AUTONOMOUS PAPER", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
             Spacer(Modifier.height(7.dp))
