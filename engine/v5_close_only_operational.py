@@ -94,6 +94,16 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "delta_out_of_range": 0, "iv_out_of_range": 0,
         "wide_spread": 0, "insufficient_settled_cash": 0,
     }
+    # Count each distinct option/side just once even if multiple setup
+    # families signal in the same minute. Execution still evaluates every
+    # setup and quote combination exactly as before.
+    counted_rejections=set()
+    def reject(code, sig, q):
+        identity=(sig.side, getattr(q, "option_symbol", id(q)))
+        if identity not in counted_rejections:
+            counted_rejections.add(identity)
+            checks[code] += 1
+
     cheapest=None
     cheapest_ask=None
     choices=[]
@@ -101,41 +111,41 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         for q in quotes:
             try:
                 if q.expiration!=local.date() or q.right!=sig.side:
-                    checks["wrong_expiration_or_side"] += 1
+                    reject("wrong_expiration_or_side", sig, q)
                     continue
                 if (q.source!="webull_production"
                     or q.timestamp_quality!="option_quote_timestamp"
                     or q.underlying_timestamp is None):
-                    checks["untrusted_source"] += 1
+                    reject("untrusted_source", sig, q)
                     continue
                 if any(not 0 <= (now-at).total_seconds() <= MAX_SOURCE_DELAY_SECONDS
                        for at in (q.timestamp,q.received_at,q.underlying_timestamp)):
-                    checks["stale_quote"] += 1
+                    reject("stale_quote", sig, q)
                     continue
                 bid=float(q.bid); ask=float(q.ask)
                 bs=int(q.bid_size); a_s=int(q.ask_size)
                 if not (math.isfinite(bid) and math.isfinite(ask) and ask>bid>0):
-                    checks["invalid_bid_ask"] += 1
+                    reject("invalid_bid_ask", sig, q)
                     continue
                 if bs<1 or a_s<1:
-                    checks["missing_depth"] += 1
+                    reject("missing_depth", sig, q)
                     continue
                 if q.greeks is None:
-                    checks["missing_greeks"] += 1
+                    reject("missing_greeks", sig, q)
                     continue
                 delta=float(q.greeks.delta); iv=float(q.greeks.implied_volatility)
                 if not (math.isfinite(delta) and math.isfinite(iv)):
-                    checks["missing_greeks"] += 1
+                    reject("missing_greeks", sig, q)
                     continue
                 if not .40<=abs(delta)<=.60:
-                    checks["delta_out_of_range"] += 1
+                    reject("delta_out_of_range", sig, q)
                     continue
                 if not (iv>0 and iv/rv<=1.5):
-                    checks["iv_out_of_range"] += 1
+                    reject("iv_out_of_range", sig, q)
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
                 if spread>MAX_PREMIUM_SPREAD:
-                    checks["wide_spread"] += 1
+                    reject("wide_spread", sig, q)
                     continue
                 debit=round((ask+SLIPPAGE_PER_SHARE)*100+FEE,2)
                 # Show the CHEAPEST quote which passes ALL non-cash gates.
@@ -147,13 +157,13 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
                 # bound by real displayed bid/ask depth and settled cash.
                 n=min(int((settled+1e-8)//debit),bs,a_s)
                 if n<1:
-                    checks["insufficient_settled_cash"] += 1
+                    reject("insufficient_settled_cash", sig, q)
                     continue
                 score=quality_score(sig,spread,delta,iv,rv)
                 choices.append((abs(abs(delta)-.5),spread,str(q.option_symbol),
                     sig,q,n,debit,score))
             except (AttributeError,TypeError,ValueError,ZeroDivisionError,OverflowError):
-                checks["missing_greeks"] += 1
+                reject("missing_greeks", sig, q)
                 continue
     reason_codes = {
         "wrong_expiration_or_side": "No matching same-day call/put contract",
