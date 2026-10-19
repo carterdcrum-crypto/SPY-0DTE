@@ -81,6 +81,17 @@ def source_snapshots(db:Path,now:datetime):
     return tuple(out.values())
 
 
+class PaperMinuteBarCache(WebullMinuteBarCache):
+    """Paper-only 15s M1 pacing avoids doubling live Webull bar API load."""
+
+    def refresh(self, provider, now):
+        if self.last_attempt is not None:
+            seconds=(now-self.last_attempt).total_seconds()
+            if 0 <= seconds < 15:
+                return self.bars
+        return super().refresh(provider,now)
+
+
 class V4QualityPaperTrader(PaperAutoTrader):
     def __init__(self,*,mode_getter,market_reader,account_store,settings,
                  production_provider=None,bar_provider=None):
@@ -88,7 +99,7 @@ class V4QualityPaperTrader(PaperAutoTrader):
                          account_store=account_store,settings=settings)
         self.production_provider=production_provider
         self.bar_provider=bar_provider or production_provider
-        self.bar_cache=WebullMinuteBarCache()
+        self.bar_cache=PaperMinuteBarCache()
         self.last_data_error=None
 
     @staticmethod
