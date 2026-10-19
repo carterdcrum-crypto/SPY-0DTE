@@ -105,3 +105,58 @@ def test_status_uses_live_worker_and_does_not_poll_broker_per_viewer(controls, m
     assert payload["live_alert"] is None
     assert payload["decision"]["state"] == payload["live_autonomy"]["state"]
     assert payload["live_risk"]["standing_authorization"]
+
+
+def test_paper_autonomy_can_trade_simultaneously_with_live_without_disarming_broker(controls):
+    """Live and paper authorization are independent durable switches."""
+    save_limits(controls)
+    enabled = controls.post("/v1/live/autonomy", json={
+        "enabled": True, "confirmation": ARM_AUTONOMY,
+    })
+    assert enabled.status_code == 200
+    assert enabled.json()["enabled"] is True
+    assert api._control_store().get_mode() is api.TradingMode.LIVE
+
+    armed = controls.post("/v1/paper/autonomy", json={"armed": True})
+    assert armed.status_code == 200
+    assert armed.json()["armed"] is True
+    assert armed.json()["mode"] == "PAPER"
+    assert armed.json()["primary_mode"] == "LIVE"
+    assert armed.json()["simultaneous_live_and_paper"] is True
+    assert api._control_store().get_mode() is api.TradingMode.LIVE
+    assert api_v2._strategy_mode() == "PAPER"
+    assert LiveAutonomyStore(autonomy_db_path()).policy()["enabled"] is True
+    status = controls.get("/v1/status").json()
+    assert status["mode"] == "LIVE"
+    assert status["live_autonomy"]["enabled"] is True
+    assert status["paper_autonomy"]["armed"] is True
+    assert status["paper_autonomy"]["live_order_submission"] is False
+    assert status["paper_autonomy"]["production_isolated"] is True
+
+    # Reopening the control database (as after a Railway restart) retains
+    # both switches. No trading capital or paper ledger is reset.
+    assert api.ControlStore(api._control_store().path).paper_armed() is True
+    stopped = controls.post("/v1/paper/autonomy", json={"armed": False})
+    assert stopped.status_code == 200
+    assert stopped.json()["primary_mode"] == "LIVE"
+    assert stopped.json()["mode"] == "SHADOW"
+    assert api_v2._strategy_mode() == "SHADOW"
+    assert LiveAutonomyStore(autonomy_db_path()).policy()["enabled"] is True
+    assert api._control_store().get_mode() is api.TradingMode.LIVE
+
+
+def test_enabling_live_preserves_existing_simulator_arming(controls):
+    assert controls.post("/v1/paper/autonomy", json={"armed": True}).status_code == 200
+    save_limits(controls)
+    assert controls.post("/v1/live/autonomy", json={
+        "enabled": True, "confirmation": ARM_AUTONOMY,
+    }).status_code == 200
+    assert api._control_store().get_mode() is api.TradingMode.LIVE
+    assert api._control_store().paper_armed() is True
+    assert api_v2._strategy_mode() == "PAPER"
+    # Standard explicit mode selection still retains its earlier safety:
+    # switching from LIVE to standalone PAPER disables real-money autonomy.
+    result = controls.post("/v1/mode", json={"mode":"PAPER"})
+    assert result.status_code == 200
+    assert api._control_store().paper_armed() is True
+    assert not LiveAutonomyStore(autonomy_db_path()).policy()["enabled"]
