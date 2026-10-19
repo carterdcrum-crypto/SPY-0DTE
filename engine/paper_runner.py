@@ -31,10 +31,9 @@ def execution_lock(account_path: str):
 
 
 def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
-    # The selected LIVE profile remains V4. V5 is a separately selected
-    # PAPER-only research profile, never shared with Webull live execution.
-    if os.environ.get("SPY_STRATEGY_PROFILE","v4_original_3x").strip().lower()!="v4_original_3x":
-        raise RuntimeError("LIVE production profile must remain original V4")
+    # The PAPER worker has no broker order submission path. Its selected
+    # profile is independent of LIVE_STRATEGY_PROFILE and legacy
+    # SPY_STRATEGY_PROFILE, so concurrent LIVE V5 cannot disable PAPER.
     paper_profile=os.environ.get("PAPER_STRATEGY_PROFILE","v4_original_3x").strip().lower()
     if paper_profile not in ("v4_original_3x","v5_close_only_unrestricted_research"):
         raise RuntimeError("Unknown paper strategy profile")
