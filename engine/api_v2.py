@@ -108,11 +108,13 @@ def _paper_autonomy_payload() -> dict[str, Any]:
     runner_enabled = _env_bool("START_PAPER_AUTOTRADER", False)
     worker = runtime_status()["workers"].get("paper", {})
     running = runner_enabled and bool(worker.get("healthy", False))
-    armed = mode is base.TradingMode.PAPER
+    armed = base._control_store().paper_armed()
     settings = PaperAutoSettings.from_env()
     return {
         "armed": armed,
-        "mode": mode.value,
+        "mode": "PAPER" if armed else "SHADOW",
+        "primary_mode": mode.value,
+        "simultaneous_live_and_paper": mode is base.TradingMode.LIVE and armed,
         "engine_running": running,
         "engine_configured": runner_enabled,
         "worker": worker,
@@ -246,12 +248,9 @@ base.status_payload = status_payload
 
 
 def _strategy_mode() -> str:
-    mode = base._control_store().get_mode()
-    # LIVE uses the same strategy/risk loop as SHADOW so decisions can be
-    # surfaced to the phone without giving that loop broker-write capability.
-    if mode is base.TradingMode.LIVE:
-        return base.TradingMode.SHADOW.value
-    return mode.value
+    # The PAPER worker can simulate while LIVE runs, with no broker-write path.
+    # It reads only the independently persisted owner PAPER switch.
+    return ("PAPER" if base._control_store().paper_armed() else "SHADOW")
 
 
 @asynccontextmanager
@@ -315,14 +314,9 @@ def set_paper_autonomy(
     _: base.UserIdentity = Depends(base.require_user),
 ) -> dict[str, Any]:
     store = base._control_store()
-    # PAPER/SHADOW action must also stop standing LIVE authorization,
-    # just like /v1/mode. Otherwise the UI might show an old live toggle
-    # as enabled after switching to simulation.
-    from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
-    live = LiveAutonomyStore(autonomy_db_path())
-    if live.policy()["enabled"]:
-        live.disable(datetime.now(timezone.utc))
-    store.set_mode(base.TradingMode.PAPER if request.armed else base.TradingMode.SHADOW)
+    # PAPER is an independent simulated account. NEVER alter the real-money
+    # live toggle or global LIVE selection when the owner arms/disarms PAPER.
+    store.set_paper_armed(request.armed)
     return _paper_autonomy_payload()
 
 
