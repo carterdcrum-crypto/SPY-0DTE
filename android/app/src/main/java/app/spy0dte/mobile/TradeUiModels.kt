@@ -106,6 +106,8 @@ internal data class ScreenStatus(
     val paperTrades: Int = 0,
     val paperArmed: Boolean = false,
     val paperEngineRunning: Boolean = false,
+    val paperDecision: String = "STARTING",
+    val paperReason: String = "Waiting for paper worker",
     val paperUnsettledCash: Double? = null,
     val paperBuys: Int = 0,
     val paperSells: Int = 0,
