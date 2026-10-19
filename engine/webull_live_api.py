@@ -219,10 +219,19 @@ _previous_lifespan = app.router.lifespan_context
 @asynccontextmanager
 async def lifespan(app):
     worker = start_worker("live", lambda context: run_live(lambda: base._control_store().get_mode().value, context))
+    notifier = None
+    # Slack is observational. Never start until the owner has separately
+    # configured all three destinations and enabled it in Railway.
+    if _env_bool("START_SLACK_ALERTS", False):
+        from .slack_alerts import VARS, run_forever as run_slack_alerts
+        if all(os.environ.get(var, "").strip() for var in VARS.values()):
+            notifier = start_worker("slack", run_slack_alerts)
     try:
         async with _previous_lifespan(app):
             yield
     finally:
+        if notifier is not None:
+            notifier.close()
         worker.close()
 
 
