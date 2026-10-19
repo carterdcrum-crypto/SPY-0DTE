@@ -393,6 +393,10 @@ internal fun parseStatus(text: String): ScreenStatus {
         paperTrades = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
         paperArmed = autonomy.optBoolean("armed", false),
         paperEngineRunning = autonomy.optBoolean("engine_running", false),
+        paperDecision = paperAutomation.optString("state", "STARTING"),
+        paperReason = paperAutomation.optString("reason", "").trim().ifBlank {
+            paperAutomation.optString("state", "WAITING_PAPER_WORKER").replace('_', ' ').lowercase()
+        },
     )
 }
 
