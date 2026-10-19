@@ -105,6 +105,8 @@ internal data class ScreenStatus(
     val paperPositions: Int = 0,
     val paperTrades: Int = 0,
     val paperArmed: Boolean = false,
+    val paperEngineRunning: Boolean = false,
+    val paperUnsettledCash: Double? = null,
     val paperBuys: Int = 0,
     val paperSells: Int = 0,
     val paperUnrealizedPnl: Double? = null,
