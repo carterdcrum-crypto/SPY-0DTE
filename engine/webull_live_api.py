@@ -242,6 +242,122 @@ def get_live_decisions(
     return {"decisions": recent_decisions(limit)}
 
 
+class ExecutionCapabilityCheck(BaseModel):
+    confirmation: Literal["VERIFY LIVE PREVIEW ONLY"]
+
+
+@app.post("/v1/live/execution-check")
+def check_live_execution(
+    request: ExecutionCapabilityCheck,
+    user: base.UserIdentity = Depends(base.require_user),
+) -> dict[str, Any]:
+    """Owner-triggered, NON-EXECUTING Webull option-order preview.
+
+    Never calls place_order, never reserves an order ID, and never modifies
+    LIVE/PAPER permissions. A successful preview does NOT prove an order will
+    fill or that the live algorithm has a qualifying signal.
+    """
+    from .live_autonomy import account_values
+    from .shared_live_quotes import collector_live_quotes
+    from .session_calendar import EASTERN, session_bounds
+    from .webull import build_option_order_item
+    from datetime import time as wall_time
+
+    _require_real_owner(user)
+    now = datetime.now(timezone.utc)
+    checks = {
+        "live_armed": bool(live_status().get("enabled")),
+        "live_worker_heartbeat": bool(live_status().get("worker_current")),
+        "mode_live": base._control_store().get_mode() is base.TradingMode.LIVE,
+        "execution_environment": not bool(execution_blocks()),
+    }
+    result: dict[str, Any] = {
+        "checked_at": now.isoformat(),
+        "order_submitted": False,
+        "broker_order_acknowledged": False,
+        "preview_only": True,
+        "checks": checks,
+        "execution_blockers": execution_blocks(),
+        "broker_preview_accepted": False,
+        "status": "NOT_PROVEN",
+    }
+    if not all(checks.values()):
+        result["status"] = "BLOCKED_BY_LIVE_PREREQUISITES"
+        return result
+
+    eastern = now.astimezone(EASTERN)
+    bounds = session_bounds(eastern.date(), wall_time(9,30), wall_time(16))
+    if bounds is None or not bounds[0] <= eastern < bounds[1] or (bounds[1]-eastern).total_seconds() < 20*60:
+        result["status"] = "OUTSIDE_LIVE_ENTRY_WINDOW"
+        return result
+    quotes = collector_live_quotes(
+        os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"),
+        now, max_age_seconds=3.0,
+    )
+    eligible = []
+    for q in quotes:
+        try:
+            if q.expiration != eastern.date() or q.greeks is None:
+                continue
+            if q.bid<=0 or q.ask<=q.bid or q.bid_size<1 or q.ask_size<1:
+                continue
+            if not .40 <= abs(float(q.greeks.delta)) <= .60:
+                continue
+            if (q.ask-q.bid)/((q.ask+q.bid)/2) > .03:
+                continue
+            _, expiry, option_type, strike = parse_occ_symbol(q.option_symbol)
+            if expiry != eastern.date().isoformat():
+                continue
+            eligible.append((q,option_type,strike))
+        except (TypeError,ValueError,ZeroDivisionError,OverflowError):
+            continue
+    result["fresh_option_contracts"] = len(quotes)
+    result["eligible_preview_contracts"] = len(eligible)
+    if not eligible:
+        result["status"] = "NO_FRESH_ELIGIBLE_OPTION_QUOTE"
+        return result
+
+    client = WebullLiveClient.from_env()
+    try:
+        profile = client.account_profile()
+        if not profile.is_cash:
+            result["status"] = "BROKER_ACCOUNT_NOT_CASH"
+            return result
+        account = account_values(client.balances(profile.account_id))
+        result["verified_settled_cash"] = round(account["settled_cash"],2)
+        # Cheapest contract passing the same option quality and provenance
+        # gates as V5. Preview is never an algorithm entry recommendation.
+        q,option_type,strike = min(eligible,key=lambda x:x[0].ask)
+        price = round(float(q.ask)+.00000001,2)
+        result["minimum_one_contract_debit_usd"] = round(price*100+1.0,2)
+        result["contract_type"] = option_type
+        if account["settled_cash"] < result["minimum_one_contract_debit_usd"]:
+            result["status"] = "INSUFFICIENT_SETTLED_BUYING_POWER"
+            return result
+        order = OptionOrderRequest(
+            account_id=profile.account_id,client_order_id=uuid.uuid4().hex,
+            underlying="SPY",strike_price=strike,
+            expiration_date=eastern.date().isoformat(),
+            option_type=option_type,side="BUY",
+            position_intent="BUY_TO_OPEN",quantity=1,limit_price=price,
+        )
+        # Validate schema locally, then invoke the broker's official
+        # *preview* endpoint. NEVER invoke place_option_order here.
+        payload = build_option_order_item(order)
+        if payload["order_type"] != "LIMIT" or payload["time_in_force"] != "DAY":
+            result["status"] = "UNSUPPORTED_ORDER_SCHEMA"
+            return result
+        client.preview_option_order(order)
+    except (WebullLiveError, RuntimeError, ValueError, TypeError, OSError) as exc:
+        result["status"] = "BROKER_PREVIEW_FAILED"
+        result["broker_error_type"] = type(exc).__name__
+        result["broker_http_status"] = getattr(exc,"http_status",None)
+        return result
+    result["broker_preview_accepted"] = True
+    result["status"] = "BROKER_PREVIEW_ACCEPTED_NO_REAL_ORDER"
+    return result
+
+
 @app.get("/v1/live/autonomy")
 def get_live_autonomy(_: base.UserIdentity = Depends(base.require_user)):
     return live_status()
