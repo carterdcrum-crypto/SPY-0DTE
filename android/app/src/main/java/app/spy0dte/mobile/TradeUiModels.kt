@@ -25,6 +25,17 @@ internal data class AiDecisionState(
     val providers: List<AiProviderState> = emptyList(),
 )
 
+/** Snapshot-only V5 decision checks; not a promise that Webull accepted an order. */
+internal data class LiveEntryDiagnostics(
+    val signalDetected: Boolean? = null,
+    val spyCandleDataReady: Boolean? = null,
+    val settledCashUsd: Double? = null,
+    val cheapestQualifiedContractUsd: Double? = null,
+    val quotesObserved: Int? = null,
+    val rejectionCode: String? = null,
+    val rejectionCounts: Map<String, Int> = emptyMap(),
+)
+
 internal data class BrokerState(
     val connected: Boolean = false,
     val entryAllowed: Boolean = false,
@@ -101,6 +112,7 @@ internal data class ScreenStatus(
     val liveEnabled: Boolean = false,
     val liveState: String = "STARTING",
     val liveReason: String = "Waiting for live worker",
+    val liveEntryDiagnostics: LiveEntryDiagnostics = LiveEntryDiagnostics(),
     val livePositions: List<LivePosition> = emptyList(),
     val workerState: String = "STARTING",
 )
