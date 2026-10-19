@@ -30,3 +30,31 @@ def test_v4_live_adapter_is_quant_only_with_no_ai_inheritance():
     from engine.paper_ai_autotrader import AIAugmentedDynamicExitTrader
     assert not issubclass(V4QualityLiveStrategy,AIAugmentedDynamicExitTrader)
     assert 'ai_engine' not in vars(V4QualityLiveStrategy(None,'test'))
+
+
+def test_v5_paper_uses_single_collector_option_feed_when_live_is_active(
+        monkeypatch, tmp_path):
+    """PAPER must never create a second Webull options poller in LIVE mode."""
+    from engine import paper_runner, live_market, webull_live
+    from engine.v5_close_only_paper import V5CloseOnlyPaperTrader
+
+    monkeypatch.setenv("PAPER_STRATEGY_PROFILE","v5_close_only_unrestricted_research")
+    monkeypatch.setenv("SPY_STRATEGY_PROFILE","v5_close_only_unrestricted_research")
+    monkeypatch.setenv("PAPER_DB_PATH",str(tmp_path/"paper.sqlite"))
+    monkeypatch.setenv("COLLECTOR_DB_PATH",str(tmp_path/"market.sqlite"))
+    monkeypatch.setenv("PAPER_STARTING_CASH","1000")
+    monkeypatch.setattr(webull_live, "production_credentials",
+                        lambda: ("example-api-key","example-api-secret"))
+
+    class FakeStockBarProvider:
+        def collect_once(self, *_args, **_kwargs):
+            raise AssertionError("paper options cannot poll Webull a second time")
+    monkeypatch.setattr(live_market, "LiveDataProvider",
+                        lambda *args,**kwargs: FakeStockBarProvider())
+    trader=paper_runner.create_trader(lambda: "PAPER",delayed=False)
+    assert isinstance(trader,V5CloseOnlyPaperTrader)
+    assert trader.production_provider is None
+    assert isinstance(trader.bar_provider, FakeStockBarProvider)
+    assert trader.market_reader.path == tmp_path/"market.sqlite"
+    # PAPER options always read production collector SQLite, not the bar SDK.
+    assert trader._quotes(datetime(2026,10,19,15,tzinfo=timezone.utc)) == ()
