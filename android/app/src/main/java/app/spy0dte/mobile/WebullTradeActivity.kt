@@ -391,6 +391,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         paperPositions = paper.optInt("open_positions", 0),
         paperTrades = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
         paperArmed = autonomy.optBoolean("armed", false),
+        paperEngineRunning = autonomy.optBoolean("engine_running", false),
     )
 }
 
@@ -628,9 +629,15 @@ private fun TradeConsole(
     },
     setPaperAutonomy = { armed ->
         backend.setPaperAutonomy(armed).map { result ->
-            val confirmedMode = result.optString("mode", if (armed) "PAPER" else "SHADOW")
-            status = status.copy(mode = confirmedMode, paperArmed = result.optBoolean("armed", armed))
-            if (armed) "AUTONOMOUS PAPER · ARMED" else "AUTONOMOUS PAPER · NEW ENTRIES STOPPED"
+            // The endpoint returns PAPER/SHADOW as the simulation *mode*.
+            // NEVER overwrite the primary LIVE mode: it may own real orders
+            // and the live switch must remain truthful in the dashboard.
+            status = status.copy(
+                paperArmed = result.optBoolean("armed", armed),
+                paperEngineRunning = result.optBoolean("engine_running", false),
+            )
+            if (armed) "AUTONOMOUS PAPER · ARMED INDEPENDENTLY OF LIVE"
+            else "AUTONOMOUS PAPER · NEW SIMULATED ENTRIES STOPPED; LIVE UNCHANGED"
         }
     },
     resetPaperAccount = { startingCash ->
