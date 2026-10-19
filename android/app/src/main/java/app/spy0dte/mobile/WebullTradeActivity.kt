@@ -95,6 +95,11 @@ internal class TradeBackend(private val token: String) {
         post("/v1/mode", json)
     }
 
+    suspend fun previewLiveOrderCapability(): Result<JSONObject> = withContext(Dispatchers.IO) {
+        post("/v1/live/execution-check",
+            JSONObject().put("confirmation", "VERIFY LIVE PREVIEW ONLY"))
+    }
+
     suspend fun setPaperAutonomy(armed: Boolean): Result<JSONObject> = withContext(Dispatchers.IO) {
         post("/v1/paper/autonomy", JSONObject().put("armed", armed))
     }
@@ -630,6 +635,16 @@ private fun TradeConsole(
             val confirmedMode = result.optString("mode", mode)
             status = status.copy(mode = confirmedMode, paperArmed = confirmedMode == "PAPER")
             "MODE · $confirmedMode"
+        }
+    },
+    verifyLiveExecution = {
+        backend.previewLiveOrderCapability().map { result ->
+            val statusText = result.optString("status", "NOT_PROVEN").replace('_', ' ')
+            val settled = if (result.has("verified_settled_cash"))
+                "$" + "%.2f".format(result.optDouble("verified_settled_cash")) else "not verified"
+            val debit = if (result.has("minimum_one_contract_debit_usd"))
+                "$" + "%.2f".format(result.optDouble("minimum_one_contract_debit_usd")) else "unavailable"
+            "WEBULL PREVIEW: $statusText · settled $settled · cheapest $debit · 0 actual orders"
         }
     },
     setPaperAutonomy = { armed ->
