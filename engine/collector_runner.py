@@ -123,9 +123,20 @@ def run_forever(context: WorkerContext | None = None) -> None:
     # Keep the broker-held contract in the collector's single production
     # quote batch even after SPY moves away from the entry strike.
     live_positions_store = None
+    paper_positions_store = None
     if source == "webull_production":
         from .live_autonomy_store import LiveAutonomyStore, autonomy_db_path
         live_positions_store = LiveAutonomyStore(autonomy_db_path())
+        # PAPER and LIVE subscribe through this ONE collector. Keep both
+        # simulated and broker-held contracts quoted for reliable exits.
+        try:
+            from .paper_account import PaperAccountStore
+            from .paper_autotrader import _paper_db_path, _paper_starting_cash
+            paper_positions_store = PaperAccountStore(
+                _paper_db_path(), default_starting_cash=_paper_starting_cash()
+            )
+        except (OSError, ValueError, RuntimeError) as exc:
+            log.warning("paper exit-quote pinning unavailable type=%s", type(exc).__name__)
     consecutive_failures = 0
     last_error = None
 
@@ -149,9 +160,13 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     if live_positions_store is not None:
                         actual_provider = getattr(provider, "provider", provider)
                         if hasattr(actual_provider, "pinned_symbols"):
-                            actual_provider.pinned_symbols = {
-                                p["symbol"] for p in live_positions_store.positions()
-                            }
+                            pinned = {p["symbol"] for p in live_positions_store.positions()}
+                            if paper_positions_store is not None:
+                                try:
+                                    pinned.update(p["symbol"] for p in paper_positions_store.positions())
+                                except Exception as exc:
+                                    log.warning("paper quote pinning deferred type=%s", type(exc).__name__)
+                            actual_provider.pinned_symbols = pinned
                     snapshots = collect_and_store(
                         provider,
                         store,
