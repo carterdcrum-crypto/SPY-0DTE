@@ -339,7 +339,18 @@ internal fun parseStatus(text: String): ScreenStatus {
         liveStrategyProfile = root.optString("live_strategy_profile", "v4_original_3x"),
         liveEnabled = liveAuto.optBoolean("enabled", false),
         liveState = if (liveAuto.optBoolean("worker_current", false)) liveAuto.optString("state", "STARTING") else "RECOVERING",
-        liveReason = liveAuto.optString("reason", "Waiting for live worker"),
+        // The quant frequently emits a precise state without a prose reason.
+        // Never misreport that as a missing worker heartbeat. In particular
+        // NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE is a trade gate, not
+        // evidence the background worker has stopped.
+        liveReason = if (!liveAuto.optBoolean("worker_current", false)) {
+            "Live worker heartbeat unavailable; checking connection"
+        } else {
+            liveAuto.optString("reason").trim().ifBlank {
+                liveAuto.optString("state", "WAITING_FOR_WORKER")
+                    .replace('_', ' ').lowercase().replaceFirstChar { it.titlecase() }
+            }
+        },
         liveEntryDiagnostics = liveEntryDiagnostics,
         livePositions = livePositions,
         workerState = if (isLive) liveAuto.optString("state", "STARTING") else autonomy.optJSONObject("worker")?.optString("state", "STARTING") ?: "STARTING",
