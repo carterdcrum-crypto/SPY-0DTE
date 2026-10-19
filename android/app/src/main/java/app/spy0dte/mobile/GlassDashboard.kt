@@ -317,6 +317,7 @@ private fun GlassLiveScreen(
                 saving = false
             }
         }
+        if (status.mode == "LIVE") GlassParallelPaperCard(status, onSettings)
         connectionError?.let { GlassNotice(it, danger = true) }
         message?.let { GlassNotice(it) }
         GlassTopTabs(topTab) { topTab = it }
@@ -333,6 +334,33 @@ private fun GlassLiveScreen(
             else -> GlassQuantSignals(status)
         }
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+@Composable
+private fun GlassParallelPaperCard(status: ScreenStatus, onSettings: () -> Unit) {
+    GlassPanel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("PAPER · INDEPENDENT SIMULATION", color = GlassColors.Text,
+                fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text(if (status.paperArmed) "ON" else "OFF",
+                color = if (status.paperArmed) GlassColors.Green else GlassColors.Amber,
+                fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(6.dp))
+        GlassKeyValue("Simulation worker", if (status.paperEngineRunning) "RUNNING" else "NOT RUNNING",
+            if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber)
+        GlassKeyValue("Settled paper cash", money(status.paperCash))
+        GlassKeyValue("Unsettled paper sales", money(status.paperUnsettledCash))
+        GlassKeyValue("Paper realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
+        GlassKeyValue("Paper positions / executions", "${status.paperPositions} / ${status.paperTrades}")
+        Text("Live Webull orders and simulated paper trades use separate balances. Paper orders never reach Webull.",
+            color = GlassColors.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(if (status.paperArmed) "Paper settings  ↗" else "Arm paper in Settings  ↗",
+            color = GlassColors.GreenDark, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp)
+                .clip(RoundedCornerShape(8.dp)).clickable(onClick = onSettings).padding(top = 12.dp))
     }
 }
 
@@ -1071,13 +1099,19 @@ private fun GlassSettingsScreen(
         GlassPanel {
             Text("AUTONOMOUS PAPER", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
             Spacer(Modifier.height(7.dp))
+            GlassKeyValue("Paper entries", if (status.paperArmed) "ARMED" else "STOPPED",
+                if (status.paperArmed) GlassColors.Green else GlassColors.Amber)
+            GlassKeyValue("Paper worker", if (status.paperEngineRunning) "RUNNING" else "NOT RUNNING",
+                if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber)
             GlassKeyValue("Starting cash", money(status.paperStartingCash))
-            GlassKeyValue("Cash", money(status.paperCash))
+            GlassKeyValue("Settled cash", money(status.paperCash))
+            GlassKeyValue("Unsettled proceeds", money(status.paperUnsettledCash))
             GlassKeyValue("Realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
             GlassKeyValue("Executions", status.paperTrades.toString())
             GlassKeyValue("Buys / sells", "${status.paperBuys} / ${status.paperSells}")
             GlassKeyValue("Unrealized P&L", signedMoney(status.paperUnrealizedPnl), pnlColor(status.paperUnrealizedPnl))
-            Text("Each buy or sell counts once. Realized P&L changes when contracts are sold.", color = GlassColors.TextMuted, fontSize = 11.sp)
+            Text("Independent from LIVE Auto Trade: this switch only controls simulated paper entries. Sale proceeds settle on the next business day; realized profits are never credited twice.",
+                color = GlassColors.TextMuted, fontSize = 11.sp, lineHeight = 16.sp)
             Spacer(Modifier.height(8.dp))
             GlassOutlineButton(
                 text = if (status.paperArmed) "Stop New Paper Entries" else "Arm Autonomous Paper",
