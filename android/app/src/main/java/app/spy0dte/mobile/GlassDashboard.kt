@@ -350,6 +350,11 @@ private fun GlassParallelPaperCard(status: ScreenStatus, onSettings: () -> Unit)
         Spacer(Modifier.height(6.dp))
         GlassKeyValue("Simulation worker", if (status.paperEngineRunning) "RUNNING" else "NOT RUNNING",
             if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber)
+        GlassKeyValue("Paper decision", status.paperDecision.replace('_', ' '))
+        if (status.paperArmed) {
+            Text(status.paperReason, color = GlassColors.TextMuted,
+                fontSize = 10.sp, lineHeight = 15.sp)
+        }
         GlassKeyValue("Settled paper cash", money(status.paperCash))
         GlassKeyValue("Unsettled paper sales", money(status.paperUnsettledCash))
         GlassKeyValue("Paper realized P&L", signedMoney(status.paperPnl), pnlColor(status.paperPnl))
@@ -1103,6 +1108,8 @@ private fun GlassSettingsScreen(
                 if (status.paperArmed) GlassColors.Green else GlassColors.Amber)
             GlassKeyValue("Paper worker", if (status.paperEngineRunning) "RUNNING" else "NOT RUNNING",
                 if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber)
+            GlassKeyValue("Paper decision", status.paperDecision.replace('_', ' '))
+            if (status.paperArmed) Text(status.paperReason, color = GlassColors.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
             GlassKeyValue("Starting cash", money(status.paperStartingCash))
             GlassKeyValue("Settled cash", money(status.paperCash))
             GlassKeyValue("Unsettled proceeds", money(status.paperUnsettledCash))
