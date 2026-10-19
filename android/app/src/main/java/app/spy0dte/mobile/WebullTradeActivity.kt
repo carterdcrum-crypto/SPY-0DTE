@@ -387,6 +387,7 @@ internal fun parseStatus(text: String): ScreenStatus {
         alert = alert,
         paperStartingCash = number(paper, "starting_cash"),
         paperCash = number(paper, "settled_cash"),
+        paperUnsettledCash = number(paper, "unsettled_cash"),
         paperPnl = number(paper, "realized_pnl"),
         paperPositions = paper.optInt("open_positions", 0),
         paperTrades = paper.optInt("execution_count", paper.optInt("trade_count", 0)),
