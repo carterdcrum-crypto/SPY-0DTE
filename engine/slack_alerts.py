@@ -7,6 +7,7 @@ and before the delivery checkpoint may duplicate an alert, never a trade.
 from __future__ import annotations
 import json
 import logging
+from contextlib import contextmanager
 import os
 import sqlite3
 import time
@@ -84,8 +85,14 @@ class SlackNotifier:
             """)
         self._seed()
 
+    @contextmanager
     def _db(self):
-        return sqlite3.connect(self.paths["state"], timeout=7)
+        conn = sqlite3.connect(self.paths["state"], timeout=7)
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _live(self):
         return _rows(self.paths["live"],
