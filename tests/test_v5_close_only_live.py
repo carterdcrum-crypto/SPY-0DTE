@@ -107,3 +107,58 @@ def test_v5_ignores_legacy_daily_stop_without_bypassing_broker_cash():
                    SimpleNamespace(max_contracts=100,max_account_exposure_pct=.35))
     assert p is not None and d["state"]=="SIGNAL"
     assert p["quantity"]>0
+
+
+def test_v5_diagnostics_reveals_only_genuine_affordable_contracts():
+    data=bars()
+    now=data[-1].available_at+timedelta(seconds=1)
+    q=quote(now,data)
+    candidate,decision=paper_candidate(now,data,[q],equity=1000,settled=25,peak=1000)
+    assert candidate is None
+    assert decision["state"]=="NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE"
+    info=decision["entry_diagnostics"]
+    assert info["signal_detected"] is True
+    assert info["data_ready"] is True
+    assert info["settled_cash_usd"]==25
+    assert info["cheapest_qualified_contract_usd"]==47.65
+    assert info["cheapest_qualified_ask"]==.46
+    assert info["rejection_code"]=="insufficient_settled_cash"
+    assert info["rejection_counts"]["insufficient_settled_cash"]==1
+
+
+def test_v5_diagnostics_separates_stale_spread_depth_and_delta():
+    data=bars()
+    now=data[-1].available_at+timedelta(seconds=1)
+    changes=[
+        ({"timestamp":now-timedelta(seconds=10)}, "stale_quote"),
+        ({"ask":.54}, "wide_spread"),
+        ({"bid_size":0}, "missing_depth"),
+        ({"greeks":SimpleNamespace(delta=.72,implied_volatility=_rv(data,len(data)-3)*.7)},
+         "delta_out_of_range"),
+        ({"greeks":None}, "missing_greeks"),
+    ]
+    for item,expected in changes:
+        p,diag=paper_candidate(now,data,[quote(now,data,**item)],
+                               equity=1000,settled=1000,peak=1000)
+        assert p is None,expected
+        info=diag["entry_diagnostics"]
+        assert diag["state"]=="NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE"
+        assert info["rejection_code"]==expected
+        assert info["rejection_counts"][expected]==1
+        assert info["cheapest_qualified_contract_usd"] is None
+
+
+def test_v5_no_close_only_signal_is_not_confused_with_quote_or_cash_failure():
+    data=bars()
+    b=data[70]
+    data[70]=Bar(b.start,b.open,b.high,b.low,b.close,15000)
+    now=data[-1].available_at+timedelta(seconds=1)
+    p,diag=paper_candidate(now,data,[quote(now,data)],
+                           equity=1000,settled=1000,peak=1000)
+    assert p is None
+    assert diag["state"]=="NO_CLOSE_ONLY_V5_SIGNAL"
+    info=diag["entry_diagnostics"]
+    assert info["data_ready"] is True
+    assert info["signal_detected"] is False
+    assert info["cheapest_qualified_contract_usd"] is None
+    assert info["rejection_counts"]=={}
