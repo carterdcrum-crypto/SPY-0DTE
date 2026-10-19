@@ -66,7 +66,20 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
     frames=_reference_frames(bars[:-1])
     setups=close_proxy_signals(frames,len(frames)-1,challenger=True)
     if not setups:
-        return None, {"state":"NO_CLOSE_ONLY_V5_SIGNAL"}
+        return None, {
+            "state":"NO_CLOSE_ONLY_V5_SIGNAL",
+            "reason":"No momentum ignition, liquidity reversal, or volatility expansion on completed SPY candles",
+            "entry_diagnostics":{
+                "signal_detected":False,"data_ready":True,
+                "settled_cash_usd":round(float(settled),2),
+                "cheapest_qualified_contract_usd":None,
+                "cheapest_qualified_ask":None,
+                "rejection_code":"no_close_only_signal",
+                "rejection_counts":{},
+                "quotes_observed":0,
+                "signals_found":0,"asof":now.isoformat(),
+            },
+        }
     rv=_rv(bars,len(bars)-3)
     if rv<=0:
         return None, {"state":"MISSING_REALIZED_VOLATILITY"}
