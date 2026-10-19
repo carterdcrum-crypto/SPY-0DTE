@@ -55,6 +55,6 @@ def test_v5_paper_uses_single_collector_option_feed_when_live_is_active(
     assert isinstance(trader,V5CloseOnlyPaperTrader)
     assert trader.production_provider is None
     assert isinstance(trader.bar_provider, FakeStockBarProvider)
-    assert trader.market_reader.path == tmp_path/"market.sqlite"
+    assert Path(trader.market_reader.path) == tmp_path/"market.sqlite"
     # PAPER options always read production collector SQLite, not the bar SDK.
     assert trader._quotes(datetime(2026,10,19,15,tzinfo=timezone.utc)) == ()
