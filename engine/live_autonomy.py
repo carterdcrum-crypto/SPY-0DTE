@@ -188,6 +188,33 @@ class LiveExecutor:
         alert = None if signal is None else {"signal": signal, "risk": result.get("risk", {})}
         return {**result, **strategy, "market": market, "guard": guard, "entry_alert": alert}
 
+    def _fresh_pending_exit_quote(self, symbol):
+        """Read the existing market collector, NEVER add a Webull option poll.
+
+        Refresh only when a pending protective SELL needs a new observed bid.
+        The existing working sell remains at the broker if quotes go stale.
+        """
+        now = self.clock()
+        quote = self.market.fresh_quote(symbol, now)
+        if quote is not None:
+            return quote
+        try:
+            if isinstance(self.provider, LiveDataProvider):
+                from .shared_live_quotes import collector_live_quotes
+                snapshots = collector_live_quotes(
+                    os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"),
+                    now,
+                )
+            else:
+                snapshots = self.provider.collect_once(now.astimezone(EASTERN).date())
+            self.market.ingest(snapshots, self.clock())
+            return self.market.fresh_quote(symbol, self.clock())
+        except Exception as exc:
+            # Not a reason to cancel an already-working protective order.
+            log.warning("pending protective exit quote unavailable type=%s",
+                        type(exc).__name__)
+            return None
+
     def _reconcile(self, now, can_enter):
         pending = self.store.orders(pending_only=True)
         errors = []
@@ -201,13 +228,36 @@ class LiveExecutor:
             except Exception as exc:
                 errors.append(exc)
         for order in self.store.orders(pending_only=True):
+            now = self.clock()  # Do not decide against a stale tick clock.
             age = (now-datetime.fromisoformat(order["created_at"])).total_seconds()
             request = order["request"]
-            cancel_due = age >= (15 if request["side"] == "BUY" else 10) or (request["side"] == "BUY" and not can_enter)
+            if request["side"] == "BUY":
+                cancel_due = age >= 15 or not can_enter
+            elif order["status"] == "UNKNOWN":
+                # Submission might have reached Webull. Cancel ONLY its
+                # original client ID, and never post a replacement until the
+                # broker confirms a terminal cancellation or fill.
+                cancel_due = age >= 10
+            elif order["reason"] == "take_profit":
+                # Preserve the existing V4 profit-order policy.
+                cancel_due = age >= 10
+            else:
+                # A working protective SELL may have been left behind by a
+                # falling option bid. Reprice by broker-confirmed
+                # cancel -> reconcile -> fresh-bid replacement of remaining
+                # quantity; never leave two simultaneous exit orders.
+                # Do not cancel if no executable current quote is available:
+                # the existing broker-side limit may still fill.
+                cancel_due = False
+                if age >= 5:
+                    quote = self._fresh_pending_exit_quote(order["symbol"])
+                    if quote is not None and quote.bid > 0:
+                        cancel_due = round(quote.bid, 2) < float(request["limit_price"])
             cancel_at = order["cancel_at"]
-            if cancel_due and (cancel_at is None or (now-datetime.fromisoformat(cancel_at)).total_seconds() >= 10):
-                # Cancel the SAME id even after an ambiguous POST; still wait for
-                # terminal confirmation before releasing any remaining quantity.
+            if cancel_due and (cancel_at is None or
+                               (now-datetime.fromisoformat(cancel_at)).total_seconds() >= 10):
+                # Cancel SAME ID only. A terminal broker state is mandatory
+                # before new execution; UNKNOWN fills cannot be duplicated.
                 self.store.mark_cancel(order["client_id"], now)
                 self.broker.cancel_order(request["account_id"], order["client_id"])
         if errors:
