@@ -1,6 +1,6 @@
 """Regression tests: software stop exit reprice is safe despite partial fills and stale quotes."""
 from datetime import timedelta
-from engine.live_autonomy import LiveExecutor
+from test_live_autonomy import rig  # deterministic broker / quote / SQLite fixture
 
 
 def open_long_and_exit(rig, *, quantity=3):
