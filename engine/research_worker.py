@@ -225,9 +225,171 @@ def run_burst_validation() -> None:
             )
 
 
+
+def run_weekly_cost_estimate() -> None:
+    """Metadata-only quote / OHLCV price estimate. NEVER download billable data."""
+    from datetime import datetime, time
+    from zoneinfo import ZoneInfo
+    try:
+        import databento as db
+    except ImportError:
+        print("WEEKLY COST: DATABENTO_SDK_UNAVAILABLE", flush=True)
+        return
+    day = date.fromisoformat(os.getenv("RESEARCH_COST_DAY", "2026-10-06"))
+    start = datetime.combine(day,time(9,30),ZoneInfo("America/New_York")).isoformat()
+    end = datetime.combine(day,time(16,0),ZoneInfo("America/New_York")).isoformat()
+    client=db.Historical()
+    for dataset,schema,symbols,stype in (
+        ("EQUS.MINI","ohlcv-1m",["SPY"],None),
+        ("OPRA.PILLAR","cmbp-1","SPY.OPT","parent"),
+        ("OPRA.PILLAR","cbbo-1s","SPY.OPT","parent"),
+        ("OPRA.PILLAR","tcbbo","SPY.OPT","parent"),
+        ("OPRA.PILLAR","statistics","SPY.OPT","parent"),
+    ):
+        label=f"{dataset} {schema}"
+        try:
+            arguments={"dataset":dataset,"schema":schema,
+                       "symbols":symbols,"start":start,"end":end}
+            if stype is not None:
+                arguments["stype_in"]=stype
+            usd=float(client.metadata.get_cost(**arguments))
+            print(f"WEEKLY COST: date={day} dataset={dataset} schema={schema} estimated_usd={usd:.4f} metadata_only=true",flush=True)
+        except Exception as exc:
+            # Avoid logging request parameters or credentials.
+            print(f"WEEKLY COST: date={day} label={label} unavailable error_type={type(exc).__name__} metadata_only=true",flush=True)
+
+
+
+def run_weekly_feasibility() -> None:
+    """Non-P&L buying-power feasibility on EXISTING sampled option NBBO.
+
+    This is explicitly NOT an execution backtest, ORB validation, or an
+    option premium return estimate. It just counts market quote snapshots
+    where one near-half-delta 0DTE contract might fit the specified budget.
+    """
+    from collections import Counter
+    from zoneinfo import ZoneInfo
+    from .burst_research import iter_research_directory
+    et=ZoneInfo("America/New_York")
+    account_sizes=(300.,1000.,10000.)
+    rates=(.005,.01,.02,.25)
+    counts=Counter()
+    observed_days=set()
+    days_with_any=Counter()
+    total_snapshots=0
+    quote_counts=0
+    skipped_market=0
+    for frame in iter_research_directory(_data_dir()):
+        local=frame.timestamp.astimezone(et)
+        if not (local.hour*60+local.minute>=9*60+45 and
+                local.hour*60+local.minute<15*60+40):
+            continue
+        # Treat only snapshots of original archived option symbols, whose
+        # expirations were checked during original dataset construction.
+        observed_days.add(local.date())
+        total_snapshots+=1
+        allowed=[
+            q for q in frame.options
+            if .4<=abs(q.delta)<=.6 and q.ask>q.bid>0
+            and (q.ask-q.bid)/((q.ask+q.bid)/2)<=.15
+            # Legacy CBBO sampled records often omit actionable quote size,
+            # time-causal OI and traded volume. This is a PRICE affordability
+            # study ONLY; do not assert executable liquidity from this count.
+        ]
+        quote_counts+=len(allowed)
+        for cash in account_sizes:
+            for fraction in rates:
+                key=(cash,fraction)
+                # Conservative one adverse cent, $.68 per executed entry.
+                budget=cash*fraction
+                if any(q.ask*100+1+.68<=budget+1e-9 for q in allowed):
+                    counts[key]+=1
+                    days_with_any[(cash,fraction,local.date())]+=1
+    print(f"WEEKLY AFFORDABILITY: sampled_sessions={len(observed_days)} "
+          f"observed_option_quote_frames={total_snapshots} "
+          f"half_delta_liquid_quote_occurrences={quote_counts} "
+          f"no_profit_returns_computed=true quote_size_and_oi_not_verified=true",flush=True)
+    for cash in account_sizes:
+        for fraction in rates:
+            n=counts[(cash,fraction)]
+            days=sum(days_with_any[(cash,fraction,d)]>0 for d in observed_days)
+            print("WEEKLY AFFORDABILITY: "
+                  f"cash={cash:.2f} risk_fraction={fraction:.4f} "
+                  f"eligible_snapshots={n} of={total_snapshots} "
+                  f"eligible_sessions={days} of={len(observed_days)} "
+                  f"uses_sampled_1m_quotes_not_executable=true",flush=True)
+
+
+
+def run_weekly_narrow_cost_estimate() -> None:
+    """No-charge metadata estimate of true OPRA event quotes for small strike universes.
+
+    Build the list from already-stored prior quote symbols; only use Databento
+    metadata.get_cost. Never request actual historical data or purchase credits.
+    """
+    from datetime import datetime, time
+    from zoneinfo import ZoneInfo
+    from .burst_research import iter_research_directory
+    import databento as db
+    day=date.fromisoformat(os.getenv("RESEARCH_COST_DAY","2026-10-06"))
+    frame=None
+    from .data import load_canonical_path
+    for item in load_canonical_path(_output_path(day)):
+        local=item.timestamp.astimezone(ZoneInfo("America/New_York"))
+        if local.hour>9 or (local.hour==9 and local.minute>=45):
+            frame=item
+            break
+    if frame is None:
+        print(f"WEEKLY NARROW: date={day} blocker=no existing quote symbols",flush=True)
+        return
+    reference=frame.market.spot
+    # Existing symbols provide historically listed OCC contracts. This is a
+    # universe COST ESTIMATE, not a trade-date filtered selection algorithm.
+    options=[q for q in frame.options if abs(abs(q.delta)-.5)<=.30
+             and q.right in ("call","put") and abs(q.strike-reference)<=15]
+    options=sorted(options,key=lambda q:(abs(q.strike-reference),q.right,q.symbol))
+    start=datetime.combine(day,time(9,30),ZoneInfo("America/New_York")).isoformat()
+    end=datetime.combine(day,time(16),ZoneInfo("America/New_York")).isoformat()
+    client=db.Historical()
+    for limit in (12,24,48):
+        selected=options[:limit]
+        symbols=[]
+        for q in selected:
+            sym=q.symbol.replace(" ","")
+            if sym.startswith("SPY") and len(sym)>3:
+                # OPRA uses 6-character padded OCC root.
+                sym="SPY".ljust(6)+sym[3:]
+            symbols.append(sym)
+        if not symbols:
+            continue
+        try:
+            cost=float(client.metadata.get_cost(
+                dataset="OPRA.PILLAR",symbols=symbols,stype_in="raw_symbol",
+                schema="cmbp-1",start=start,end=end))
+            print(f"WEEKLY NARROW: date={day} first_quote_spot={reference:.2f} "
+                  f"listed_symbols={len(symbols)} max_universe={limit} "
+                  f"cmbp1_usd={cost:.4f} metadata_only=true",flush=True)
+        except Exception as exc:
+            print(f"WEEKLY NARROW: date={day} listed_symbols={len(symbols)} "
+                  f"cost_unavailable_type={type(exc).__name__}",flush=True)
+
+
 def main() -> None:
     mode = os.getenv("RESEARCH_MODE", "backfill").strip().lower()
-    if mode == "burst":
+    if mode == "weeklydiagnostics":
+        run_weekly_narrow_cost_estimate()
+        run_weekly_feasibility()
+    elif mode == "weeklynarrowcost":
+        run_weekly_narrow_cost_estimate()
+    elif mode == "weeklyfeasibility":
+        run_weekly_feasibility()
+    elif mode == "weeklycost":
+        run_weekly_cost_estimate()
+    elif mode == "weeklyoptionsaudit":
+        import json
+        from .weekly_options_data import audit
+        print("WEEKLY OPTIONS DATA AUDIT: " + json.dumps(audit(_data_dir()),sort_keys=True),flush=True)
+    elif mode == "burst":
         run_burst_validation()
     elif mode == "backfill":
         if os.getenv("RESEARCH_RANGE_START", "").strip():
