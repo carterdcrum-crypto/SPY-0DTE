@@ -69,20 +69,50 @@ def _percentile(values: Sequence[float], q: float) -> float:
     return ordered[low] * (1.0 - weight) + ordered[high] * weight
 
 
-def _research_files(path: str | Path) -> Tuple[Path, ...]:
+def _research_file_date(item: Path) -> date:
+    prefix = "spy_0dte_"
+    name = item.name
+    if not name.startswith(prefix):
+        raise ValueError(f"unexpected research filename: {name}")
+    return date.fromisoformat(name[len(prefix) : len(prefix) + 10])
+
+
+def _research_files(
+    path: str | Path,
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> Tuple[Path, ...]:
+    if start_date is not None and end_date is not None and end_date < start_date:
+        raise ValueError("end_date must be on or after start_date")
+
     root = Path(path)
     compressed = {item.name.removesuffix(".gz"): item for item in root.glob("spy_0dte_*.csv.gz")}
     plain = {item.name: item for item in root.glob("spy_0dte_*.csv")}
     selected = list(compressed.values())
     selected.extend(item for name, item in plain.items() if name not in compressed)
-    return tuple(sorted(selected))
+
+    filtered = []
+    for item in selected:
+        trade_date = _research_file_date(item)
+        if start_date is not None and trade_date < start_date:
+            continue
+        if end_date is not None and trade_date > end_date:
+            continue
+        filtered.append(item)
+    return tuple(sorted(filtered))
 
 
-def iter_research_directory(path: str | Path) -> Iterator[HistoricalFrame]:
+def iter_research_directory(
+    path: str | Path,
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> Iterator[HistoricalFrame]:
     """Yield canonical history in strict time order without materializing all days."""
 
     last_timestamp: datetime | None = None
-    for item in _research_files(path):
+    for item in _research_files(path, start_date=start_date, end_date=end_date):
         for frame in load_canonical_path(item):
             if last_timestamp is not None and frame.timestamp <= last_timestamp:
                 raise ValueError(
@@ -92,10 +122,17 @@ def iter_research_directory(path: str | Path) -> Iterator[HistoricalFrame]:
             yield frame
 
 
-def load_research_directory(path: str | Path) -> Tuple[HistoricalFrame, ...]:
+def load_research_directory(
+    path: str | Path,
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> Tuple[HistoricalFrame, ...]:
     """Materialized compatibility loader; use iter_research_directory for large runs."""
 
-    return tuple(iter_research_directory(path))
+    return tuple(
+        iter_research_directory(path, start_date=start_date, end_date=end_date)
+    )
 
 
 def _affordable_call(
@@ -277,6 +314,8 @@ def run_burst_stress_directory(
     starting_cash: float,
     config: CausalBurstConfig = CausalBurstConfig(),
     adverse_ticks: Iterable[int] = (0, 1, 2),
+    start_date: date | None = None,
+    end_date: date | None = None,
 ) -> Tuple[BurstStressResult, ...]:
     """Stream large research datasets from disk for each execution-stress pass."""
 
@@ -286,7 +325,7 @@ def run_burst_stress_directory(
             raise ValueError("adverse ticks cannot be negative")
         strategy = CausalBurstStrategy(config)
         result = run_backtest_stream(
-            iter_research_directory(path),
+            iter_research_directory(path, start_date=start_date, end_date=end_date),
             strategy,
             config=BacktestConfig(
                 starting_cash=starting_cash,
