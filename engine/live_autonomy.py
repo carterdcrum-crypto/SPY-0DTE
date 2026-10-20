@@ -427,14 +427,20 @@ class LiveExecutor:
             return {**common, **self._submit(order, symbol=position["symbol"], reason=reason,
                     signal_key=order.client_order_id, policy=policy, now=now, position_id=position["position_id"])}
 
-        orders = self.store.orders()
-        if orders and (now-datetime.fromisoformat(orders[-1]["updated_at"])).total_seconds() < 180:
-            return {**common, "state": "COOLDOWN", "reason": "waiting between live executions"}
         from .one_shot_live_test import (
             TAG as TEST_TAG, TestConfig, used_before,
             eligible_option, broker_preview_permits,
         )
+        orders = self.store.orders()
         test = TestConfig.from_env()
+        # Reflect that the one-shot authorization has been consumed even
+        # during the ordinary 180-second cooldown. A prior unknown buy is
+        # always irrevocably spent, including after a process restart.
+        if test.enabled and used_before(orders):
+            return {**common, "state": "ONE_SHOT_ALREADY_USED",
+                    "reason": "one test entry reserved; no additional purchases allowed"}
+        if orders and (now-datetime.fromisoformat(orders[-1]["updated_at"])).total_seconds() < 180:
+            return {**common, "state": "COOLDOWN", "reason": "waiting between live executions"}
         if test.enabled:
             # Suppress ALL normal unrestricted V5 entries while this one-time
             # diagnostic is armed; never silently resume normal buying when
@@ -442,9 +448,6 @@ class LiveExecutor:
             if not self._unrestricted_v5():
                 return {**common, "state": "ONE_SHOT_PROFILE_MISMATCH",
                         "reason": "one-shot is supported only with the V5 live profile"}
-            if used_before(orders):
-                return {**common, "state": "ONE_SHOT_ALREADY_USED",
-                        "reason": "one test entry reserved; no additional purchases allowed"}
             timing = test.timing(self.clock())
             if timing is not None:
                 return {**common, "state": timing,
