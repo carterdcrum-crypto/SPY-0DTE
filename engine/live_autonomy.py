@@ -379,7 +379,12 @@ class LiveExecutor:
                 position["average_price"] * 100.0 + fee,
             )
             position["peak_exit_value"] = peak
-            reason = "automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None
+            from .one_shot_live_test import TAG as TEST_TAG
+            # For this specifically authorized diagnostic, submit SELL_TO_CLOSE
+            # on the very first observed, broker-confirmed long position, rather
+            # than waiting for stop/profit/timeout signals.
+            reason = "one_shot_immediate_sell" if str(position.get("entry_reason","")).startswith(TEST_TAG) else None
+            reason = reason or ("automation_stopped" if not can_enter and (not policy["enabled"] or self.mode_getter() != "LIVE") else None)
             reason = reason or ("daily_stop" if daily and daily["halt_reason"] else None)
             close_buffer = 15 if str(position.get("entry_reason","")).startswith(
                 ("v4_original_3x;","v5_close_only_unrestricted_research;")) else 10
@@ -425,6 +430,72 @@ class LiveExecutor:
         orders = self.store.orders()
         if orders and (now-datetime.fromisoformat(orders[-1]["updated_at"])).total_seconds() < 180:
             return {**common, "state": "COOLDOWN", "reason": "waiting between live executions"}
+        from .one_shot_live_test import (
+            TAG as TEST_TAG, TestConfig, used_before,
+            eligible_option, broker_preview_permits,
+        )
+        test = TestConfig.from_env()
+        if test.enabled:
+            # Suppress ALL normal unrestricted V5 entries while this one-time
+            # diagnostic is armed; never silently resume normal buying when
+            # the date passes or when the test is over.
+            if not self._unrestricted_v5():
+                return {**common, "state": "ONE_SHOT_PROFILE_MISMATCH",
+                        "reason": "one-shot is supported only with the V5 live profile"}
+            if used_before(orders):
+                return {**common, "state": "ONE_SHOT_ALREADY_USED",
+                        "reason": "one test entry reserved; no additional purchases allowed"}
+            timing = test.timing(self.clock())
+            if timing is not None:
+                return {**common, "state": timing,
+                        "reason": "one-shot can only enter on its authorized session within 09:55-15:30 ET"}
+            if not can_enter:
+                return {**common, "state": "ONE_SHOT_WAITING_OWNER_LIVE_SWITCH",
+                        "reason": "owner must enable LIVE Auto Trade; no authorization bypass"}
+            candidate = eligible_option(self.market.quotes, self.clock(),
+                                        account["settled_cash"], test)
+            if candidate is None:
+                return {**common, "state": "ONE_SHOT_NO_LIQUID_AFFORDABLE_QUOTE",
+                        "reason": "no verified same-day SPY option fits the $25 reserve and liquidity checks"}
+            order = OptionOrderRequest(
+                account_id=profile.account_id,
+                client_order_id=uuid.uuid4().hex,
+                underlying="SPY", strike_price=candidate["strike"],
+                expiration_date=self.clock().astimezone(EASTERN).date().isoformat(),
+                option_type=candidate["right"], side="BUY",
+                position_intent="BUY_TO_OPEN", quantity=1,
+                limit_price=candidate["price"],
+            )
+            # Preview is an additional non-executing broker check. Reject any
+            # error; never assume a preview is a fill or promise a quick exit.
+            try:
+                broker_preview = self.broker.preview_option_order(order)
+                if not broker_preview_permits(broker_preview):
+                    return {**common, "state": "ONE_SHOT_PREVIEW_REJECTED",
+                            "reason": "Webull did not approve the diagnostic preview"}
+            except Exception as exc:
+                log.warning("one-shot Webull preview unavailable type=%s",
+                            type(exc).__name__)
+                return {**common, "state": "ONE_SHOT_PREVIEW_UNAVAILABLE",
+                        "reason": "Webull preview failed; no live order submitted"}
+            # The original fresh quote is mandatory even after broker preview.
+            fresh = self.market.fresh_quote(candidate["symbol"], self.clock())
+            if fresh is None or fresh.ask > order.limit_price + 1e-9:
+                return {**common, "state": "ONE_SHOT_QUOTE_MOVED",
+                        "reason": "quote moved or became stale during preview"}
+            # Re-check settled cash after preview. Entry's durable reserve
+            # prevents duplicate orders on a restart / ambiguous Webull POST.
+            account = self._account(profile.account_id)
+            if account["settled_cash"] < order.limit_price * 100 + 5.0:
+                return {**common, "state": "ONE_SHOT_CASH_CHANGED",
+                        "reason": "verified settled cash is no longer sufficient"}
+            result = self._submit(
+                order, symbol=candidate["symbol"],
+                reason=TEST_TAG + ";max_25_usd;instant_exit_after_fill",
+                signal_key="one_shot:" + test.session.isoformat(),
+                policy=policy, now=self.clock(),
+            )
+            return {**common, **result}
         limits = self.store.envelope(now)
         if not self._unrestricted_v5() and (limits is None or not limits.is_complete):
             return {**common,"state":"RISK_BLOCKED",
