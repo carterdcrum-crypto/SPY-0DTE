@@ -216,7 +216,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
 
 
 def paper_exit_reason(position,quote,bars,now):
-    """Observed 35% hard loss / 25% premium trail / reversal / 18min exit."""
+    """Observed 35% hard loss / 25% premium trail / reversal exits; no fixed maximum hold."""
     if quote is None or not 0<=(now-quote.timestamp).total_seconds()<=MAX_SOURCE_DELAY_SECONDS:
         return None
     opened=position["opened_at"]
@@ -244,6 +244,4 @@ def paper_exit_reason(position,quote,bars,now):
     direction=1 if quote.right=="call" else -1
     if direction*(bars[-1].close/bars[-4].close-1)<0:
         return "v5_spy_close_reversal"
-    if age>=18*60:
-        return "v5_18min_timeout"
     return None
