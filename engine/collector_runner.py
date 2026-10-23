@@ -139,6 +139,7 @@ def run_forever(context: WorkerContext | None = None) -> None:
             log.warning("paper exit-quote pinning unavailable type=%s", type(exc).__name__)
     consecutive_failures = 0
     last_error = None
+    last_retention_date = None
 
     log.info(
         "collector started source=%s db=%s interval=%ss window=%s-%s ET",
@@ -154,7 +155,27 @@ def run_forever(context: WorkerContext | None = None) -> None:
     try:
         while not context.stop.is_set():
             now = datetime.now(timezone.utc)
-            if is_collection_window(now, settings):
+            collecting = is_collection_window(now, settings)
+            # Run once each calendar day outside the trading window, never
+            # during a live quote cycle. Failed/incomplete cleanup retries
+            # on the next idle poll without touching position/account ledgers.
+            if not collecting and last_retention_date != now.astimezone(EASTERN).date():
+                try:
+                    result = store.prune_old_sessions(keep_sessions=5)
+                    log.info(
+                        "collector retention removed_rows=%s kept_dates=%s reusable_bytes=%s complete=%s",
+                        result["removed_rows"],
+                        ",".join(result["retained_sessions"]),
+                        result["reusable_bytes"],
+                        result["complete"],
+                    )
+                    if result["complete"]:
+                        last_retention_date = now.astimezone(EASTERN).date()
+                except Exception as exc:
+                    # Never let maintenance terminate the collector or expose
+                    # provider credentials through exception messages.
+                    log.warning("collector retention deferred type=%s", type(exc).__name__)
+            if collecting:
                 trade_date = now.astimezone(EASTERN).date()
                 try:
                     if live_positions_store is not None:

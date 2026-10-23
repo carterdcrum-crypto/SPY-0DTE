@@ -85,6 +85,64 @@ class SnapshotStore:
     def close(self) -> None:
         self.connection.close()
 
+    def _reusable_bytes(self) -> int:
+        """SQLite freelist pages can hold new snapshots even before VACUUM."""
+        page_size = int(self.connection.execute("PRAGMA page_size").fetchone()[0])
+        free_pages = int(self.connection.execute("PRAGMA freelist_count").fetchone()[0])
+        return page_size * free_pages
+
+    def prune_old_sessions(self, *, keep_sessions: int = 5, batch_rows: int = 256) -> dict:
+        """Keep the five newest observed quote sessions; never touch account ledgers.
+
+        Small commits and WAL truncation avoid a full-size VACUUM scratch copy on
+        a nearly full Railway volume. SQLite may retain freed pages for reuse.
+        This must be called by the collector only outside market hours.
+        """
+        if keep_sessions < 1 or batch_rows < 1:
+            raise ValueError("retention limits must be positive")
+        sessions = [
+            str(row[0])
+            for row in self.connection.execute(
+                "SELECT DISTINCT substr(timestamp, 1, 10) AS session "
+                "FROM option_snapshots ORDER BY session DESC LIMIT ?",
+                (keep_sessions + 1,),
+            )
+        ]
+        if len(sessions) <= keep_sessions:
+            return {"removed_rows": 0, "retained_sessions": sessions, "complete": True,
+                    "reusable_bytes": self._reusable_bytes()}
+
+        oldest_retained = sessions[keep_sessions - 1]
+        cutoff = oldest_retained + "T"
+        removed = 0
+        complete = True
+        while True:
+            # Each batch can create a WAL file before checkpointing. Reserve
+            # sufficient physical space for journals shared with this volume.
+            if self.path != ":memory:" and shutil.disk_usage(Path(self.path).parent).free < 12 * 1024 * 1024:
+                complete = False
+                break
+            cursor = self.connection.execute(
+                "DELETE FROM option_snapshots WHERE rowid IN "
+                "(SELECT rowid FROM option_snapshots WHERE timestamp < ? "
+                "ORDER BY timestamp LIMIT ?)",
+                (cutoff, batch_rows),
+            )
+            changed = max(0, int(cursor.rowcount))
+            self.connection.commit()
+            removed += changed
+            # Fail conservatively if a concurrent reader prevents truncation.
+            # Continuing deletions could otherwise fill the remaining disk via WAL.
+            checkpoint = self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+            if checkpoint is not None and int(checkpoint[0]) != 0:
+                complete = False
+                break
+            if changed == 0:
+                break
+
+        return {"removed_rows": removed, "retained_sessions": sessions[:keep_sessions],
+                "complete": complete, "reusable_bytes": self._reusable_bytes()}
+
     def insert(self, snapshots: Iterable[FreeOptionSnapshot]) -> int:
         rows = []
         for item in snapshots:
@@ -119,11 +177,23 @@ class SnapshotStore:
             )
         if not rows:
             return 0
-        # Research quotes must not consume the final space needed by the
-        # paper/live execution journals sharing this volume. Preserve all
-        # history and resume collection when storage capacity is restored.
-        if self.path != ":memory:" and shutil.disk_usage(Path(self.path).parent).free < 16 * 1024 * 1024:
-            raise StorageCapacityError("Market history paused: less than 16 MiB free; expand storage")
+        # Retention frees internal SQLite pages for reuse, but DELETE alone
+        # does not necessarily shrink the on-disk database. Never compromise
+        # journal space just because the database has free pages.
+        low_disk = False
+        if self.path != ":memory:":
+            physical_free = shutil.disk_usage(Path(self.path).parent).free
+            if physical_free < 12 * 1024 * 1024:
+                raise StorageCapacityError("Market history paused: less than 12 MiB physical disk free; expand storage")
+            low_disk = physical_free < 16 * 1024 * 1024
+            if low_disk:
+                required_reusable = max(8 * 1024 * 1024, len(rows) * 2048)
+                if self._reusable_bytes() < required_reusable:
+                    raise StorageCapacityError("Market history paused: insufficient reusable SQLite pages")
+                # Checkpoint first so a stale WAL cannot consume the journal reserve.
+                checkpoint = self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                if checkpoint is not None and int(checkpoint[0]) != 0:
+                    raise StorageCapacityError("Market history paused: WAL checkpoint busy")
         self.connection.executemany(
             """
             INSERT OR REPLACE INTO option_snapshots (
@@ -158,6 +228,10 @@ class SnapshotStore:
             rows,
         )
         self.connection.commit()
+        if low_disk:
+            # Best effort: SQLite still enforces safe failure if physical space
+            # or the freelist runs low on a later cycle.
+            self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
         return len(rows)
 
     def count(self) -> int:
