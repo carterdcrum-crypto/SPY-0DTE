@@ -90,7 +90,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "wrong_expiration_or_side": 0, "untrusted_source": 0,
         "stale_quote": 0, "invalid_bid_ask": 0,
         "missing_depth": 0, "missing_greeks": 0,
-        "delta_out_of_range": 0, "invalid_iv": 0,
+        "delta_out_of_range": 0, "iv_out_of_range": 0,
         "wide_spread": 0, "insufficient_settled_cash": 0,
     }
     # Count each distinct option/side just once even if multiple setup
@@ -139,8 +139,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
                 if not .40<=abs(delta)<=.60:
                     reject("delta_out_of_range", sig, q)
                     continue
-                if iv <= 0:
-                    reject("invalid_iv", sig, q)
+                if not (iv > 0 and iv / rv <= 1.5):
+                    reject("iv_out_of_range", sig, q)
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
                 if spread>MAX_PREMIUM_SPREAD:
@@ -172,13 +172,13 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "missing_depth": "No executable size on both sides of the quote",
         "missing_greeks": "Option delta or implied volatility unavailable",
         "delta_out_of_range": "Option delta outside 0.40–0.60",
-        "invalid_iv": "Option implied volatility must be positive",
+        "iv_out_of_range": "Option implied volatility exceeds the V5 threshold",
         "wide_spread": "Option bid/ask spread exceeds 3%",
         "insufficient_settled_cash": "Settled cash cannot cover one qualifying contract",
     }
     blocking = "eligible" if choices else next(
         (name for name in (
-            "insufficient_settled_cash", "wide_spread", "invalid_iv",
+            "insufficient_settled_cash", "wide_spread", "iv_out_of_range",
             "delta_out_of_range", "missing_greeks", "missing_depth",
             "invalid_bid_ask", "stale_quote", "untrusted_source",
             "wrong_expiration_or_side",
@@ -216,7 +216,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
 
 
 def paper_exit_reason(position,quote,bars,now):
-    """Observed 35% hard loss / 25% premium trail / reversal exits; no fixed maximum hold."""
+    """Observed 35% hard loss / 25% premium trail / reversal / 18min exit."""
     if quote is None or not 0<=(now-quote.timestamp).total_seconds()<=MAX_SOURCE_DELAY_SECONDS:
         return None
     opened=position["opened_at"]
@@ -244,4 +244,6 @@ def paper_exit_reason(position,quote,bars,now):
     direction=1 if quote.right=="call" else -1
     if direction*(bars[-1].close/bars[-4].close-1)<0:
         return "v5_spy_close_reversal"
+    if age >= 18 * 60:
+        return "v5_18min_timeout"
     return None
