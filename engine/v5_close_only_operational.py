@@ -7,6 +7,7 @@ orders from this unvalidated policy. No lookahead, historical prices or AI.
 """
 from __future__ import annotations
 
+import logging
 import math
 import statistics
 from datetime import datetime, timedelta
@@ -22,6 +23,19 @@ from quantconnect.v5_core import quality_score
 
 PROFILE = "v5_close_only_unrestricted_research"
 MAX_PREMIUM_SPREAD = .03
+
+_log = logging.getLogger("spy0dte.v5")
+_iv_diagnostic_minute = None
+
+
+def _log_iv_rejection(now, iv, rv):
+    """At most one sanitized IV comparison per minute per process."""
+    global _iv_diagnostic_minute
+    minute = now.replace(second=0, microsecond=0)
+    if minute == _iv_diagnostic_minute:
+        return
+    _iv_diagnostic_minute = minute
+    _log.info("v5_iv_rejection iv=%.8f rv=%.8f ratio=%.4f threshold=1.5", iv, rv, iv / rv)
 
 
 def _reference_frames(bars):
@@ -141,6 +155,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
                     reject("delta_out_of_range", sig, q)
                     continue
                 if not (iv>0 and iv/rv<=1.5):
+                    _log_iv_rejection(now, iv, rv)
                     reject("iv_out_of_range", sig, q)
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
