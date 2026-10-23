@@ -94,7 +94,7 @@ def close_proxy_signals(frames, i, *, challenger=False):
     return tuple(events)
 
 
-def proxy_candidates(frames, *, challenger):
+def proxy_candidates(frames, *, challenger, iv_ratio_cap=1.5):
     times=[f.timestamp+timedelta(minutes=1) for f in frames]
     entries=[]
     for i in range(35,len(frames)):
@@ -129,7 +129,8 @@ def proxy_candidates(frames, *, challenger):
             market=frames[j].market
             if (q.spread_fraction>.03 or market.realized_volatility<=0 or
                     q.implied_volatility<=0 or
-                    q.implied_volatility/market.realized_volatility>1.5):
+                    (iv_ratio_cap is not None and
+                     q.implied_volatility/market.realized_volatility>iv_ratio_cap)):
                 continue
             score=quality_score(sig,q.spread_fraction,q.delta,
                                 q.implied_volatility,market.realized_volatility)
@@ -170,7 +171,7 @@ def proxy_size(arm, *, equity, settled, peak, debit, score, starting_cash=START_
     return max(0,min(cash,int((min(.35*equity,fraction*riskable)+1e-8)//debit)))
 
 
-def proxy_exit(arm,entry,frames,cutoff):
+def proxy_exit(arm,entry,frames,cutoff, *, no_max_hold=False):
     """Real sampled option bids, research-only simulated realized exits.
 
     Exit on hard stop or peak trailing stop, close proxy reversal and timer.
@@ -202,16 +203,25 @@ def proxy_exit(arm,entry,frames,cutoff):
                 momentum=direction*(closes[ix]/closes[ix-3]-1)
                 if momentum<0 and at>=entry_at+timedelta(minutes=10):
                     reason="underlying_reversal_close_proxy"
-                elif at>=due:
+                elif not no_max_hold and at>=due:
                     reason="time_exit"
                 else:
                     continue
-            elif at>=due:
+            elif not no_max_hold and at>=due:
                 reason="time_exit"
             else:
                 continue
         return {"pnl_usd":round(credit-debit,6),
                 "exit_at":at,"exit_reason":reason}
+    if no_max_hold:
+        # Only an observed bid within one minute of mandatory liquidation.
+        terminal = [(at, bid) for at, bid in path
+                    if cutoff <= at <= cutoff + timedelta(minutes=1)]
+        if terminal:
+            at, bid = terminal[0]
+            credit = max(0., (bid-SLIP)*100-FEE)
+            return {"pnl_usd": round(credit-debit, 6),
+                    "exit_at": at, "exit_reason": "session_close_sampled_bid"}
     return None
 
 
@@ -234,13 +244,15 @@ def rolling_42(s, starting_cash=START_CASH):
                 if windows else None}
 
 
-def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, split_setups=False):
+def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, split_setups=False, current_setup=False):
     if not math.isfinite(starting_cash) or starting_cash <= 0 or round(starting_cash, 2) != starting_cash:
         raise ValueError("starting_cash must be a positive dollar-and-cent amount")
     if not arms or any(arm not in ARMS for arm in arms):
         raise ValueError("unknown or missing research arm")
     if split_setups and tuple(arms)!=(ARMS[-1],):
         raise ValueError("split_setups requires only unrestricted V5 research arm")
+    if current_setup and tuple(arms) != (ARMS[-1],):
+        raise ValueError("current_setup is restricted to the isolated unrestricted V5 proxy arm")
     # Fully separate accounts, not profit attribution within the combined arm.
     policies={arm:(arm,None) for arm in arms}
     if split_setups:
@@ -269,7 +281,8 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, 
         from .regime_hold_sensitivity import selection
         original=selection(frames)
         proxy_regular=proxy_candidates(frames,challenger=False)
-        proxy_challenger=proxy_candidates(frames,challenger=True)
+        proxy_challenger=proxy_candidates(frames,challenger=True,
+            iv_ratio_cap=None if current_setup else 1.5)
         for label,s in states.items():
             arm,setup_filter=policies[label]
             s["settled"]+=s["pending"]
@@ -284,7 +297,7 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, 
                 if setup_filter is not None and item["signal"]["setup"]!=setup_filter:
                     continue
                 at=item["entry_at"]
-                if at>=cutoff-timedelta(minutes=MAX_FIXED_MIN+1):
+                if at>=cutoff-timedelta(minutes=5 if current_setup else MAX_FIXED_MIN+1):
                     s["skips"]["LATE_ENTRY"]+=1
                     continue
                 if busy is not None and at<=busy:
@@ -311,7 +324,7 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, 
                         frames,entry_at=at,side=item["signal"]["side"],
                         symbol=q.symbol,cutoff=cutoff)
                 else:
-                    outcome=proxy_exit(arm,item,frames,cutoff)
+                    outcome=proxy_exit(arm,item,frames,cutoff,no_max_hold=current_setup)
                 s["settled"]=round(s["settled"]-qty*debit,8)
                 row={"day":str(day),"arm":label,"setup":item["signal"]["setup"],
                      "contracts":qty,"quality_score":score,
@@ -343,6 +356,10 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, 
         "sessions":len(names),"first_day":min(names),"last_day":max(names),
         "start_cash_usd":starting_cash,
         "tested_arms":list(policies),
+        "current_setup":current_setup,
+        "iv_ratio_cap":None if current_setup else 1.5,
+        "max_hold_minutes":None if current_setup else "legacy_arm_specific",
+        "fee_per_contract_per_side":FEE,
         "split_setups":split_setups,
         "split_method":"Independent all-cash T+1 replays with only that entry signal; no changes to shared exits, spreads, slippage or contract selection." if split_setups else None,
         "source":"Previously inspected SPY close/volume-ratio and CBBO-1m archive",
