@@ -213,15 +213,14 @@ def proxy_exit(arm,entry,frames,cutoff, *, no_max_hold=False):
                 continue
         return {"pnl_usd":round(credit-debit,6),
                 "exit_at":at,"exit_reason":reason}
-    if no_max_hold:
-        # Only an observed bid within one minute of mandatory liquidation.
-        terminal = [(at, bid) for at, bid in path
-                    if cutoff <= at <= cutoff + timedelta(minutes=1)]
-        if terminal:
-            at, bid = terminal[0]
-            credit = max(0., (bid-SLIP)*100-FEE)
-            return {"pnl_usd": round(credit-debit, 6),
-                    "exit_at": at, "exit_reason": "session_close_sampled_bid"}
+    # Same mandatory session exit for both arms; never invent a terminal bid.
+    terminal = [(at, bid) for at, bid in path
+                if cutoff <= at <= cutoff + timedelta(minutes=1)]
+    if terminal:
+        at, bid = terminal[0]
+        credit = max(0., (bid-SLIP)*100-FEE)
+        return {"pnl_usd": round(credit-debit, 6),
+                "exit_at": at, "exit_reason": "session_close_sampled_bid"}
     return None
 
 
@@ -297,7 +296,7 @@ def run(data_dir:Path, output_dir:Path, *, starting_cash=START_CASH, arms=ARMS, 
                 if setup_filter is not None and item["signal"]["setup"]!=setup_filter:
                     continue
                 at=item["entry_at"]
-                if at>=cutoff-timedelta(minutes=5 if current_setup else MAX_FIXED_MIN+1):
+                if at>=cutoff-timedelta(minutes=5):
                     s["skips"]["LATE_ENTRY"]+=1
                     continue
                 if busy is not None and at<=busy:
