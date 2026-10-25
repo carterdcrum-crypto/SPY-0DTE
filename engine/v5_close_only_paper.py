@@ -102,11 +102,9 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
         if proposed is None:
             return self._finish(current,{**decision,"mode":mode,
                 "last_action":None,"settled_released":released})
-        if self._in_cooldown(current):
-            return self._finish(current,{"state":"COOLDOWN","mode":mode,
-                "last_signal":proposed,"last_action":None,
-                "reason":"paper cooldown; no re-entry",
-                "settled_released":released})
+        # No arbitrary 180-second post-exit cooldown in the archived V5
+        # model. The persistent single-position ledger and T+1 cash
+        # settlement still prevent overlapping/double-spent entries.
         if mode=="SHADOW":
             return self._finish(current,{"state":"SHADOW_SIGNAL",
                 "mode":mode,"last_signal":proposed,"last_action":"WOULD_BUY",
