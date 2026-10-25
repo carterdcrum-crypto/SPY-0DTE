@@ -48,7 +48,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     close = session_close(local.date())
     if close is None or local.hour < 9 or (local.hour == 9 and local.minute < 52):
         return None, {"state":"MARKET_CLOSED"}
-    if (datetime.combine(local.date(),close,ET)-local).total_seconds() < 20*60:
+    # Replay blocks entry in the last 26 minutes of the SPY session.
+    if (datetime.combine(local.date(),close,ET)-local).total_seconds() <= 26*60:
         return None, {"state":"ENTRY_WINDOW_CLOSED"}
     if not (equity>0 and settled>0 and peak>0):
         return None, {"state":"INSUFFICIENT_SETTLED_CASH"}
@@ -59,9 +60,11 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
             or not math.isfinite(opening) or opening <= 0):
         return None, {"state":"INVALID_V5_DRAWDOWN_BUDGET"}
     budget = min(float(settled), opening * risk_fraction)
-    if len(bars)<57 or not last_spy_bar_is_fresh(bars,now):
+    # Close-proxy challenger first evaluates i=35; entry uses the NEXT
+    # completed minute, so require 36 signal bars + 1 confirmation bar.
+    if len(bars)<37 or not last_spy_bar_is_fresh(bars,now):
         return None, {"state":"WAITING_REAL_COMPLETED_SPY_M1"}
-    tail=bars[-57:]
+    tail=bars[-37:]
     if any(b.start.astimezone(ET).date()!=local.date() or b.volume<=0 for b in tail):
         return None, {"state":"NONCONTIGUOUS_REAL_SPY_M1"}
     if any((b.start-a.start).total_seconds()!=60 for a,b in zip(tail,tail[1:])):
