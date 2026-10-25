@@ -23,7 +23,8 @@ def drawdown_fraction(opening_equity: float, prior_peak: float) -> float:
         raise ValueError("nonfinite risk equity")
     if opening_equity <= 0 or prior_peak <= 0:
         raise ValueError("risk equity must be positive")
-    decline = max(0., 1 - opening_equity / prior_peak)
+    # Normalize float representation at exact 2/5/10 percent boundaries.
+    decline = round(max(0., 1 - opening_equity / prior_peak), 10)
     if decline < .02:
         return 1.0
     if decline < .05:
