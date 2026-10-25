@@ -403,6 +403,9 @@ class WebullMinuteBarCache:
         self.last_attempt=None
         self.error="SPY M1 bars not fetched"
         self.source="Webull OpenAPI stock M1 OHLCV"
+        # Original V4 keeps its 55-bar requirement. V5 close-proxy can
+        # explicitly opt into the historical model's 36 signal + 1 entry bars.
+        self.minimum_history_bars=55
 
     def refresh(self,provider,now:datetime):
         if self.last_attempt is not None:
@@ -446,8 +449,12 @@ class WebullMinuteBarCache:
                               "realtime stock-data subscription/permission needed")
             _store_spy_chart(chart_bars,now,reason=chart_reason)
             # Trade decisions use only FINISHED bars (never live_rows).
-            if not last_spy_bar_is_fresh(fresh,now) or len(fresh)<55:
-                raise ValueError("Webull did not return 55 fresh completed SPY M1 RTH bars")
+            if (not last_spy_bar_is_fresh(fresh,now)
+                    or len(fresh)<self.minimum_history_bars):
+                raise ValueError(
+                    f"Webull did not return {self.minimum_history_bars} fresh "
+                    "completed SPY M1 RTH bars"
+                )
             self.bars=fresh
             self.error=None
         except Exception as exc:
