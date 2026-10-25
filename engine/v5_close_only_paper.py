@@ -47,6 +47,11 @@ def manage_v5_position(trader,position,current,mode,eastern,quotes,released):
 
 
 class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # The $867,018 close-proxy replay can signal after minute 36, not 55.
+        self.bar_cache.minimum_history_bars=37
+
     @staticmethod
     def _finish(now,values):
         return PaperAutoTrader._finish(now,{**values,
