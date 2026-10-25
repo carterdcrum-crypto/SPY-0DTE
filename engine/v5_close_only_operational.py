@@ -35,7 +35,8 @@ def _reference_frames(bars):
     return frames
 
 
-def paper_candidate(now, bars, quotes, *, equity, settled, peak):
+def paper_candidate(now, bars, quotes, *, equity, settled, peak,
+                    risk_fraction: float = 1.0, risk_opening_equity: float | None = None):
     """Independent paper signal / live-observation preview; never an order.
 
     Verify fresh option quote AND its underlying timestamp and genuine size.
@@ -51,6 +52,13 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         return None, {"state":"ENTRY_WINDOW_CLOSED"}
     if not (equity>0 and settled>0 and peak>0):
         return None, {"state":"INSUFFICIENT_SETTLED_CASH"}
+    # Original unrestricted V5 proposal is now bounded by the as-of, durable
+    # prior-session drawdown throttle. Real settled cash/depth always win.
+    opening = equity if risk_opening_equity is None else float(risk_opening_equity)
+    if (not math.isfinite(float(risk_fraction)) or not 0 < risk_fraction <= 1
+            or not math.isfinite(opening) or opening <= 0):
+        return None, {"state":"INVALID_V5_DRAWDOWN_BUDGET"}
+    budget = min(float(settled), opening * risk_fraction)
     if len(bars)<57 or not last_spy_bar_is_fresh(bars,now):
         return None, {"state":"WAITING_REAL_COMPLETED_SPY_M1"}
     tail=bars[-57:]
@@ -152,9 +160,9 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
                 if cheapest is None or debit<cheapest:
                     cheapest=debit
                     cheapest_ask=ask
-                # Fully unrestricted premium budgeting IN PAPER, but strictly
-                # bound by real displayed bid/ask depth and settled cash.
-                n=min(int((settled+1e-8)//debit),bs,a_s)
+                # Cash-first, then peak-to-trough EOD risk fraction and
+                # independently observed option quote depth.
+                n=min(int((budget+1e-8)//debit),bs,a_s)
                 if n<1:
                     reject("insufficient_settled_cash", sig, q)
                     continue
@@ -193,6 +201,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "rejection_counts":checks,
         "quotes_observed":len(quotes),
         "signals_found":len(setups),
+        "risk_fraction":risk_fraction, "risk_opening_equity":round(opening,2),
+        "risk_budget_usd":round(budget,2),
         "asof":now.isoformat(),
     }
     if not choices:
@@ -207,10 +217,15 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak):
         "signal_at":sig_at.isoformat(),"cycle":sig_at.isoformat(),
         "debit_per_contract":debit,
         "underlying_spot":q.underlying_price,
-        "sizing_mode":"UNRESTRICTED_CASH_PAPER_RESEARCH",
+        "sizing_mode":"FULL_CASH_WITH_EOD_DRAWDOWN_THROTTLE",
+        "risk_fraction":risk_fraction,
+        "risk_opening_equity":round(opening,2),
+        "risk_budget_usd":round(budget,2),
         "reason":f"{PROFILE}; {sig.setup}; long0dte; paper-research-only",
         "no_live_order":True}, {"state":"PAPER_RESEARCH_SIGNAL","contracts":n,
                                  "full_premium_risk_usd":round(n*debit,2),
+                                 "risk_fraction":risk_fraction,
+                                 "risk_budget_usd":round(budget,2),
                                  "entry_diagnostics":details,
                                  "no_live_order":True}
 
