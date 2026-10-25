@@ -54,12 +54,20 @@ def signals(frames, i, *, compression=.75, min_rvol=1.25, buffer=0., acceleratio
         return (Signal("put","volatility_expansion_CLOSE_PROXY",rvol,trend,efficiency),)
     return ()
 
+def quantity(cash, debit, mode):
+    if mode not in ("fixed_one", "settled_cash"):
+        raise ValueError("unknown sizing mode")
+    if not math.isfinite(cash) or not math.isfinite(debit) or debit <= 0 or cash < debit - 1e-8:
+        return 0
+    return 1 if mode == "fixed_one" else max(0, math.floor((cash + 1e-8) / debit))
+
 def run():
+    mode=os.environ.get("EXPANSION_SIZING_MODE","fixed_one")
     root=Path(os.environ.get("RESEARCH_DATA_DIR","/data/research"))
     paths=_research_files(root)
     if not paths:
         raise ValueError("No historical archive")
-    states={name:dict(cash=1000.,pending=0.,peak=1000.,max_dd=0.,pnl=[],unscored=0,skips=Counter(),daily=[]) for name in CONFIGS}
+    states={name:dict(cash=1000.,pending=0.,peak=1000.,max_dd=0.,pnl=[],unscored=0,contracts=0,max_contracts=0,skips=Counter(),daily=[]) for name in CONFIGS}
     days=[]
     for file in paths:
         frames=list(load_canonical_path(file))
@@ -79,9 +87,13 @@ def run():
                 if busy is not None and at<=busy:
                     s["skips"]["busy"]+=1;continue
                 debit=item["debit"]
-                if debit>s["cash"]+1e-8:
+                qty=quantity(s["cash"],debit,mode)
+                if qty < 1:
                     s["skips"]["cash"]+=1;continue
-                s["cash"]-=debit
+                if qty*debit>s["cash"]+1e-8:
+                    raise AssertionError("settled cash exceeded")
+                s["cash"]-=qty*debit
+                s["contracts"]+=qty;s["max_contracts"]=max(s["max_contracts"],qty)
                 outcome=proxy_exit(ARMS[-1],item,frames,cutoff)
                 if outcome is None:
                     terminal=[(t,b) for t,b in quote_path(frames,item["entry_idx"],item["quote"].symbol,cutoff) if cutoff<=t<=cutoff+timedelta(minutes=1)]
@@ -89,7 +101,7 @@ def run():
                         t,b=terminal[0];outcome={"exit_at":t,"pnl_usd":max(0.,(b-.01)*100-.65)-debit}
                 if outcome is None:
                     s["unscored"]+=1;busy=cutoff;continue
-                pnl=outcome["pnl_usd"];s["pending"]+=max(0.,debit+pnl)
+                pnl=qty*outcome["pnl_usd"];s["pending"]+=max(0.,qty*debit+pnl)
                 s["pnl"].append(pnl);busy=outcome["exit_at"]
             equity=s["cash"]+s["pending"];s["peak"]=max(s["peak"],equity)
             s["max_dd"]=max(s["max_dd"],1-equity/s["peak"])
@@ -98,9 +110,9 @@ def run():
     results={}
     for name,s in states.items():
         pnl=s["pnl"];wins=sum(x>0 for x in pnl);loss=-sum(x for x in pnl if x<0)
-        results[name]={"ending_equity":round(s["cash"]+s["pending"],2),"trades":len(pnl),"win_rate":round(100*wins/len(pnl),2) if pnl else None,"profit_factor":round(sum(x for x in pnl if x>0)/loss,3) if loss else None,"max_eod_drawdown_pct":round(100*s["max_dd"],2),"unscorable":s["unscored"],"net_after_extra_2usd_per_trade":round(sum(pnl)-2*len(pnl),2),"skips":dict(s["skips"])}
-    report={"status":"REUSED_IN_SAMPLE_CLOSE_ONLY_PROXY_NOT_EXACT_V5","sessions":len(days),"first_day":min(days),"last_day":max(days),"starting_cash":1000,"contracts_per_trade":1,"iv_rv_cap":1.5,"max_hold_minutes":18,"fees_per_side":.65,"slippage_per_share_per_side":.01,"results":results,"missing_real_intrabar_volume_and_executable_depth":True,"data_purchases":0,"broker_orders":0}
-    dest=root/"volatility_expansion_2026_10_25";dest.mkdir(parents=True,exist_ok=True)
+        results[name]={"ending_equity":round(s["cash"]+s["pending"],2),"trades":len(pnl),"win_rate":round(100*wins/len(pnl),2) if pnl else None,"profit_factor":round(sum(x for x in pnl if x>0)/loss,3) if loss else None,"max_eod_drawdown_pct":round(100*s["max_dd"],2),"unscorable":s["unscored"],"contracts":s["contracts"],"max_contracts_per_trade":s["max_contracts"],"net_after_extra_2usd_per_contract":round(sum(pnl)-2*s["contracts"],2),"skips":dict(s["skips"])}
+    report={"status":"REUSED_IN_SAMPLE_CLOSE_ONLY_PROXY_NOT_EXACT_V5","sessions":len(days),"first_day":min(days),"last_day":max(days),"starting_cash":1000,"sizing_mode":mode,"daily_contract_cap":None,"contracts_per_trade":1 if mode=="fixed_one" else "all_settled_cash","iv_rv_cap":1.5,"max_hold_minutes":18,"fees_per_side":.65,"slippage_per_share_per_side":.01,"results":results,"missing_real_intrabar_volume_and_executable_depth":True,"data_purchases":0,"broker_orders":0}
+    dest=root/"volatility_expansion_2026_10_25"/mode;dest.mkdir(parents=True,exist_ok=True)
     (dest/"report.json").write_text(json.dumps(report,indent=2)+"\n")
     (dest/"daily_equity.json").write_text(json.dumps({k:v["daily"] for k,v in states.items()})+"\n")
     print("EXPANSION_RESULT "+json.dumps(report,sort_keys=True),flush=True)
