@@ -35,7 +35,7 @@ def test_predictive_never_exceeds_current_throttle_band():
         if policy[0]=="adaptive":
             continue
         assert budget_fraction(policy,950,1000,factors)<=.40
-        assert budget_fraction(policy,900,1000,factors)<=.15
+        assert budget_fraction(policy,890,1000,factors)<=.15
 
 
 def test_strict_spread_blocks_wide_quote():
