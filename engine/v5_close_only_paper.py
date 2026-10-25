@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from .paper_autotrader import PaperAutoTrader, EASTERN
 from .v4_paper_trader import V4QualityPaperTrader
 from .v5_close_only_operational import (
-    PROFILE, paper_candidate, paper_exit_reason,
+    PROFILE, paper_candidate, paper_exit_reason, V5_MIN_COMPLETED_BARS,
 )
 from .v4_operational import FEE, SLIPPAGE_PER_SHARE
 from .v5_drawdown_sizing import observe_flat_session
@@ -50,7 +50,7 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # The $867,018 close-proxy replay can signal after minute 36, not 55.
-        self.bar_cache.minimum_history_bars=37
+        self.bar_cache.minimum_history_bars=V5_MIN_COMPLETED_BARS
 
     @staticmethod
     def _finish(now,values):
