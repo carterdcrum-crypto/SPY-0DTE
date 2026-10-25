@@ -449,7 +449,12 @@ class LiveExecutor:
         if test.enabled and used_before(orders):
             return {**common, "state": "ONE_SHOT_ALREADY_USED",
                     "reason": "one test entry reserved; no additional purchases allowed"}
-        if orders and (now-datetime.fromisoformat(orders[-1]["updated_at"])).total_seconds() < 180:
+        # The original V5 $867k proxy has no post-exit 180-second
+        # cooldown. Its only pacing is one owned position at a time.
+        # Keep the legacy cooldown for V4; pending/unknown order journaling,
+        # market-data gates and per-signal idempotency remain mandatory.
+        if (orders and not self._unrestricted_v5()
+                and (now-datetime.fromisoformat(orders[-1]["updated_at"])).total_seconds() < 180):
             return {**common, "state": "COOLDOWN", "reason": "waiting between live executions"}
         if test.enabled:
             # Suppress ALL normal unrestricted V5 entries while this one-time
