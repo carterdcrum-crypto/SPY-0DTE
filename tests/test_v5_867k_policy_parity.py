@@ -3,6 +3,7 @@
 These tests assert identical *decision policy*, not real-world replication of
 the archived result. The replay lacked executable NBBO sizes and full OHLCV.
 """
+import inspect
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -127,3 +128,8 @@ def test_v5_broker_submit_rechecks_same_latest_entry(monkeypatch):
     result=executor._submit(order,symbol="SPY",reason="test",
                             signal_key="test",policy={"generation":1},now=now)
     assert result["state"]=="ENTRY_WINDOW_CLOSED"
+
+
+def test_no_v5_extra_180_second_delay_vs_original_proxy():
+    assert "_in_cooldown" not in inspect.getsource(V5CloseOnlyPaperTrader.tick)
+    assert "orders and not self._unrestricted_v5()" in inspect.getsource(LiveExecutor.tick)
