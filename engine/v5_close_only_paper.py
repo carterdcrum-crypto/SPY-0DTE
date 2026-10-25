@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from .paper_autotrader import PaperAutoTrader, EASTERN
 from .v4_paper_trader import V4QualityPaperTrader
 from .v5_close_only_operational import (
-    PROFILE, paper_candidate, paper_exit_reason, V5_MIN_COMPLETED_BARS,
+    PROFILE, paper_candidate, paper_exit_reason, V5_MIN_COMPLETED_BARS, V5_MAX_HOLD_MINUTES,
 )
 from .v4_operational import FEE, SLIPPAGE_PER_SHARE
 from .v5_drawdown_sizing import observe_flat_session
@@ -123,7 +123,7 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
             fill_price=debit,opened_at=current,
             entry_spot=proposed["underlying_spot"],strategy=PROFILE,
             stop_price=debit*.65,target_price=1e12,
-            max_hold_seconds=18*60,reason=proposed["reason"])
+            max_hold_seconds=V5_MAX_HOLD_MINUTES*60,reason=proposed["reason"])
         return self._finish(current,{"state":"POSITION_OPENED",
             "mode":mode,"position":opened,"last_signal":proposed,
             "last_action":"BUY","reason":proposed["reason"],
