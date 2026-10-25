@@ -86,12 +86,10 @@ def close_proxy_signals(frames, i, *, challenger=False):
         add("call","liquidity_reversal_CLOSE_PROXY")
     wide=max(spots[i-32:i-8])-min(spots[i-32:i-8])
     narrow=max(spots[i-8:i])-min(spots[i-8:i])
-    # Selected V5 expansion: require a 2-basis-point break of the close range.
-    breakout_buffer = .0002 if challenger else 0.
     if wide>0 and narrow/wide<=(.75 if challenger else .60):
-        if now>max(spots[i-8:i])*(1+breakout_buffer) and now>prev and momentum>=2 and fast>slow:
+        if now>max(spots[i-8:i]) and now>prev and momentum>=2 and fast>slow:
             add("call","volatility_expansion_CLOSE_PROXY")
-        elif now<min(spots[i-8:i])*(1-breakout_buffer) and now<prev and momentum<=-2 and fast<slow:
+        elif now<min(spots[i-8:i]) and now<prev and momentum<=-2 and fast<slow:
             add("put","volatility_expansion_CLOSE_PROXY")
     return tuple(events)
 
