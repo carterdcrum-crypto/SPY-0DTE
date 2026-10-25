@@ -266,6 +266,6 @@ def paper_exit_reason(position,quote,bars,now):
     direction=1 if quote.right=="call" else -1
     if direction*(bars[-1].close/bars[-4].close-1)<0:
         return "v5_spy_close_reversal"
-    if age >= 18 * 60:
+    if age >= V5_MAX_HOLD_MINUTES * 60:
         return "v5_18min_timeout"
     return None
