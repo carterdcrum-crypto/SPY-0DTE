@@ -13,7 +13,7 @@ from .v4_live_strategy import V4QualityLiveStrategy
 from .v5_close_only_operational import (
     PROFILE, paper_candidate, paper_exit_reason,
 )
-from .v4_operational import FEE
+from .v4_operational import FEE, ET
 from .live_autonomy_store import autonomy_db_path
 from .v5_drawdown_sizing import observe_flat_session
 
@@ -40,7 +40,7 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
         # The policy persists last observed FLAT equity across sessions.
         # Avoid treating a temporarily reserved option premium as a loss.
         # No per-order owner limit is substituted for this V5 EOD throttle.
-        risk=observe_flat_session(autonomy_db_path(),now.astimezone(__import__('zoneinfo').ZoneInfo('America/New_York')).date(),
+        risk=observe_flat_session(autonomy_db_path(),now.astimezone(ET).date(),
                                   float(account["equity"]))
         proposal, diag=paper_candidate(
             now, self.bar_cache.bars, self.market_reader.quotes.values(),
