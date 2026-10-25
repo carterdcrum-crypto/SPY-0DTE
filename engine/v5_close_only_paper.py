@@ -13,6 +13,7 @@ from .v5_close_only_operational import (
     PROFILE, paper_candidate, paper_exit_reason,
 )
 from .v4_operational import FEE, SLIPPAGE_PER_SHARE
+from .v5_drawdown_sizing import observe_flat_session
 
 
 def manage_v5_position(trader,position,current,mode,eastern,quotes,released):
@@ -49,7 +50,7 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
     @staticmethod
     def _finish(now,values):
         return PaperAutoTrader._finish(now,{**values,
-            "strategy":PROFILE,"sizing_mode":"cash_and_verified_depth_RESEARCH_PAPER"})
+            "strategy":PROFILE,"sizing_mode":"full_cash_with_eod_drawdown_throttle"})
 
     def tick(self, now:datetime|None=None):
         current=(now or datetime.now(timezone.utc)).astimezone(timezone.utc)
@@ -85,10 +86,14 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
                 "last_action":None,"settled_released":released})
         acct=self.account_store.snapshot()
         equity=acct.settled_cash+acct.unsettled_cash
-        peak=max(acct.starting_cash,acct.starting_cash+acct.realized_pnl,equity)
+        # Only observe a FLAT account. Reserve premium while a position is
+        # open; it is not an equity drawdown until its exit is confirmed.
+        risk=observe_flat_session(self.account_store.path,eastern.date(),equity)
         proposed,decision=paper_candidate(
             current,self.bar_cache.bars,quotes,equity=equity,
-            settled=acct.settled_cash,peak=peak)
+            settled=acct.settled_cash,peak=risk["prior_peak_equity"],
+            risk_fraction=risk["fraction"],
+            risk_opening_equity=risk["opening_equity"])
         if proposed is None:
             return self._finish(current,{**decision,"mode":mode,
                 "last_action":None,"settled_released":released})
@@ -120,6 +125,8 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
             "mode":mode,"position":opened,"last_signal":proposed,
             "last_action":"BUY","reason":proposed["reason"],
             "risk":{"full_premium_loss_usd":round(quantity*debit,2),
-                    "up_to_all_settled_cash_in_paper":True,
+                    "full_cash_drawdown_throttle":True,
+                    "risk_fraction":risk["fraction"],
+                    "risk_budget_usd":proposed["risk_budget_usd"],
                     "live_broker_orders":False},
             "settled_released":released})
