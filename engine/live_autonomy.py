@@ -542,7 +542,19 @@ class LiveExecutor:
                     or int(snapshot.bid_size)<1 or int(snapshot.ask_size)<1):
                 return {**common,"state":"RISK_BLOCKED",
                         "reason":"V5 requires fresh verified market depth and narrow spread"}
-            budget=account["settled_cash"]
+            # Revalidate drawdown sizing against a FRESH broker balance.
+            # The 100/70/40/15% risk budget cannot be enlarged by a quote
+            # change between signal discovery and submission.
+            try:
+                fraction=float(candidate["risk_fraction"])
+                opening=float(candidate["risk_opening_equity"])
+                if (not math.isfinite(fraction) or not math.isfinite(opening)
+                        or not 0 < fraction <= 1 or opening <= 0):
+                    raise ValueError("invalid V5 drawdown budget")
+            except (KeyError, TypeError, ValueError, OverflowError):
+                return {**common, "state": "RISK_BLOCKED",
+                        "reason": "missing or invalid V5 durable drawdown throttle"}
+            budget=min(account["settled_cash"], opening*fraction)
             quantity=min(int(candidate["quantity"]),int(snapshot.bid_size),
                          int(snapshot.ask_size),int(budget//per_contract))
         else:
