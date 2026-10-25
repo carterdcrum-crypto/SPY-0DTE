@@ -96,11 +96,11 @@ def close_proxy_signals(frames, i, *, challenger=False):
     return tuple(events)
 
 
-def proxy_candidates(frames, *, challenger):
+def proxy_candidates(frames, *, challenger, signal_builder=None):
     times=[f.timestamp+timedelta(minutes=1) for f in frames]
     entries=[]
     for i in range(35,len(frames)):
-        signals=close_proxy_signals(frames,i,challenger=challenger)
+        signals=(signal_builder or close_proxy_signals)(frames,i,challenger=challenger)
         if not signals:
             continue
         event_time=times[i]
