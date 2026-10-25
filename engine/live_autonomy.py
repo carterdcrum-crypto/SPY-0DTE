@@ -271,7 +271,9 @@ class LiveExecutor:
         now = self.clock()
         if self.market.fresh_quote(symbol, now) is None:
             return {"state": "WAITING_FRESH_DATA", "reason": "quote expired during final broker checks"}
-        if order.side == "BUY" and self.strategy._minutes_to_close(now.astimezone(EASTERN)) <= 20:
+        from .v5_close_only_operational import V5_LATEST_ENTRY_MINUTES
+        minimum_minutes = V5_LATEST_ENTRY_MINUTES if self._unrestricted_v5() else 20
+        if order.side == "BUY" and self.strategy._minutes_to_close(now.astimezone(EASTERN)) <= minimum_minutes:
             return {"state": "ENTRY_WINDOW_CLOSED", "reason": "0DTE entry window closed during final checks"}
         if not self.store.reserve(order, symbol=symbol, reason=reason, signal_key=signal_key,
                                   now=now, generation=policy["generation"], position_id=position_id):
@@ -511,7 +513,10 @@ class LiveExecutor:
         if q is None or q.ask <= 0 or q.bid <= 0:
             return {**common, "state": "WAITING_FRESH_DATA", "reason": "signal quote expired before execution"}
         underlying, expiration, right, strike = parse_occ_symbol(candidate["symbol"])
-        if expiration != now.astimezone(EASTERN).date().isoformat() or self.strategy._minutes_to_close(now.astimezone(EASTERN)) <= 20:
+        from .v5_close_only_operational import V5_LATEST_ENTRY_MINUTES
+        latest_entry_buffer = V5_LATEST_ENTRY_MINUTES if self._unrestricted_v5() else 20
+        if (expiration != now.astimezone(EASTERN).date().isoformat()
+                or self.strategy._minutes_to_close(now.astimezone(EASTERN)) <= latest_entry_buffer):
             return {**common, "state": "ENTRY_WINDOW_CLOSED", "reason": "0DTE entry window closed"}
         # Re-read balances after model work. Reserve full premium + fee cushion,
         # including the worst possible loss of this long option, before sizing.
