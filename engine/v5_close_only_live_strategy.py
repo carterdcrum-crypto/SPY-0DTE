@@ -14,6 +14,8 @@ from .v5_close_only_operational import (
     PROFILE, paper_candidate, paper_exit_reason,
 )
 from .v4_operational import FEE
+from .live_autonomy_store import autonomy_db_path
+from .v5_drawdown_sizing import observe_flat_session
 
 
 class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
@@ -22,10 +24,10 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
     def telemetry(self):
         return {
             "strategy": PROFILE,
-            "sizing_mode": "unrestricted_SETTLED_CASH_AND_VERIFIED_DEPTH",
+            "sizing_mode": "full_cash_with_eod_drawdown_throttle_AND_VERIFIED_DEPTH",
             "signal_model": "CLOSE_ONLY_QUANT_NO_LLM",
             "exit_profile": "35pct_hard_25pct_trailing_close_reversal_18min",
-            "risk_profile": "NO_OWNER_DAILY_GAIN_LOSS_CONTRACT_EXPOSURE_CAPS_cash_depth_only",
+            "risk_profile": "EOD_DD_2/5/10pct_to_100/70/40/15pct_cash_budget_verified_depth",
             "data_source": "timestamp_verified_webull_completed_m1_and_0dte_nbbo",
             "data_blocker": self.bar_cache.error,
             "historical_evidence": "UNVALIDATED_REUSED_CBBO_MINUTE_PROXY",
@@ -35,13 +37,18 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
         if account is None or daily is None:
             return None, {"state":"RISK_BLOCKED",
                           "reason":"missing verified live account or equity high watermark"}
-        # Deliberately ignore previous V4 owner-defined gain/loss limits.
-        # The broker reconciler still requires settled cash and actual depth.
+        # The policy persists last observed FLAT equity across sessions.
+        # Avoid treating a temporarily reserved option premium as a loss.
+        # No per-order owner limit is substituted for this V5 EOD throttle.
+        risk=observe_flat_session(autonomy_db_path(),now.astimezone(__import__('zoneinfo').ZoneInfo('America/New_York')).date(),
+                                  float(account["equity"]))
         proposal, diag=paper_candidate(
             now, self.bar_cache.bars, self.market_reader.quotes.values(),
             equity=float(account["equity"]),
             settled=float(account["settled_cash"]),
-            peak=float(daily["high_watermark"]))
+            peak=risk["prior_peak_equity"],
+            risk_fraction=risk["fraction"],
+            risk_opening_equity=risk["opening_equity"])
         if proposal is None:
             return None, {**diag,"strategy":PROFILE}
         # Final live executor rechecks the exact ask, fresh depth and settled
@@ -52,8 +59,13 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
             "reason":f"{PROFILE}; {proposal['setup']}; long0dte; user_selected_live",
             "cycle":proposal["cycle"],
             "model_proposed_cash_depth_quantity":int(proposal["quantity"]),
+            "risk_fraction":risk["fraction"],
+            "risk_opening_equity":risk["opening_equity"],
+            "risk_peak_equity":risk["prior_peak_equity"],
+            "risk_budget_usd":proposal["risk_budget_usd"],
         },{**diag,"state":"SIGNAL","strategy":PROFILE,
-           "live_model":"user_selected_V5_cash_unrestricted",
+           "live_model":"user_selected_V5_full_cash_eod_drawdown_throttle",
+           "risk":risk,
            "broker_settled_cash_and_nbbo_depth_enforced":True}
 
     def exit(self, position, now):
