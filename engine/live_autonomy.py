@@ -341,6 +341,14 @@ class LiveExecutor:
             log.warning("live balance unavailable type=%s", type(exc).__name__)
         common = {"broker_connected": True, "account": account, "daily": daily}
         if not positions and not can_enter:
+            # Once V5's final-entry window closes, retain the final verified
+            # FLAT-account mark for this session's next-day EOD drawdown gate.
+            # This is observational: never creates an order or changes mode.
+            if (self._unrestricted_v5() and account is not None
+                    and not inventory and not foreign and in_session):
+                from .v5_drawdown_sizing import observe_flat_session
+                observe_flat_session(
+                    autonomy_db_path(), eastern.date(), account["equity"])
             return {**common, "state": "PAUSED" if not policy["enabled"] or self.mode_getter() != "LIVE" else "ENTRY_WINDOW_CLOSED",
                     "reason": "new entries paused; owned positions remain managed"}
         if not positions and (foreign or inventory):
