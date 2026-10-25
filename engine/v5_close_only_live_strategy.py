@@ -21,6 +21,12 @@ from .v5_drawdown_sizing import observe_flat_session
 class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
     unrestricted_v5_live = True
 
+    def __init__(self, reader, audit_path: str):
+        super().__init__(reader, audit_path)
+        # Historical close-only challenger only requires 36 completed
+        # signal bars plus one finished confirmation/entry minute.
+        self.bar_cache.minimum_history_bars=37
+
     def telemetry(self):
         return {
             "strategy": PROFILE,
