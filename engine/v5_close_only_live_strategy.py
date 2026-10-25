@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from .v4_live_strategy import V4QualityLiveStrategy
 from .v5_close_only_operational import (
-    PROFILE, paper_candidate, paper_exit_reason,
+    PROFILE, paper_candidate, paper_exit_reason, V5_MIN_COMPLETED_BARS,
 )
 from .v4_operational import FEE, ET
 from .live_autonomy_store import autonomy_db_path
@@ -25,7 +25,7 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
         super().__init__(reader, audit_path)
         # Historical close-only challenger only requires 36 completed
         # signal bars plus one finished confirmation/entry minute.
-        self.bar_cache.minimum_history_bars=37
+        self.bar_cache.minimum_history_bars=V5_MIN_COMPLETED_BARS
 
     def telemetry(self):
         return {
