@@ -1,8 +1,8 @@
-"""Autonomous V5 CLOSE-ONLY unrestricted *PAPER* research trader.
+"""V5 close-proxy full-cash drawdown-throttled autonomous PAPER trader.
 
-Never transmits Webull orders. Existing V4 production LIVE remains original.
-Fully settled cash may be spent in PAPER only where timestamped market
-data and displayed option NBBO depth are independently verified.
+Never transmits Webull orders. PAPER is independent of the selected LIVE
+profile. Models entry only against settled cash and timestamp-verified option
+bid/ask and displayed depth.
 """
 from __future__ import annotations
 
