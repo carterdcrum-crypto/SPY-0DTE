@@ -75,6 +75,11 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
         if not self._market_session(eastern) and position is None:
             return self._finish(current,{"state":"MARKET_CLOSED","mode":mode,
                 "last_action":None,"settled_released":released})
+        if position is None:
+            # Record real flat account equity even if later option quotes fail.
+            acct=self.account_store.snapshot()
+            equity=acct.settled_cash+acct.unsettled_cash
+            risk=observe_flat_session(self.account_store.path,eastern.date(),equity)
         self.bar_cache.refresh(self.bar_provider,current)
         quotes=self._quotes(current,position)
         if position:
@@ -89,11 +94,6 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
             return self._finish(current,{"state":"WAITING_FRESH_OPTIONS","mode":mode,
                 "reason":self.last_data_error or "real-time option bid/ask unavailable",
                 "last_action":None,"settled_released":released})
-        acct=self.account_store.snapshot()
-        equity=acct.settled_cash+acct.unsettled_cash
-        # Only observe a FLAT account. Reserve premium while a position is
-        # open; it is not an equity drawdown until its exit is confirmed.
-        risk=observe_flat_session(self.account_store.path,eastern.date(),equity)
         proposed,decision=paper_candidate(
             current,self.bar_cache.bars,quotes,equity=equity,
             settled=acct.settled_cash,peak=risk["prior_peak_equity"],
