@@ -168,6 +168,13 @@ class PaperAccountStore:
             connection.execute("DELETE FROM paper_positions")
             connection.execute("DELETE FROM paper_settlements")
             connection.execute("DELETE FROM paper_trades")
+            # A user-requested paper-account reset starts a new risk epoch.
+            # Do not carry drawdown peaks from the previous simulated account.
+            if connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' "
+                "AND name='v5_equity_risk_days'"
+            ).fetchone():
+                connection.execute("DELETE FROM v5_equity_risk_days")
             connection.execute(
                 """
                 UPDATE paper_account
