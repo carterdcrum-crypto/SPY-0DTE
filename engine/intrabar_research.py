@@ -22,7 +22,8 @@ from zoneinfo import ZoneInfo
 from .session_calendar import session_close
 
 ET = ZoneInfo("America/New_York")
-ARMS = ("early_5s", "early_10s", "early_20s", "hybrid_10s", "after_candle_close")
+ARMS = ("early_5s", "early_10s", "early_20s", "hybrid_10s",
+        "preclose_20s", "preclose_10s", "preclose_5s", "after_candle_close")
 FEE_PER_SIDE = .65
 SLIPPAGE_PER_SHARE = .01
 MAX_QUOTE_AGE = 3.0
@@ -204,8 +205,14 @@ def _simulate(cycles, event, arm):
     at,side,symbol,minute,past=event
     if arm=="after_candle_close":
         begin=minute+timedelta(minutes=1)
+    elif arm.startswith("preclose_"):
+        begin=minute+timedelta(minutes=1)-timedelta(seconds=int(arm.split("_")[1][:-1]))
+        if at > begin:
+            return None,"signal_not_observed_by_checkpoint"
     else:
         begin=at+timedelta(seconds=int(arm.split("_")[1][:-1]))
+        if begin >= minute+timedelta(minutes=1):
+            return None,"entry_would_cross_candle_close"
     if arm=="hybrid_10s":
         # Require price to keep extending beyond event (observed only as-of
         # the +10s decision point) before the hypothetical entry.
@@ -219,6 +226,16 @@ def _simulate(cycles, event, arm):
     if entry is None:
         return None,"no_fresh_entry_quote"
     entry_cycle,entry_quote=entry
+    if arm.startswith("preclose_"):
+        if entry_cycle.at >= minute+timedelta(minutes=1):
+            return None,"entry_would_cross_candle_close"
+        # Recheck the same price-only ignition at the actual decision sample.
+        momentum=entry_cycle.spot/past[2]-1
+        confirmed=(entry_cycle.spot>max(past)*1.0002 and momentum>=.0003
+                   if side=="call" else
+                   entry_cycle.spot<min(past)*.9998 and momentum<=-.0003)
+        if not confirmed:
+            return None,"ignition_faded_before_checkpoint"
     debit=(entry_quote.ask+SLIPPAGE_PER_SHARE)*100+FEE_PER_SIDE
     peak=0.
     expiry=entry_cycle.at+timedelta(minutes=5)
@@ -277,6 +294,7 @@ def research_day(path: str | Path, day: date) -> dict:
     results={a:[] for a in ARMS}
     skips={a:defaultdict(int) for a in ARMS}
     complete_pairs=0
+    paired={a:[] for a in ARMS if a!="after_candle_close"}
     for event in events:
         outcomes={}
         for arm in ARMS:
@@ -285,6 +303,11 @@ def research_day(path: str | Path, day: date) -> dict:
                 skips[arm][reason]+=1
             else:
                 outcomes[arm]=result
+        baseline=outcomes.get("after_candle_close")
+        if baseline is not None:
+            for arm,row in outcomes.items():
+                if arm!="after_candle_close":
+                    paired[arm].append((row["net_pnl_usd"], baseline["net_pnl_usd"]))
         if len(outcomes)==len(ARMS):
             complete_pairs+=1
         for arm,row in outcomes.items():
@@ -299,7 +322,13 @@ def research_day(path: str | Path, day: date) -> dict:
                      "total_hypothetical_one_contract_pnl_usd":round(sum(profits),2),
                      "unscorable_reasons":dict(skips[arm]),
                      "sample_trades":trades[:5]}
-    return {**base,"status":("RESEARCH_SAMPLE_AVAILABLE" if complete_pairs>=5
+    paired_summary={arm:{"matched_events":len(rows),
+        "variant_total_net_usd":round(sum(a for a,b in rows),2),
+        "control_total_net_usd":round(sum(b for a,b in rows),2),
+        "mean_advantage_usd":round(statistics.mean(a-b for a,b in rows),2) if rows else None}
+        for arm,rows in paired.items()}
+    return {**base,"paired_vs_after_close":paired_summary,
+            "status":("RESEARCH_SAMPLE_AVAILABLE" if any(len(v)>=5 for v in paired.values())
                             else "INSUFFICIENT_MATCHED_EVENTS_NO_EDGE_CLAIM"),
             "candidate_events":len(events),"all_arm_matched_events":complete_pairs,
             "results":report}
@@ -375,6 +404,14 @@ def run_forever(context):
                     day_result.get("all_arm_matched_events",0),
                     json.dumps(coverage, sort_keys=True),
                 )
+                for result in payload["results"]:
+                    getLogger("spy0dte.intrabar").info(
+                        "INTRABAR_TIMING_RESULT %s", json.dumps({
+                            "date":result.get("date"), "status":result.get("status"),
+                            "candidate_events":result.get("candidate_events",0),
+                            "paired":result.get("paired_vs_after_close",{}),
+                            "price_only_proxy":True, "exit_horizon_minutes":5,
+                            "orders":0}, sort_keys=True))
                 context.heartbeat(state="RUNNING",last_error=None,
                                   latest_researched_session=key,
                                   complete_days=len(payload["results"]))
