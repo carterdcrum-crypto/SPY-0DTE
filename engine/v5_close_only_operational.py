@@ -1,9 +1,11 @@
-"""Causal CLOSE-ONLY V5 challenger for real-time PAPER and LIVE observation.
+"""Causal V5 close-proxy proposal shared by PAPER and owner-authorized LIVE.
 
-The $507k Railway arm was an illiquid, no-price-impact research hypothesis.
-Only PAPER research can request settled-cash sizing, bounded by authentic
-current NBBO displayed depths. LIVE can OBSERVE this signal but does not emit
-orders from this unvalidated policy. No lookahead, historical prices or AI.
+The archived $867k full-cash+drawdown replay lacks historical executable depth
+and market-impact data. Paper never sends broker orders; the separate LIVE
+executor may send owner-authorized orders using this proposal, but first
+rechecks actual Webull settled cash and fresh displayed bid/ask depth.
+Neither live nor paper promises the proxy research return.
+No lookahead, fabricated OHLCV or AI decision models.
 """
 from __future__ import annotations
 
