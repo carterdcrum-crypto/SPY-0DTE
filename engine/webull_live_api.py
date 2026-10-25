@@ -201,7 +201,13 @@ def status_payload() -> dict[str, Any]:
                 "daily_loss_limit": None, "daily_gain_limit": None,
                 "max_contracts": None, "max_account_exposure_pct": None,
                 "standing_authorization": live["enabled"],
-                "sizing": "SETTLED_CASH_AND_VERIFIED_NBBO_DEPTH_ONLY",
+                "sizing": "FULL_CASH_WITH_EOD_DRAWDOWN_THROTTLE_AND_NBBO_DEPTH",
+                "drawdown_throttle": {
+                    "drawdown_bands_pct": [2, 5, 10],
+                    "opening_equity_budget_fraction": [1.0, 0.70, 0.40, 0.15],
+                    "reference": "prior_session_last_observed_flat_equity",
+                    "live_switch_unchanged": True,
+                },
             }
         else:
             payload["live_risk"] = {**limits.as_dict(), "armed_today": limits.is_complete, "standing_authorization": live["enabled"]}
