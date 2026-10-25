@@ -1,11 +1,12 @@
-"""User-selected V5 close-only unrestricted *cash* LIVE execution policy.
+"""V5 close-only full-cash *with EOD drawdown throttle* LIVE proposal.
 
-Faithful close-only challenger signal, no cap from the signal itself.
-The user intentionally removed discretionary daily loss/gain, maximum
-contracts, and exposure ceilings for this LIVE profile. Still enforce
-actual Webull settled buying power and current NBBO depth.
-The 500k archival replay did not have those checks. No AI decisions.
-Never bypass owner LIVE Auto Trade switch or the single-writer executor.
+Uses the restored original V5 signals, plus the $867k research sizing
+fractions 100/70/40/15% at prior EOD drawdown 2/5/10%.
+LIVE broker buying power, full premium and contemporaneous bid/ask depth
+always bound quantity; the historical replay lacked these executable checks.
+Never bypass the owner LIVE switch or single-writer order executor.
+The legacy V5 profile ID is retained so previously opened positions preserve
+their required original exit manager. No AI decision models.
 """
 from __future__ import annotations
 
@@ -72,7 +73,9 @@ class V5CloseOnlyLiveStrategy(V4QualityLiveStrategy):
         },{**diag,"state":"SIGNAL","strategy":PROFILE,
            "live_model":"user_selected_V5_full_cash_eod_drawdown_throttle",
            "risk":risk,
-           "broker_settled_cash_and_nbbo_depth_enforced":True}
+           "broker_settled_cash_and_nbbo_depth_enforced":True,
+           "no_live_order":False,
+           "live_order_submission_only_via_authorized_executor":True}
 
     def exit(self, position, now):
         reason=str(position.get("entry_reason",""))
