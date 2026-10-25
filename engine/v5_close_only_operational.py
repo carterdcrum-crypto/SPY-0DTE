@@ -22,6 +22,10 @@ from quantconnect.v5_core import quality_score
 
 PROFILE = "v5_close_only_unrestricted_research"
 MAX_PREMIUM_SPREAD = .03
+# Frozen from the $867,017.60 128-session V5 close-proxy study.
+V5_MIN_COMPLETED_BARS = 37
+V5_LATEST_ENTRY_MINUTES = 26
+V5_MAX_HOLD_MINUTES = 18
 
 def _reference_frames(bars):
     """Observed SPY completed close and observed volume-derived RVOL only."""
@@ -49,7 +53,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     if close is None or local.hour < 9 or (local.hour == 9 and local.minute < 52):
         return None, {"state":"MARKET_CLOSED"}
     # Replay blocks entry in the last 26 minutes of the SPY session.
-    if (datetime.combine(local.date(),close,ET)-local).total_seconds() <= 26*60:
+    if (datetime.combine(local.date(),close,ET)-local).total_seconds() <= V5_LATEST_ENTRY_MINUTES*60:
         return None, {"state":"ENTRY_WINDOW_CLOSED"}
     if not (equity>0 and settled>0 and peak>0):
         return None, {"state":"INSUFFICIENT_SETTLED_CASH"}
@@ -62,9 +66,9 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     budget = min(float(settled), opening * risk_fraction)
     # Close-proxy challenger first evaluates i=35; entry uses the NEXT
     # completed minute, so require 36 signal bars + 1 confirmation bar.
-    if len(bars)<37 or not last_spy_bar_is_fresh(bars,now):
+    if len(bars)<V5_MIN_COMPLETED_BARS or not last_spy_bar_is_fresh(bars,now):
         return None, {"state":"WAITING_REAL_COMPLETED_SPY_M1"}
-    tail=bars[-37:]
+    tail=bars[-V5_MIN_COMPLETED_BARS:]
     if any(b.start.astimezone(ET).date()!=local.date() or b.volume<=0 for b in tail):
         return None, {"state":"NONCONTIGUOUS_REAL_SPY_M1"}
     if any((b.start-a.start).total_seconds()!=60 for a,b in zip(tail,tail[1:])):
