@@ -91,3 +91,21 @@ def test_low_disk_requires_reusable_pages_and_journal_reserve(tmp_path, monkeypa
     assert store.insert([_snapshot()]) == 1
     assert store.count() == 1
     store.close()
+
+
+
+def test_retention_preserves_only_newest_two_sessions_without_touching_live_ledger(tmp_path):
+    ledger = tmp_path / "spy_live_autonomy.sqlite"
+    ledger.write_bytes(b"immutable broker position and order journal")
+    store = SnapshotStore(tmp_path / "collector.sqlite")
+    for i, day in enumerate(["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23"]):
+        _row(store, day, i)
+    store.connection.commit()
+    result = store.prune_old_sessions(keep_sessions=2, batch_rows=2)
+    sessions = [r[0][:10] for r in store.connection.execute(
+        "SELECT timestamp FROM option_snapshots ORDER BY timestamp"
+    )]
+    assert sessions == ["2026-10-22", "2026-10-23"]
+    assert result["removed_rows"] == 2 and result["complete"]
+    assert ledger.read_bytes() == b"immutable broker position and order journal"
+    store.close()
