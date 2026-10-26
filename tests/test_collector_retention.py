@@ -109,3 +109,29 @@ def test_retention_preserves_only_newest_two_sessions_without_touching_live_ledg
     assert result["removed_rows"] == 2 and result["complete"]
     assert ledger.read_bytes() == b"immutable broker position and order journal"
     store.close()
+
+
+def test_bounded_emergency_recovery_reclaims_reusable_pages_without_touching_today(tmp_path):
+    store=SnapshotStore(tmp_path / "quotes.sqlite")
+    days=["2026-10-20","2026-10-21","2026-10-22","2026-10-23",
+          "2026-10-26"]
+    for i,day in enumerate(days):
+        for j in range(3):
+            _row(store,day,i*100+j)
+    store.connection.commit()
+    prior=store._reusable_bytes()
+    first=store.prune_old_sessions(keep_sessions=2,batch_rows=2,max_batches=1)
+    assert first["removed_rows"]==2
+    assert first["complete"] is False
+    assert first["reusable_bytes"]>=prior
+    untouched=[r[0][:10] for r in store.connection.execute(
+        "SELECT timestamp FROM option_snapshots WHERE timestamp LIKE '2026-10-26%'"
+    )]
+    assert untouched==["2026-10-26"]*3
+    final=store.prune_old_sessions(keep_sessions=2,batch_rows=6,max_batches=6)
+    assert final["complete"]
+    remaining={r[0][:10] for r in store.connection.execute(
+        "SELECT timestamp FROM option_snapshots"
+    )}
+    assert remaining=={"2026-10-23","2026-10-26"}
+    store.close()
