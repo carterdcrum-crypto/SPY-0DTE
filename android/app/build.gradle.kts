@@ -16,8 +16,8 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
-        versionCode = 18 // Graffiti brand UI only; trading behavior unchanged
-        versionName = "0.3.5"
+        versionCode = 19 // Simplified end-user UI; trading behavior unchanged
+        versionName = "0.3.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl}\"")
