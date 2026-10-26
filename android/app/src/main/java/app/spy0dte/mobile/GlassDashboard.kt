@@ -559,7 +559,7 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
 private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(GlassColors.BackgroundBlue)
         .border(1.dp, GlassColors.Border, RoundedCornerShape(16.dp)).padding(4.dp)) {
-        listOf("OPTIONS" to "Overview", "NEWS" to "News").forEach { (key, label) ->
+        listOf("OPTIONS" to "Options", "NEWS" to "News").forEach { (key, label) ->
             val active = selected == key
             val color by animateColorAsState(if (active) GlassColors.Mint else Color.Transparent, label = "Segment color")
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(color)
