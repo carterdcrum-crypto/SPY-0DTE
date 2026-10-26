@@ -139,7 +139,12 @@ class GlassDashboardTest {
         val layout = layouts.single()
         val bounds = "size=${layout.size}, paragraph=${layout.multiParagraph.width} × ${layout.multiParagraph.height}"
         assertEquals("Mode label must stay on one line: $bounds", 1, layout.lineCount)
-        org.junit.Assert.assertFalse("Mode label must fit its button: $bounds", layout.hasVisualOverflow)
+        assertEquals("Mode label must remain complete", "SHADOW".length, layout.getLineEnd(0, visibleEnd = true))
+        // An unwrapped paragraph can retain the parent's available width even
+        // when the Text node wraps its glyphs. Check the visible characters.
+        val glyphs = (0 until "SHADOW".length).map(layout::getBoundingBox)
+        org.junit.Assert.assertTrue("Mode label must fit its button: $bounds; glyphs=$glyphs",
+            glyphs.minOf { it.left } >= -1f && glyphs.maxOf { it.right } <= layout.size.width + 1f)
     }
 
     @Test fun quantTabsNavigateWithoutAnyAiControl() {
