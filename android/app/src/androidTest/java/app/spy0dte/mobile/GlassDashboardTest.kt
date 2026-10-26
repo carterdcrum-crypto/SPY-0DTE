@@ -16,6 +16,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -129,6 +132,11 @@ class GlassDashboardTest {
         screenshot("05-large-text-offline")
         compose.onNodeWithTag("nav_SETTINGS").performClick()
         compose.onNodeWithText("Your account. Your controls.").assertIsDisplayed()
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onNodeWithText("SHADOW", useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+        assertEquals(1, layouts.single().lineCount)
+        org.junit.Assert.assertFalse(layouts.single().hasVisualOverflow)
         screenshot("06-large-text-settings")
     }
 

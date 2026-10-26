@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -73,7 +74,7 @@ internal fun SpyFiveMinuteChart(status:ScreenStatus, compact:Boolean=false){
                 color=GlassColors.Amber,fontSize=10.sp)
             }
         }else{
-            Box(Modifier.fillMaxWidth().height(if(compact) 120.dp else 165.dp)
+            Box(Modifier.fillMaxWidth().heightIn(min = if(compact) 120.dp else 165.dp)
                 .background(GlassColors.BackgroundBlue,RoundedCornerShape(12.dp))
                 .padding(15.dp)){
                 Column(verticalArrangement=Arrangement.spacedBy(8.dp)){

@@ -1094,7 +1094,8 @@ private fun GlassSettingsScreen(
                             contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
                         ),
                         border = BorderStroke(1.dp, if (active) GlassColors.BorderBright else GlassColors.Border),
-                    ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                    ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false) }
                 }
             }
             modeMessage?.let {
@@ -1390,6 +1391,7 @@ private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
                         val labelSize = (maxWidth.value / (label.length * .62f) /
                             LocalDensity.current.fontScale).coerceIn(8f, 10f)
                         Text(label, color = tint, fontSize = labelSize.sp,
+                            lineHeight = (labelSize + 3f).sp,
                             fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
