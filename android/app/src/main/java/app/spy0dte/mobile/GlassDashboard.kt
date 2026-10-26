@@ -405,6 +405,11 @@ private fun GlassAutoTradeCard(status: ScreenStatus, preview: Boolean, saving: B
     onSettings: () -> Unit, onChange: (Boolean) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     GlassPanel(modifier = Modifier.animateContentSize()) {
+        // Graffiti sits immediately above the actual Auto Trade control,
+        // never across its clickable switch or its disabled/off indicator.
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+            MoneyButtonGraffiti(Modifier.widthIn(max = 228.dp).fillMaxWidth(.62f).height(69.dp))
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp))
                 .clickable(onClickLabel = "Show Auto trade details") { expanded = !expanded }
@@ -533,9 +538,18 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
                     Text(amount, color = GlassColors.White, fontSize = amountSize.sp,
                         fontWeight = FontWeight.SemiBold, letterSpacing = (-1.5).sp, maxLines = 1)
                 }
-                Text(if (paper) "Settled cash" else if (status.brokerState.totalEquity != null) "Account equity" else "Available cash",
-                    color = GlassColors.InkMuted, fontSize = 11.sp)
-                Spacer(Modifier.height(18.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(if (paper) "Settled cash" else if (status.brokerState.totalEquity != null) "Account equity" else "Available cash",
+                        color = GlassColors.InkMuted, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                    // Signed branding belongs right of Account equity, not on
+                    // the account value. No overlay hides financial figures.
+                    if (!paper) CarterSignatureGraffiti(Modifier.width(132.dp).height(64.dp))
+                }
+                Spacer(Modifier.height(6.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .12f)))
                 Spacer(Modifier.height(15.dp))
                 Row {
