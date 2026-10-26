@@ -184,7 +184,14 @@ class SnapshotStore:
         if self.path != ":memory:":
             physical_free = shutil.disk_usage(Path(self.path).parent).free
             if physical_free < 12 * 1024 * 1024:
-                raise StorageCapacityError("Market history paused: less than 12 MiB physical disk free; expand storage")
+                # Before reporting capacity failure, reclaim an idle WAL
+                # journal. Never delete the SQLite WAL file directly: that
+                # can lose writes and corrupt the concurrent live quote feed.
+                checkpoint = self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                if checkpoint is not None and int(checkpoint[0]) == 0:
+                    physical_free = shutil.disk_usage(Path(self.path).parent).free
+            if physical_free < 12 * 1024 * 1024:
+                raise StorageCapacityError("Market history paused: less than 12 MiB physical disk free; preserve trading journals")
             low_disk = physical_free < 16 * 1024 * 1024
             if low_disk:
                 required_reusable = max(8 * 1024 * 1024, len(rows) * 2048)
