@@ -93,7 +93,7 @@ private fun ChartCanvas(bars:List<SpyCandle>, compact:Boolean){
     val highest=bars.maxOf{it.high}
     val lowest=bars.minOf{it.low}
     val spread=(highest-lowest).coerceAtLeast(0.01)
-    Canvas(modifier=Modifier.fillMaxWidth().height(if(compact) 165.dp else 220.dp)
+    Canvas(modifier=Modifier.fillMaxWidth().height(if(compact) 140.dp else 220.dp)
         .background(GlassColors.BackgroundBlue,RoundedCornerShape(12.dp))
         .testTag(if(compact) "overview_chart_candles" else "spy_chart_candles")){
         val volumeHeight=22.dp.toPx()

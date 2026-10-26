@@ -98,6 +98,7 @@ class GlassDashboardTest {
         compose.onNodeWithText("Your account. Your controls.").assertIsDisplayed()
         screenshot("04-settings")
         compose.onNodeWithTag("nav_LIVE").performClick()
+        compose.onNodeWithTag("autotrade_details").performScrollTo().performClick()
         compose.onNodeWithTag("autotrade_settings").performScrollTo().performClick()
         compose.onNodeWithText("Your account. Your controls.").assertIsDisplayed()
     }
@@ -207,6 +208,7 @@ class GlassDashboardTest {
         )
         compose.setContent { GlassTheme { GlassDashboard(status, false, null, actions(), null) } }
         compose.onNodeWithTag("overview_chart_candles").assertIsDisplayed()
+        compose.onNodeWithTag("auto_trade_switch").assertIsDisplayed().assertIsOn()
         screenshot("07-obsidian-live-overview")
         compose.onNodeWithTag("overview_chart_details").performClick()
         compose.onNodeWithText("SPY · LAST 30 MINUTES").assertIsDisplayed()
