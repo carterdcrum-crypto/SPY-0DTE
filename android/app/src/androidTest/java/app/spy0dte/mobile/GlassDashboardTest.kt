@@ -153,7 +153,7 @@ class GlassDashboardTest {
         compose.onNodeWithTag("insight_NEWS").performScrollTo().performClick()
         compose.onNodeWithText("LATEST HEADLINES").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("insight_OPTIONS").performScrollTo().performClick()
-        compose.onNodeWithTag("overview_chart_candles").assertExists()
+        compose.onNodeWithText("NEXT OPPORTUNITY").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun settingsSaveAndPaperActivationCallTheirBackendActions() {
@@ -222,7 +222,7 @@ class GlassDashboardTest {
         )
         compose.setContent { GlassTheme { GlassDashboard(status, false, null, actions(), null) } }
         compose.onNodeWithTag("overview_chart_candles").assertIsDisplayed()
-        compose.onNodeWithTag("auto_trade_switch").assertIsDisplayed().assertIsOn()
+        compose.onNodeWithTag("auto_trade_switch").performScrollTo().assertIsDisplayed().assertIsOn()
         screenshot("07-obsidian-live-overview")
         compose.onNodeWithTag("overview_chart_details").assertDoesNotExist()
         screenshot("08-obsidian-simplified-overview")
