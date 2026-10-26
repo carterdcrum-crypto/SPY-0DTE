@@ -91,14 +91,15 @@ class SnapshotStore:
         free_pages = int(self.connection.execute("PRAGMA freelist_count").fetchone()[0])
         return page_size * free_pages
 
-    def prune_old_sessions(self, *, keep_sessions: int = 5, batch_rows: int = 256) -> dict:
+    def prune_old_sessions(self, *, keep_sessions: int = 5, batch_rows: int = 256,
+                           max_batches: int | None = None) -> dict:
         """Keep the five newest observed quote sessions; never touch account ledgers.
 
         Small commits and WAL truncation avoid a full-size VACUUM scratch copy on
         a nearly full Railway volume. SQLite may retain freed pages for reuse.
         This must be called by the collector only outside market hours.
         """
-        if keep_sessions < 1 or batch_rows < 1:
+        if keep_sessions < 1 or batch_rows < 1 or (max_batches is not None and max_batches < 1):
             raise ValueError("retention limits must be positive")
         sessions = [
             str(row[0])
@@ -116,7 +117,13 @@ class SnapshotStore:
         cutoff = oldest_retained + "T"
         removed = 0
         complete = True
+        batches = 0
         while True:
+            # During trading, reclaim bounded chunks to avoid starving
+            # live option quote reads and broker order reconciliation.
+            if max_batches is not None and batches >= max_batches:
+                complete = False
+                break
             # Each batch can create a WAL file before checkpointing. Reserve
             # sufficient physical space for journals shared with this volume.
             if self.path != ":memory:" and shutil.disk_usage(Path(self.path).parent).free < 12 * 1024 * 1024:
@@ -131,6 +138,8 @@ class SnapshotStore:
             changed = max(0, int(cursor.rowcount))
             self.connection.commit()
             removed += changed
+            if changed:
+                batches += 1
             # Fail conservatively if a concurrent reader prevents truncation.
             # Continuing deletions could otherwise fill the remaining disk via WAL.
             checkpoint = self.connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
