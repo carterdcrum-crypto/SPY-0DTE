@@ -1087,7 +1087,7 @@ private fun GlassSettingsScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (active) GlassColors.Mint else GlassColors.Panel,
@@ -1095,7 +1095,8 @@ private fun GlassSettingsScreen(
                         ),
                         border = BorderStroke(1.dp, if (active) GlassColors.BorderBright else GlassColors.Border),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                    ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false) }
+                    ) { Text(mode, fontSize = 10.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1, softWrap = false) }
                 }
             }
             modeMessage?.let {

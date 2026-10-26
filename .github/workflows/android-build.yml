@@ -68,8 +68,7 @@ jobs:
           disable-animations: true
           working-directory: android
           script: |
-            gradle --no-daemon :app:connectedDebugAndroidTest
-            adb pull /sdcard/Pictures/spy0dte-ui ./ui-screenshots
+            gradle --no-daemon :app:connectedDebugAndroidTest; test_result=$?; adb pull /sdcard/Pictures/spy0dte-ui ./ui-screenshots; exit "$test_result"
 
       - name: Upload UI verification
         if: always()

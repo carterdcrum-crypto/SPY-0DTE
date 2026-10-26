@@ -135,9 +135,11 @@ class GlassDashboardTest {
         val layouts = mutableListOf<TextLayoutResult>()
         compose.onNodeWithText("SHADOW", useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
-        assertEquals(1, layouts.single().lineCount)
-        org.junit.Assert.assertFalse(layouts.single().hasVisualOverflow)
         screenshot("06-large-text-settings")
+        val layout = layouts.single()
+        val bounds = "size=${layout.size}, paragraph=${layout.multiParagraph.width} × ${layout.multiParagraph.height}"
+        assertEquals("Mode label must stay on one line: $bounds", 1, layout.lineCount)
+        org.junit.Assert.assertFalse("Mode label must fit its button: $bounds", layout.hasVisualOverflow)
     }
 
     @Test fun quantTabsNavigateWithoutAnyAiControl() {
