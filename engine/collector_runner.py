@@ -140,6 +140,7 @@ def run_forever(context: WorkerContext | None = None) -> None:
     consecutive_failures = 0
     last_error = None
     last_retention_date = None
+    last_storage_reported_failures = -100
 
     log.info(
         "collector started source=%s db=%s interval=%ss window=%s-%s ET",
@@ -161,7 +162,9 @@ def run_forever(context: WorkerContext | None = None) -> None:
             # on the next idle poll without touching position/account ledgers.
             if not collecting and last_retention_date != now.astimezone(EASTERN).date():
                 try:
-                    result = store.prune_old_sessions(keep_sessions=5)
+                    # Quote history is disposable after the trading date:
+                    # retain two recent sessions, never live/paper ledgers.
+                    result = store.prune_old_sessions(keep_sessions=2)
                     log.info(
                         "collector retention removed_rows=%s kept_dates=%s reusable_bytes=%s complete=%s",
                         result["removed_rows"],
@@ -214,6 +217,25 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     consecutive_failures += 1
                     last_error = type(exc).__name__
                     sleep_seconds = _backoff_seconds(settings, consecutive_failures)
+                    if last_error == "StorageCapacityError" and (
+                        consecutive_failures == 1 or
+                        consecutive_failures - last_storage_reported_failures >= 12
+                    ):
+                        # Disk telemetry is non-sensitive; no connection keys,
+                        # broker positions, account IDs, or payloads.
+                        import shutil
+                        disk = shutil.disk_usage(settings.db_path.parent)
+                        db = settings.db_path
+                        wal = Path(str(db) + "-wal")
+                        log.warning(
+                            "collector disk pressure free_mb=%.2f total_mb=%.2f "
+                            "db_mb=%.2f wal_mb=%.2f reusable_mb=%.2f",
+                            disk.free / (1024*1024), disk.total/(1024*1024),
+                            db.stat().st_size / (1024*1024) if db.exists() else 0,
+                            wal.stat().st_size / (1024*1024) if wal.exists() else 0,
+                            store._reusable_bytes() / (1024*1024),
+                        )
+                        last_storage_reported_failures=consecutive_failures
                     log.warning(
                         "collection cycle failed source=%s type=%s %s retry_in=%ss failures=%d",
                         source,
