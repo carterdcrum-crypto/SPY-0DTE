@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Mapping
 from zoneinfo import ZoneInfo
 
-from .collector import SnapshotStore, collect_and_store
+from .collector import SnapshotStore, StorageCapacityError, collect_and_store
 from .market_data_factory import provider_from_env, provider_source
 from .runtime import WorkerContext
 from .session_calendar import session_bounds
@@ -217,6 +217,26 @@ def run_forever(context: WorkerContext | None = None) -> None:
                     consecutive_failures += 1
                     last_error = type(exc).__name__
                     sleep_seconds = _backoff_seconds(settings, consecutive_failures)
+                    if isinstance(exc, StorageCapacityError):
+                        # Emergency recovery only touches OLD option-quote
+                        # snapshots. One short bounded pass per failure,
+                        # never any paper/live accounts, broker positions,
+                        # order journaling, credentials or current session.
+                        # Reuse freed database pages when the volume is near
+                        # capacity. Never force VACUUM on a near-full volume.
+                        try:
+                            recovered=store.prune_old_sessions(
+                                keep_sessions=2, batch_rows=256, max_batches=24)
+                            if recovered["removed_rows"]:
+                                log.warning(
+                                    "collector recovered old quote capacity removed_rows=%d "
+                                    "reusable_mb=%.2f complete=%s",
+                                    recovered["removed_rows"],
+                                    recovered["reusable_bytes"]/(1024*1024),
+                                    recovered["complete"])
+                        except Exception as cleanup_exc:
+                            log.warning("collector recovery deferred type=%s",
+                                        type(cleanup_exc).__name__)
                     if last_error == "StorageCapacityError" and (
                         consecutive_failures == 1 or
                         consecutive_failures - last_storage_reported_failures >= 12
