@@ -11,7 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="SPY 0DTE"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/Theme.Spy0dte.Obsidian">
         <activity
             android:name=".LauncherActivity"
             android:exported="true">

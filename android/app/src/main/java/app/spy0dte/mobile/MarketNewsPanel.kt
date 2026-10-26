@@ -145,7 +145,7 @@ internal fun MarketNewsPanel(){
   LaunchedEffect(Unit){refresh()}
   Column(modifier=Modifier.testTag("news_panel"),verticalArrangement=Arrangement.spacedBy(10.dp)){
     // Latest headlines are FIRST, before the directory of trusted sources.
-    Card(colors=CardDefaults.cardColors(containerColor=GlassColors.White),
+    Card(colors=CardDefaults.cardColors(containerColor=GlassColors.Panel),
       border=BorderStroke(1.dp,GlassColors.Border),shape=RoundedCornerShape(22.dp)){
       Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
@@ -172,7 +172,7 @@ internal fun MarketNewsPanel(){
         }
       }
     }
-    Card(colors=CardDefaults.cardColors(containerColor=GlassColors.White),
+    Card(colors=CardDefaults.cardColors(containerColor=GlassColors.Panel),
       border=BorderStroke(1.dp,GlassColors.Border),shape=RoundedCornerShape(22.dp)){
       Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         Text("TRUSTED MARKET NEWS",fontWeight=FontWeight.Bold,fontSize=12.sp,

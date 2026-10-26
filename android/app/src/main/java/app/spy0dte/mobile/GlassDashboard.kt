@@ -46,6 +46,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -93,9 +95,9 @@ internal data class GlassActions(
 )
 
 /**
- * Refined Glass dashboard: calm surfaces, clear hierarchy and explicit live controls.
+ * Obsidian dashboard: matte surfaces, emerald accents and explicit live controls.
  *
- * Clean, minimal, light and frosted. Every financial value comes from the
+ * Every financial value comes from the
  * Railway status stream. Missing values render as an em dash; sample values
  * from the concept art are never substituted into the running app.
  */
@@ -136,7 +138,7 @@ internal fun GlassDashboard(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    listOf(GlassColors.Background, Color(0xFFF7F9F7), GlassColors.BackgroundBlue),
+                    listOf(GlassColors.Background, GlassColors.BackgroundBlue, GlassColors.Background),
                 ),
             )
             .windowInsetsPadding(WindowInsets.safeDrawing),
@@ -201,7 +203,7 @@ internal fun GlassDashboard(
 @Composable
 private fun GlassAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
-        drawCircle(GlassColors.Mint.copy(alpha = 0.42f), size.width * 0.65f,
+        drawCircle(GlassColors.Green.copy(alpha = 0.025f), size.width * 0.65f,
             Offset(size.width * 1.02f, size.height * 0.10f))
     }
 }
@@ -210,30 +212,29 @@ private fun GlassAmbientBackground() {
 private fun GlassHeader(status: ScreenStatus, onMenuClick: () -> Unit, onModeClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+        Surface(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
             .clickable(onClickLabel = "Open navigation", onClick = onMenuClick)
             .semantics { contentDescription = "Open navigation" },
-            shape = RoundedCornerShape(16.dp), color = GlassColors.Ink) {
-            Canvas(Modifier.padding(12.dp)) {
-                val line = Path().apply {
-                    moveTo(0f, size.height * .78f); lineTo(size.width * .27f, size.height * .5f)
-                    lineTo(size.width * .50f, size.height * .65f); lineTo(size.width, size.height * .12f)
+            shape = RoundedCornerShape(14.dp), color = Color.Transparent) {
+            Canvas(Modifier.padding(5.dp)) {
+                for (index in 0..3) {
+                    val height = size.height * (.22f + index * .23f)
+                    val x = size.width * (.10f + index * .25f)
+                    drawLine(GlassColors.Green, Offset(x, size.height), Offset(x, size.height-height),
+                        strokeWidth = size.width * .14f, cap = StrokeCap.Round)
                 }
-                drawPath(line, GlassColors.Lime, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
-                drawLine(GlassColors.Lime, Offset(size.width * .66f, size.height * .12f),
-                    Offset(size.width, size.height * .12f), 2.5.dp.toPx(), StrokeCap.Round)
             }
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
             Text("SPY", color = GlassColors.Text, fontWeight = FontWeight.Bold, fontSize = 23.sp, letterSpacing = (-.7).sp)
-            Text("0DTE  /  TRADING", color = GlassColors.TextMuted, fontWeight = FontWeight.Medium,
-                fontSize = 9.sp, letterSpacing = 1.2.sp)
+            Text("0DTE", color = GlassColors.TextMuted, fontWeight = FontWeight.Medium,
+                fontSize = 10.sp, letterSpacing = 1.6.sp)
         }
         Surface(modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(99.dp))
             .clickable(onClickLabel = "Change trading mode", onClick = onModeClick)
             .testTag("mode_picker"),
-            shape = RoundedCornerShape(99.dp), color = GlassColors.White,
-            border = BorderStroke(1.dp, GlassColors.Border)) {
+            shape = RoundedCornerShape(99.dp), color = GlassColors.Panel,
+            border = BorderStroke(1.dp, GlassColors.BorderBright)) {
             Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 Box(Modifier.size(6.dp).background(if (status.mode == "LIVE") GlassColors.Green else GlassColors.Amber, CircleShape))
@@ -257,10 +258,10 @@ private fun GlassHeaderNavigation(selected: String, onSelect: (String) -> Unit) 
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (active) GlassColors.Mint else Color.White.copy(alpha = 0.50f),
+                    containerColor = if (active) GlassColors.Mint else GlassColors.Panel,
                     contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
                 ),
-                border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
+                border = BorderStroke(1.dp, if (active) GlassColors.BorderBright else GlassColors.Border),
             ) {
                 Text(destination.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 8.sp, fontWeight = FontWeight.Bold)
             }
@@ -281,10 +282,10 @@ private fun GlassHeaderModePicker(selected: String, onSelect: (String) -> Unit) 
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (active) GlassColors.Mint else Color.White.copy(alpha = 0.50f),
+                    containerColor = if (active) GlassColors.Mint else GlassColors.Panel,
                     contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
                 ),
-                border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
+                border = BorderStroke(1.dp, if (active) GlassColors.BorderBright else GlassColors.Border),
             ) { Text(mode, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
         }
     }
@@ -303,12 +304,17 @@ private fun GlassLiveScreen(
     var message by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
     var topTab by rememberSaveable { mutableStateOf("QUANT") }
+    var openChartDetails by remember { mutableStateOf(false) }
+    val chartDetails = remember { BringIntoViewRequester() }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GlassPortfolioCard(status)
-        GlassMarketStrip(status)
+        GlassOverviewChart(status) {
+            topTab = "CHART"
+            openChartDetails = true
+        }
         GlassAutoTradeCard(status, preview, saving, onSettings) { enabled ->
             saving = true
             scope.launch {
@@ -329,7 +335,15 @@ private fun GlassLiveScreen(
                 GlassPositionsCard(status, onPositions)
                 GlassTodayCard(status)
             }
-            "CHART" -> GlassChartPanel(status)
+            "CHART" -> {
+                Box(Modifier.bringIntoViewRequester(chartDetails)) { GlassChartPanel(status) }
+                LaunchedEffect(openChartDetails) {
+                    if (openChartDetails) {
+                        chartDetails.bringIntoView()
+                        openChartDetails = false
+                    }
+                }
+            }
             "OPTIONS" -> GlassSetupCard(status)
             "NEWS" -> MarketNewsPanel()
             else -> GlassQuantSignals(status)
@@ -340,17 +354,35 @@ private fun GlassLiveScreen(
 
 @Composable
 private fun GlassParallelPaperCard(status: ScreenStatus, onSettings: () -> Unit) {
-    GlassPanel {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    GlassPanel(modifier = Modifier.animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("PAPER · INDEPENDENT SIMULATION", color = GlassColors.Text,
-                fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text("Independent paper", color = GlassColors.Text,
+                    fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Spacer(Modifier.height(5.dp))
+                Text(if (status.paperEngineRunning) "●  RUNNING" else "○  NOT RUNNING",
+                    color = if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber,
+                    fontSize = 9.sp, letterSpacing = 1.1.sp)
+            }
             Text(if (status.paperArmed) "ON" else "OFF",
                 color = if (status.paperArmed) GlassColors.Green else GlassColors.Amber,
-                fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(99.dp))
+                    .background(GlassColors.PanelSoft).clickable(onClick = onSettings)
+                    .padding(horizontal = 16.dp, vertical = 14.dp))
         }
-        Spacer(Modifier.height(6.dp))
-        GlassKeyValue("Simulation worker", if (status.paperEngineRunning) "RUNNING" else "NOT RUNNING",
-            if (status.paperEngineRunning) GlassColors.Green else GlassColors.Amber)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(if (expanded) "Hide details  −" else "Details  +", color = GlassColors.TextMuted,
+                fontSize = 10.sp, modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    .clip(RoundedCornerShape(8.dp)).clickable { expanded = !expanded }
+                    .padding(top = 16.dp).testTag("paper_details"))
+            Text("Settings  ↗", color = GlassColors.Green, fontSize = 10.sp,
+                modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onSettings).padding(start = 12.dp, top = 16.dp)
+                    .testTag("paper_settings"))
+        }
+        if (expanded) {
         GlassKeyValue("Paper decision", status.paperDecision.replace('_', ' '))
         if (status.paperArmed) {
             Text(status.paperReason, color = GlassColors.TextMuted,
@@ -367,6 +399,7 @@ private fun GlassParallelPaperCard(status: ScreenStatus, onSettings: () -> Unit)
             color = GlassColors.GreenDark, fontWeight = FontWeight.SemiBold, fontSize = 11.sp,
             modifier = Modifier.fillMaxWidth().heightIn(min = 42.dp)
                 .clip(RoundedCornerShape(8.dp)).clickable(onClick = onSettings).padding(top = 12.dp))
+        }
     }
 }
 
@@ -377,9 +410,6 @@ private fun GlassAutoTradeCard(status: ScreenStatus, preview: Boolean, saving: B
     GlassPanel(modifier = Modifier.animateContentSize()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("LIVE AUTOMATION", color = GlassColors.TextMuted, fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.2.sp, fontSize = 9.sp)
-                Spacer(Modifier.height(4.dp))
                 Text("Auto trade", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 23.sp)
             }
             AutoTradeSwitch(status.liveEnabled, !preview && status.connected && !saving, onChange)
@@ -431,7 +461,7 @@ private fun AutoTradeSwitch(checked: Boolean, enabled: Boolean, onChange: (Boole
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.size(width = 54.dp, height = 32.dp).clip(RoundedCornerShape(99.dp))
-            .background((if (checked) GlassColors.Green else Color(0xFFDCE3DF)).copy(alpha = if (enabled) 1f else 0.55f))) {
+            .background((if (checked) GlassColors.Green else GlassColors.Border).copy(alpha = if (enabled) 1f else 0.55f))) {
             Box(Modifier.align(Alignment.CenterStart).offset(x = thumbOffset).size(28.dp)
                 .background(Color.White, CircleShape))
         }
@@ -439,19 +469,33 @@ private fun AutoTradeSwitch(checked: Boolean, enabled: Boolean, onChange: (Boole
 }
 
 @Composable
-private fun GlassMarketStrip(status: ScreenStatus) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 3.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(42.dp).background(GlassColors.White, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-            Text("S", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 20.sp)
+private fun GlassOverviewChart(status: ScreenStatus, onOpenChart: () -> Unit) {
+    GlassPanel {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("SPY", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                Text(status.spot?.let { money(it) } ?: "—", color = GlassColors.Text,
+                    fontSize = 21.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.5).sp)
+            }
+            Surface(shape = RoundedCornerShape(99.dp), color = GlassColors.PanelSoft,
+                border = BorderStroke(1.dp, GlassColors.Border)) {
+                Text("1m", color = GlassColors.Text, fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp))
+            }
+            Spacer(Modifier.width(6.dp))
+            Surface(shape = RoundedCornerShape(99.dp), color = GlassColors.Mint,
+                border = BorderStroke(1.dp, GlassColors.BorderBright),
+                modifier = Modifier.clip(RoundedCornerShape(99.dp)).clickable(onClick = onOpenChart)
+                    .testTag("overview_chart_details")) {
+                Text("30m view  ↗", color = GlassColors.Green, fontSize = 10.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp))
+            }
         }
-        Column(Modifier.weight(1f).padding(start = 11.dp)) {
-            Text("SPY", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text("S&P 500 ETF", color = GlassColors.TextMuted, fontSize = 10.sp)
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            Text(status.spot?.let { money(it) } ?: "—", color = GlassColors.Text,
-                fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.7).sp)
+        Spacer(Modifier.height(12.dp))
+        SpyFiveMinuteChart(status, compact = true)
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("S&P 500 ETF", color = GlassColors.TextFaint, fontSize = 9.sp)
             val delayed = (status.feedDelay ?: 0.0) > 5 || (status.dataAge ?: 0.0) > 5
             Text(when {
                 !status.connected -> "Connecting"
@@ -469,28 +513,29 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
     val balance = if (paper) status.paperCash else status.brokerState.totalEquity ?: status.brokerState.cashAvailable
     val pnl = if (paper) status.paperPnl else status.brokerState.dailyPnl
     val lightPnl = if (pnl == null) GlassColors.White else if (pnl < 0) Color(0xFFFFB7B9) else GlassColors.Lime
-    Surface(shape = RoundedCornerShape(28.dp), color = GlassColors.Ink, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(24.dp), color = GlassColors.Ink,
+        border = BorderStroke(1.dp, GlassColors.BorderBright), modifier = Modifier.fillMaxWidth()) {
         Box {
             Canvas(Modifier.matchParentSize()) {
-                drawCircle(Color.White.copy(alpha = .025f), size.width * .5f, Offset(size.width * 1.03f, size.height * .1f))
-                drawCircle(Color.White.copy(alpha = .035f), size.width * .34f, Offset(size.width * 1.03f, size.height * .1f))
+                drawRect(Brush.linearGradient(listOf(GlassColors.Ink, GlassColors.Panel)))
             }
             Column(Modifier.fillMaxWidth().padding(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (paper) "PAPER ACCOUNT" else "WEBULL ACCOUNT", color = GlassColors.InkMuted,
                         fontSize = 10.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                    Text(if (status.connected) "●  Connected" else "○  Connecting", color = GlassColors.InkMuted, fontSize = 9.sp)
+                    Text(if (status.connected) "●  Connected" else "○  Connecting",
+                        color = if (status.connected) GlassColors.Green else GlassColors.InkMuted, fontSize = 9.sp)
                 }
-                Spacer(Modifier.height(17.dp))
-                Text(if (paper) "Settled cash" else if (status.brokerState.totalEquity != null) "Account equity" else "Available cash",
-                    color = GlassColors.InkMuted, fontSize = 12.sp)
+                Spacer(Modifier.height(15.dp))
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     val amount = money(balance)
                     val amountSize = (maxWidth.value / (amount.length.coerceAtLeast(1) * .62f) /
-                        LocalDensity.current.fontScale).coerceIn(22f, 40f)
+                        LocalDensity.current.fontScale).coerceIn(22f, 48f)
                     Text(amount, color = GlassColors.White, fontSize = amountSize.sp,
-                        fontWeight = FontWeight.Medium, letterSpacing = (-1.5).sp, maxLines = 1)
+                        fontWeight = FontWeight.SemiBold, letterSpacing = (-1.5).sp, maxLines = 1)
                 }
+                Text(if (paper) "Settled cash" else if (status.brokerState.totalEquity != null) "Account equity" else "Available cash",
+                    color = GlassColors.InkMuted, fontSize = 11.sp)
                 Spacer(Modifier.height(18.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .12f)))
                 Spacer(Modifier.height(15.dp))
@@ -514,14 +559,15 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
 
 @Composable
 private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0xFFE8EEEA)).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(GlassColors.BackgroundBlue)
+        .border(1.dp, GlassColors.Border, RoundedCornerShape(16.dp)).padding(4.dp)) {
         listOf("QUANT" to "Quant", "CHART" to "Chart", "OPTIONS" to "Options", "NEWS" to "News").forEach { (key, label) ->
             val active = selected == key
-            val color by animateColorAsState(if (active) GlassColors.White else Color.Transparent, label = "Segment color")
+            val color by animateColorAsState(if (active) GlassColors.Mint else Color.Transparent, label = "Segment color")
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(color)
                 .selectable(active, role = Role.Tab, onClick = { onSelect(key) }).testTag("insight_$key"),
                 contentAlignment = Alignment.Center) {
-                Text(label, color = if (active) GlassColors.Text else GlassColors.TextMuted, fontSize = 12.sp,
+                Text(label, color = if (active) GlassColors.Green else GlassColors.TextMuted, fontSize = 12.sp,
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
@@ -687,7 +733,7 @@ private fun GlassSetupCard(status: ScreenStatus) {
                 Surface(
                     shape = RoundedCornerShape(99.dp),
                     color = GlassColors.Mint,
-                    border = BorderStroke(1.dp, Color(0xFFA8E7CF)),
+                    border = BorderStroke(1.dp, GlassColors.BorderBright),
                 ) {
                     Text(
                         it,
@@ -737,7 +783,7 @@ private fun GlassQuickButton(
             .height(65.dp)
             .clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(17.dp),
-        color = Color.White.copy(alpha = if (enabled) 0.66f else 0.35f),
+        color = if (enabled) GlassColors.PanelStrong else GlassColors.Panel,
         border = BorderStroke(1.dp, GlassColors.Border),
     ) {
         Column(
@@ -1045,10 +1091,10 @@ private fun GlassSettingsScreen(
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (active) GlassColors.Mint else Color.White.copy(alpha = 0.35f),
+                            containerColor = if (active) GlassColors.Mint else GlassColors.Panel,
                             contentColor = if (active) GlassColors.GreenDark else GlassColors.TextMuted,
                         ),
-                        border = BorderStroke(1.dp, if (active) Color(0xFFA8E7CF) else GlassColors.Border),
+                        border = BorderStroke(1.dp, if (active) GlassColors.BorderBright else GlassColors.Border),
                     ) { Text(mode, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                 }
             }
@@ -1329,8 +1375,8 @@ private fun GlassSettingsScreen(
 @Composable
 private fun GlassBottomNav(selected: String, onSelect: (String) -> Unit) {
     Surface(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(26.dp), color = GlassColors.White,
-        border = BorderStroke(1.dp, GlassColors.Border), shadowElevation = 5.dp) {
+        shape = RoundedCornerShape(26.dp), color = GlassColors.Panel,
+        border = BorderStroke(1.dp, GlassColors.Border), shadowElevation = 0.dp) {
         Row(Modifier.fillMaxWidth().padding(6.dp)) {
             listOf("LIVE" to "Overview", "POSITIONS" to "Positions", "ANALYTICS" to "Analytics", "SETTINGS" to "Settings").forEach { (key, label) ->
                 val active = selected == key
@@ -1374,9 +1420,9 @@ private fun GlassNavIcon(destination: String, tint: Color) {
             "ANALYTICS" -> { line(.2f,.83f,.2f,.51f); line(.5f,.83f,.5f,.17f); line(.8f,.83f,.8f,.35f) }
             else -> {
                 line(.12f,.27f,.88f,.27f); line(.12f,.72f,.88f,.72f)
-                drawCircle(GlassColors.White,w*.12f,Offset(w*.36f,h*.27f))
+                drawCircle(GlassColors.Panel,w*.12f,Offset(w*.36f,h*.27f))
                 drawCircle(tint,w*.12f,Offset(w*.36f,h*.27f),style=Stroke(stroke))
-                drawCircle(GlassColors.White,w*.12f,Offset(w*.68f,h*.72f))
+                drawCircle(GlassColors.Panel,w*.12f,Offset(w*.68f,h*.72f))
                 drawCircle(tint,w*.12f,Offset(w*.68f,h*.72f),style=Stroke(stroke))
             }
         }
@@ -1403,13 +1449,13 @@ private fun GlassPanel(
 private fun GlassNotice(text: String, danger: Boolean = false) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = if (danger) GlassColors.SoftRed.copy(alpha = 0.78f) else Color.White.copy(alpha = 0.55f),
+        color = if (danger) GlassColors.SoftRed else GlassColors.PanelSoft,
         border = BorderStroke(1.dp, if (danger) GlassColors.Red.copy(alpha = 0.25f) else GlassColors.Border),
     ) {
         Text(
             text,
             modifier = Modifier.fillMaxWidth().padding(11.dp),
-            color = if (danger) Color(0xFFC83C39) else GlassColors.TextMuted,
+            color = if (danger) GlassColors.Red else GlassColors.TextMuted,
             fontSize = 12.sp,
             lineHeight = 18.sp,
         )
@@ -1429,9 +1475,9 @@ private fun GlassPrimaryButton(
         modifier = modifier.heightIn(min = 52.dp),
         shape = RoundedCornerShape(15.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = GlassColors.Ink,
-            contentColor = GlassColors.White,
-            disabledContainerColor = Color(0xFFDCE5E8),
+            containerColor = GlassColors.Green,
+            contentColor = GlassColors.Black,
+            disabledContainerColor = GlassColors.PanelSoft,
             disabledContentColor = GlassColors.TextFaint,
         ),
     ) {
@@ -1448,7 +1494,7 @@ private fun GlassOutlineButton(text: String, onClick: () -> Unit, modifier: Modi
         shape = RoundedCornerShape(15.dp),
         border = BorderStroke(1.dp, GlassColors.Border),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.White.copy(alpha = 0.35f),
+            containerColor = GlassColors.PanelStrong,
             contentColor = GlassColors.Text,
         ),
     ) {
@@ -1473,8 +1519,8 @@ private fun GlassTextField(value: String, onValueChange: (String) -> Unit, label
             focusedTextColor = GlassColors.Text,
             unfocusedTextColor = GlassColors.Text,
             cursorColor = GlassColors.Green,
-            focusedContainerColor = Color.White.copy(alpha = 0.56f),
-            unfocusedContainerColor = Color.White.copy(alpha = 0.42f),
+            focusedContainerColor = GlassColors.PanelStrong,
+            unfocusedContainerColor = GlassColors.Panel,
         ),
     )
 }

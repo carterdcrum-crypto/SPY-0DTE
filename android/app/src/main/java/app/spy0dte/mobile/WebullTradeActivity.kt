@@ -12,8 +12,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.util.concurrent.TimeUnit
@@ -491,21 +501,30 @@ private fun WebullTradeApp(activity: Activity) {
 
     if (token == null) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 36.dp),
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)
+                .imePadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 36.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("SPY 0DTE", color = GlassColors.Cyan, fontWeight = FontWeight.Black)
-            Text(if (existingOwner == false) "CREATE YOUR ONE OWNER ACCOUNT" else "OWNER SIGN IN")
-            Spacer(Modifier.height(16.dp))
+            Text("SPY", color = GlassColors.Text, fontWeight = FontWeight.Bold,
+                fontSize = 40.sp, letterSpacing = (-1.5).sp)
+            Text("0 D T E", color = GlassColors.Green, fontWeight = FontWeight.Medium,
+                fontSize = 12.sp, letterSpacing = 2.sp)
+            Spacer(Modifier.height(28.dp))
+            Text(if (existingOwner == false) "CREATE YOUR ONE OWNER ACCOUNT" else "OWNER SIGN IN",
+                color = GlassColors.TextMuted, fontSize = 11.sp, letterSpacing = 1.2.sp)
+            Spacer(Modifier.height(22.dp))
             OutlinedTextField(
                 value = username, onValueChange = { username = it },
                 label = { Text("Username") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = password, onValueChange = { password = it },
                 label = { Text("Password") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
                 visualTransformation = PasswordVisualTransformation(),
             )
             if (existingOwner == false) {
@@ -513,6 +532,7 @@ private fun WebullTradeApp(activity: Activity) {
                 OutlinedTextField(
                     value = setupCode, onValueChange = { setupCode = it },
                     label = { Text("One-time owner setup code") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
                     visualTransformation = PasswordVisualTransformation(),
                 )
                 Spacer(Modifier.height(8.dp))
@@ -520,6 +540,8 @@ private fun WebullTradeApp(activity: Activity) {
             }
             Spacer(Modifier.height(18.dp))
             Button(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = RoundedCornerShape(16.dp),
                 enabled = existingOwner != null && !busy &&
                     username.isNotBlank() && password.isNotBlank() &&
                     (existingOwner == true || setupCode.isNotBlank()),

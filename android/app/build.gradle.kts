@@ -16,8 +16,8 @@ android {
         applicationId = "app.spy0dte.mobile"
         minSdk = 28
         targetSdk = 36
-        versionCode = 16 // Owner-only login build
-        versionName = "0.3.3"
+        versionCode = 17 // Obsidian UI; trading behavior unchanged
+        versionName = "0.3.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl}\"")

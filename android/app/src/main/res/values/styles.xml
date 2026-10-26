@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Spy0dte.Obsidian" parent="android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">#090D0C</item>
+        <item name="android:statusBarColor">#090D0C</item>
+        <item name="android:navigationBarColor">#090D0C</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">#3EDFA7</item>
+    </style>
+</resources>

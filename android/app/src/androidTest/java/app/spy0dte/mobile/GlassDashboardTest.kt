@@ -186,6 +186,37 @@ class GlassDashboardTest {
         compose.onNodeWithText("30 MIN WINDOW · 1 MIN CANDLES").performScrollTo().assertIsDisplayed()
     }
 
+    @Test fun obsidianLiveOverviewOpensChartDetailsAndPaperSettings() {
+        val start = java.time.Instant.parse("2026-10-14T14:00:00Z")
+        val candles = (0 until 30).map { index ->
+            val open = 760.0 + index * .08 + kotlin.math.sin(index * .7) * .2
+            val close = open + if (index % 4 == 0) -.12 else .16
+            SpyCandle(start.plusSeconds(index * 60L).toString(), open,
+                maxOf(open, close) + .10, minOf(open, close) - .08, close,
+                150_000L + index * 4_000, forming = index == 29)
+        }
+        val status = fixture.copy(
+            mode = "LIVE", spot = candles.last().close, dataAge = 2.0, feedDelay = 0.0,
+            brokerConnected = true,
+            brokerState = BrokerState(connected = true, totalEquity = 195.11,
+                cashAvailable = 195.11, dailyPnl = 0.0),
+            liveEnabled = true, liveState = "WAITING", liveReason = "Waiting for a qualified entry",
+            paperEngineRunning = true, paperArmed = true,
+            spyChart = SpyChartState(state = "LIVE_FORMING", ageSeconds = 2.0,
+                hasFormingCandle = true, candles = candles),
+        )
+        compose.setContent { GlassTheme { GlassDashboard(status, false, null, actions(), null) } }
+        compose.onNodeWithTag("overview_chart_candles").assertIsDisplayed()
+        screenshot("07-obsidian-live-overview")
+        compose.onNodeWithTag("overview_chart_details").performClick()
+        compose.onNodeWithText("SPY · LAST 30 MINUTES").assertIsDisplayed()
+        screenshot("08-obsidian-chart-details")
+        compose.onNodeWithTag("paper_details").performScrollTo().performClick()
+        compose.onNodeWithText("Settled paper cash").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("paper_settings").performScrollTo().performClick()
+        compose.onNodeWithText("Your account. Your controls.").assertIsDisplayed()
+    }
+
     @Test fun newsTabDisplaysThreeRealPublishersAndRefresh() {
         compose.setContent { GlassTheme {
             GlassDashboard(fixture, false, null, actions(), null)
