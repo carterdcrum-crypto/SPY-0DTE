@@ -69,22 +69,19 @@ class GlassDashboardTest {
         bitmap.recycle()
     }
 
-    @Test fun liveV5AnalyticsShowsSelectedEngineAndCorrectRiskNotLegacyV4() {
+    @Test fun analyticsShowsAppStatusWithoutStrategyInternals() {
         val v5 = fixture.copy(
             mode = "LIVE",
             liveStrategyProfile = "v5_close_only_unrestricted_research",
             strategy = "v5_close_only_unrestricted_research",
             decision = "MARKET_CLOSED",
-            riskProfile = "NO_OWNER_DAILY_GAIN_LOSS_CONTRACT_EXPOSURE_CAPS_cash_depth_only",
-            exitProfile = "35pct_hard_25pct_trailing_close_reversal_18min",
         )
-        assertEquals("V5 Close-Only · Unrestricted", engineDisplayName(v5))
         compose.setContent { GlassTheme { GlassDashboard(v5, false, null, actions(), null) } }
         compose.onNodeWithTag("nav_ANALYTICS").performClick()
-        compose.onNodeWithText("QUANT ENGINE · V5 CLOSE-ONLY").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Dynamic · settled cash and displayed market depth").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("35% loss trigger / 25% trail / reversal / 18 min").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("QUANT ENGINE · ORIGINAL V4 3X").assertDoesNotExist()
+        compose.onNodeWithText("APP STATUS").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Connection").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("QUANT ENGINE · V5 CLOSE-ONLY").assertDoesNotExist()
+        compose.onNodeWithText("Momentum ignition / liquidity reversal / volatility expansion").assertDoesNotExist()
     }
 
     @Test fun navigationAndPreviewControlsRemainFunctional() {
@@ -147,13 +144,16 @@ class GlassDashboardTest {
             glyphs.minOf { it.left } >= -1f && glyphs.maxOf { it.right } <= layout.size.width + 1f)
     }
 
-    @Test fun quantTabsNavigateWithoutAnyAiControl() {
+    @Test fun overviewHasNoQuantOrDuplicateChartTabsButKeepsNews() {
         compose.setContent { GlassTheme { GlassDashboard(fixture, false, null, actions(), null) } }
-        compose.onNodeWithText("QUANT ENGINE · V4 ADAPTIVE PAPER").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
+        compose.onNodeWithTag("insight_QUANT").assertDoesNotExist()
+        compose.onNodeWithTag("insight_CHART").assertDoesNotExist()
+        compose.onNodeWithTag("insight_OPTIONS").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("NEXT OPPORTUNITY").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("insight_NEWS").performScrollTo().performClick()
+        compose.onNodeWithText("LATEST HEADLINES").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("insight_OPTIONS").performScrollTo().performClick()
-        compose.onNodeWithTag("insight_QUANT").performScrollTo().performClick()
-        compose.onNodeWithText("QUANT ENGINE · V4 ADAPTIVE PAPER").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("overview_chart_candles").assertExists()
     }
 
     @Test fun settingsSaveAndPaperActivationCallTheirBackendActions() {
@@ -185,7 +185,7 @@ class GlassDashboardTest {
     }
 
 
-    @Test fun thirtyMinuteChartShowsVerifiedCandlesAndFormingCandle() {
+    @Test fun overviewKeepsOriginalThirtyMinuteChartWithoutSecondPanel() {
         val start = "2026-10-14T14:00:00+00:00"
         val candles = (0 until 30).map { i ->
             SpyCandle(start, 600.0 + i, 601.0 + i,
@@ -196,13 +196,12 @@ class GlassDashboardTest {
         compose.setContent { GlassTheme {
             GlassDashboard(fixture.copy(spyChart=chart), false, null, actions(), null)
         } }
-        compose.onNodeWithTag("insight_CHART").performScrollTo().performClick()
-        compose.onNodeWithTag("spy_5min_chart").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("SPY · LAST 30 MINUTES").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("30 MIN WINDOW · 1 MIN CANDLES").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("overview_chart_candles").assertIsDisplayed()
+        compose.onNodeWithTag("overview_chart_details").assertDoesNotExist()
+        compose.onNodeWithTag("insight_CHART").assertDoesNotExist()
     }
 
-    @Test fun obsidianLiveOverviewOpensChartDetailsAndPaperSettings() {
+    @Test fun obsidianLiveOverviewKeepsPaperSettingsWithoutDuplicateChart() {
         val start = java.time.Instant.parse("2026-10-14T14:00:00Z")
         val candles = (0 until 30).map { index ->
             val open = 760.0 + index * .08 + kotlin.math.sin(index * .7) * .2
@@ -225,9 +224,8 @@ class GlassDashboardTest {
         compose.onNodeWithTag("overview_chart_candles").assertIsDisplayed()
         compose.onNodeWithTag("auto_trade_switch").assertIsDisplayed().assertIsOn()
         screenshot("07-obsidian-live-overview")
-        compose.onNodeWithTag("overview_chart_details").performClick()
-        compose.onNodeWithText("SPY · LAST 30 MINUTES").assertIsDisplayed()
-        screenshot("08-obsidian-chart-details")
+        compose.onNodeWithTag("overview_chart_details").assertDoesNotExist()
+        screenshot("08-obsidian-simplified-overview")
         compose.onNodeWithTag("paper_details").performScrollTo().performClick()
         compose.onNodeWithText("Settled paper cash").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("paper_settings").performScrollTo().performClick()
