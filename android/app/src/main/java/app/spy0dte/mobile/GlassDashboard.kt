@@ -307,18 +307,15 @@ private fun GlassLiveScreen(
     val scope = rememberCoroutineScope()
     var message by remember { mutableStateOf<String?>(null) }
     var saving by remember { mutableStateOf(false) }
-    var topTab by rememberSaveable { mutableStateOf("QUANT") }
-    var openChartDetails by remember { mutableStateOf(false) }
-    val chartDetails = remember { BringIntoViewRequester() }
+    // Keep the main market chart. The duplicate detailed-chart and quant tabs
+    // are deliberately hidden from the end-user dashboard.
+    var topTab by rememberSaveable { mutableStateOf("OPTIONS") }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GlassPortfolioCard(status)
-        GlassOverviewChart(status) {
-            topTab = "CHART"
-            openChartDetails = true
-        }
+        GlassOverviewChart(status)
         GlassAutoTradeCard(status, preview, saving, onSettings) { enabled ->
             saving = true
             scope.launch {
@@ -333,24 +330,13 @@ private fun GlassLiveScreen(
         message?.let { GlassNotice(it) }
         GlassTopTabs(topTab) { topTab = it }
         when (topTab) {
-            "QUANT" -> {
-                GlassQuantSignals(status)
+            "NEWS" -> MarketNewsPanel()
+            else -> {
+                // Show account actions and outcomes, not internal strategy mechanics.
                 GlassSetupCard(status)
                 GlassPositionsCard(status, onPositions)
                 GlassTodayCard(status)
             }
-            "CHART" -> {
-                Box(Modifier.bringIntoViewRequester(chartDetails)) { GlassChartPanel(status) }
-                LaunchedEffect(openChartDetails) {
-                    if (openChartDetails) {
-                        chartDetails.bringIntoView()
-                        openChartDetails = false
-                    }
-                }
-            }
-            "OPTIONS" -> GlassSetupCard(status)
-            "NEWS" -> MarketNewsPanel()
-            else -> GlassQuantSignals(status)
         }
         Spacer(Modifier.height(4.dp))
     }
@@ -473,7 +459,7 @@ private fun AutoTradeSwitch(checked: Boolean, enabled: Boolean, onChange: (Boole
 }
 
 @Composable
-private fun GlassOverviewChart(status: ScreenStatus, onOpenChart: () -> Unit) {
+private fun GlassOverviewChart(status: ScreenStatus) {
     GlassPanel {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -487,11 +473,10 @@ private fun GlassOverviewChart(status: ScreenStatus, onOpenChart: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp))
             }
             Spacer(Modifier.width(6.dp))
+            // Only one market chart remains; no link to a duplicate chart.
             Surface(shape = RoundedCornerShape(99.dp), color = GlassColors.Mint,
-                border = BorderStroke(1.dp, GlassColors.BorderBright),
-                modifier = Modifier.clip(RoundedCornerShape(99.dp)).clickable(onClick = onOpenChart)
-                    .testTag("overview_chart_details")) {
-                Text("30m view  ↗", color = GlassColors.Green, fontSize = 10.sp,
+                border = BorderStroke(1.dp, GlassColors.BorderBright)) {
+                Text("30m", color = GlassColors.Green, fontSize = 10.sp,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp))
             }
         }
@@ -574,7 +559,7 @@ private fun GlassPortfolioCard(status: ScreenStatus) {
 private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(GlassColors.BackgroundBlue)
         .border(1.dp, GlassColors.Border, RoundedCornerShape(16.dp)).padding(4.dp)) {
-        listOf("QUANT" to "Quant", "CHART" to "Chart", "OPTIONS" to "Options", "NEWS" to "News").forEach { (key, label) ->
+        listOf("OPTIONS" to "Overview", "NEWS" to "News").forEach { (key, label) ->
             val active = selected == key
             val color by animateColorAsState(if (active) GlassColors.Mint else Color.Transparent, label = "Segment color")
             Box(Modifier.weight(1f).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(color)
@@ -584,55 +569,6 @@ private fun GlassTopTabs(selected: String, onSelect: (String) -> Unit) {
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
-    }
-}
-
-/** Engine identity comes from the selected LIVE profile or PAPER worker,
- * never from a hard-coded legacy V4 Analytics card. */
-internal fun v5EngineSelected(status: ScreenStatus): Boolean =
-    if (status.mode == "LIVE") {
-        status.liveStrategyProfile == "v5_close_only_unrestricted_research"
-    } else {
-        status.strategy == "v5_close_only_unrestricted_research"
-    }
-
-internal fun engineDisplayName(status: ScreenStatus): String =
-    if (v5EngineSelected(status)) "V5 Close-Only · Unrestricted"
-    else if (status.mode == "PAPER" || status.mode == "SHADOW") "V4 Adaptive Paper"
-    else "Original V4 3x"
-
-@Composable
-private fun GlassQuantSignals(status: ScreenStatus) {
-    val v5 = v5EngineSelected(status)
-    val adaptivePaper = status.mode == "PAPER" || status.mode == "SHADOW"
-    GlassPanel {
-        Text(
-            when {
-                v5 -> "QUANT ENGINE · V5 CLOSE-ONLY"
-                adaptivePaper -> "QUANT ENGINE · V4 ADAPTIVE PAPER"
-                else -> "QUANT ENGINE · ORIGINAL V4 3X"
-            },
-            color = GlassColors.Text,
-            fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = .7.sp,
-        )
-        Spacer(Modifier.height(8.dp))
-        if (v5) {
-            GlassKeyValue("Signal", "Momentum ignition / liquidity reversal / volatility expansion")
-            GlassKeyValue("Entry", "Completed SPY 1-min closes · verified option quotes")
-            GlassKeyValue("Sizing", "Dynamic · settled cash and displayed market depth")
-            GlassKeyValue("Exits", "35% loss trigger / 25% trail / reversal / 18 min")
-        } else {
-            GlassKeyValue("Signal", "Trend / stretch reclaim")
-            GlassKeyValue("Entry", if (adaptivePaper) "Six-factor quality · adaptive sizing (≤35% premium)" else "Six-factor quality · original 1–3 contracts")
-            GlassKeyValue("Exits", "30% trail / 35% hard / conditional 10m")
-        }
-        GlassKeyValue("Engine", engineDisplayName(status))
-        GlassKeyValue("State", status.decision.replace('_', ' '))
-        Text(
-            if (v5) "V5 is the selected quantitative engine. Live entries still require fresh market data, real settled cash and executable quotes."
-            else "Quantitative rules only · no AI recommendations or generated trades.",
-            color = GlassColors.TextMuted, fontSize = 10.sp,
-        )
     }
 }
 
@@ -880,19 +816,6 @@ private fun GlassDivider() {
 }
 
 @Composable
-private fun GlassChartPanel(status: ScreenStatus) {
-    GlassPanel {
-        Text("SPY · LAST 30 MINUTES", color=GlassColors.Text,
-            fontSize=12.sp, fontWeight=FontWeight.SemiBold)
-        Spacer(Modifier.height(7.dp))
-        Text(status.spot?.let { "SPY  %.2f".format(it) } ?: "SPY  —",
-            color=GlassColors.Text,fontSize=24.sp,fontWeight=FontWeight.SemiBold)
-        Spacer(Modifier.height(5.dp))
-        SpyFiveMinuteChart(status)
-    }
-}
-
-@Composable
 private fun GlassPositionsScreen(status: ScreenStatus) {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
@@ -995,22 +918,14 @@ private fun GlassAnalyticsScreen(status: ScreenStatus) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         GlassSectionTitle("Analytics")
-        GlassQuantSignals(status)
         GlassPanel {
-            Text("ENGINE", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+            Text("APP STATUS", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            GlassKeyValue("Active engine", engineDisplayName(status))
-            if (v5EngineSelected(status)) {
-                GlassKeyValue("Risk", "No owner caps · cash and quote-depth checks")
-                GlassKeyValue("Exit", "35% loss / 25% trail / reversal / 18 min")
-            } else {
-                GlassKeyValue("Risk", status.riskProfile)
-                GlassKeyValue("Exit", status.exitProfile)
-            }
-            GlassKeyValue("Decision", status.decision)
-            GlassKeyValue("Worker", status.workerState)
-            Spacer(Modifier.height(6.dp))
-            Text(status.reason, color = GlassColors.TextMuted, fontSize = 10.sp)
+            GlassKeyValue("Connection", if (status.connected) "Connected" else "Reconnecting",
+                if (status.connected) GlassColors.Green else GlassColors.Amber)
+            GlassKeyValue("Auto trade", if (status.liveEnabled) "On" else "Off",
+                if (status.liveEnabled) GlassColors.Green else GlassColors.TextMuted)
+            GlassKeyValue("Status", status.reason.ifBlank { "Watching the market" })
         }
         GlassPanel {
             Text("PAPER LEDGER", color = GlassColors.Text, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
