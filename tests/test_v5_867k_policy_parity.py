@@ -50,7 +50,7 @@ def _inputs(now):
 
 def _fake_signals(monkeypatch):
     monkeypatch.setattr(operational, "close_proxy_signals",
-        lambda frames,i,challenger: (
+        lambda frames,i,challenger,**kwargs: (
             Signal("call","volatility_expansion_CLOSE_PROXY",1.75,5.,.5),))
     monkeypatch.setattr(operational,"_rv",lambda bars,i: .2)
     monkeypatch.setattr(operational,"last_spy_bar_is_fresh",lambda bars,now: True)

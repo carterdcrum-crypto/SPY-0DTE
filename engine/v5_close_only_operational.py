@@ -29,6 +29,10 @@ MAX_PREMIUM_SPREAD = .05
 V5_MIN_ABS_DELTA = .35
 V5_MAX_ABS_DELTA = .65
 V5_MAX_IV_RV = 1.5
+# Owner-selected isolated liquidity reversal variation (2026-10-28).
+# The historical archive call retains its original 20-close / 0.60 defaults.
+V5_REVERSAL_PRIOR_CLOSES = 15
+V5_REVERSAL_EFFICIENCY_CEILING = .75
 # Frozen from the $867,017.60 128-session V5 close-proxy study.
 V5_MIN_COMPLETED_BARS = 37
 V5_LATEST_ENTRY_MINUTES = 26
@@ -85,7 +89,11 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     if not 60 <= (now-sig_at).total_seconds() <= 125:
         return None, {"state":"WAITING_AFTER_SIGNAL_MINUTE"}
     frames=_reference_frames(bars[:-1])
-    setups=close_proxy_signals(frames,len(frames)-1,challenger=True)
+    setups=close_proxy_signals(
+        frames,len(frames)-1,challenger=True,
+        reversal_lookback=V5_REVERSAL_PRIOR_CLOSES,
+        reversal_max_efficiency=V5_REVERSAL_EFFICIENCY_CEILING,
+    )
     if not setups:
         return None, {
             "state":"NO_CLOSE_ONLY_V5_SIGNAL",
@@ -219,6 +227,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "abs_delta_range":[V5_MIN_ABS_DELTA,V5_MAX_ABS_DELTA],
         "max_iv_rv_ratio":V5_MAX_IV_RV,
         "max_bid_ask_spread_fraction":MAX_PREMIUM_SPREAD,
+        "reversal_prior_closes":V5_REVERSAL_PRIOR_CLOSES,
+        "reversal_max_efficiency":V5_REVERSAL_EFFICIENCY_CEILING,
         "risk_fraction":risk_fraction, "risk_opening_equity":round(opening,2),
         "risk_budget_usd":round(budget,2),
         "asof":now.isoformat(),

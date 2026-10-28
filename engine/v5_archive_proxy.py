@@ -39,12 +39,18 @@ SETUP_SPLITS = {
 }
 
 
-def close_proxy_signals(frames, i, *, challenger=False):
+def close_proxy_signals(frames, i, *, challenger=False,
+                        reversal_lookback=20, reversal_max_efficiency=.60):
     """Close-only alternatives, NOT the QC V5 high/low/volume setup.
 
     Close range breakout is NOT a replacement for true intraminute high/low.
     RVOL reads the as-of archive's volume_ratio, not made-up bar volume.
+    Default reversal parameters remain frozen for historical replay; only
+    production V5 passes the expressly selected 15-close / 0.75 variant.
     """
+    if not (3 <= reversal_lookback <= 30 and
+            0 < reversal_max_efficiency <= 1):
+        raise ValueError("invalid reversal-variant parameters")
     if i < 35:
         return ()
     today=frames[i].timestamp.astimezone(NY).date()
@@ -79,10 +85,12 @@ def close_proxy_signals(frames, i, *, challenger=False):
             add("call","momentum_ignition_CLOSE_PROXY")
         elif (now<min(spots[i-12:i]) and fast<slow and trend<=-2 and momentum<=-3):
             add("put","momentum_ignition_CLOSE_PROXY")
-    old=spots[i-22:i-2]
-    if prev>max(old) and now<max(old) and now<prev and eff<.6:
+    old=spots[i-reversal_lookback-2:i-2]
+    if (prev>max(old) and now<max(old) and now<prev
+            and eff<reversal_max_efficiency):
         add("put","liquidity_reversal_CLOSE_PROXY")
-    elif prev<min(old) and now>min(old) and now>prev and eff<.6:
+    elif (prev<min(old) and now>min(old) and now>prev
+            and eff<reversal_max_efficiency):
         add("call","liquidity_reversal_CLOSE_PROXY")
     wide=max(spots[i-32:i-8])-min(spots[i-32:i-8])
     narrow=max(spots[i-8:i])-min(spots[i-8:i])

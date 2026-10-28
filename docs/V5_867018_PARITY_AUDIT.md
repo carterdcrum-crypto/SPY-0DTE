@@ -106,3 +106,27 @@ hypothetical ending equity at 5% from $1,000, **but implicitly assumed a
 single 25,612-contract fill with no actual displayed executable depth or
 market impact**. It is not proof of a live edge. Increasing acceptable
 option spreads can materially increase slippage and fill/exit risk.
+
+
+## 2026-10-28 owner-selected looser liquidity-reversal entry
+
+Production PAPER and LIVE now evaluate **liquidity_reversal_CLOSE_PROXY**
+against the prior **15 closes** (previously 20), and admit reversal
+efficiency **<0.75** (previously <0.60). The signal still requires the previous
+close to have broken its prior range and the signal close to recross that
+range in the opposite direction, with at least 1.25 observed as-of RVOL.
+Momentum ignition and volatility expansion conditions are unchanged.
+Historical `close_proxy_signals(...,challenger=True)` without override
+preserves the original reversal parameters and archived baseline.
+
+The research-only 128-session close-only archive at 5% max sampled spread,
+IV/RV <=1.5 and absolute delta 0.35–0.65 recorded **$2,055,376.50**
+hypothetical ending equity for looser liquidity reversal, versus
+**$1,808,494.60** for the three-signal baseline, starting at $1,000.
+Simulated positions: 125 vs 121; wins: 55.20% vs 53.72%;
+true EOD max drawdown: **39.11% vs 32.24%**. The more permissive signal
+**increased historical drawdown**. Sampled archive data lacks executable
+NBBO size/market impact and the looser variant assumed up to **29,107 option
+contracts filled at once**. These returns are not tradable forecasts or
+evidence of robust out-of-sample advantage. Source branch:
+`research/v5-signal-variations-2026-10-28`.
