@@ -162,3 +162,40 @@ def test_v5_no_close_only_signal_is_not_confused_with_quote_or_cash_failure():
     assert info["signal_detected"] is False
     assert info["cheapest_qualified_contract_usd"] is None
     assert info["rejection_counts"]=={}
+
+
+def test_v5_035_065_delta_gate_and_15_iv_rv_limit():
+    """Both LIVE and PAPER share paper_candidate: verify exact new bounds."""
+    data=bars()
+    now=data[-1].available_at+timedelta(seconds=1)
+    rv=_rv(data,len(data)-3)
+    assert rv>0
+    for delta in (.35,.38,.50,.62,.65):
+        q=quote(now,data,greeks=SimpleNamespace(
+            delta=delta,implied_volatility=rv*1.45))
+        proposed,decision=paper_candidate(
+            now,data,[q],equity=1000,settled=1000,peak=1000)
+        assert proposed is not None,(delta,decision)
+        info=decision["entry_diagnostics"]
+        assert info["abs_delta_range"]==[.35,.65]
+        assert info["max_iv_rv_ratio"]==1.5
+    for delta in (.349,.651):
+        q=quote(now,data,greeks=SimpleNamespace(
+            delta=delta,implied_volatility=rv*1.45))
+        proposed,decision=paper_candidate(
+            now,data,[q],equity=1000,settled=1000,peak=1000)
+        assert proposed is None,(delta,decision)
+        assert decision["entry_diagnostics"]["rejection_code"]=="delta_out_of_range"
+    q=quote(now,data,greeks=SimpleNamespace(
+        delta=.5,implied_volatility=rv*1.51))
+    proposed,decision=paper_candidate(
+        now,data,[q],equity=1000,settled=1000,peak=1000)
+    assert proposed is None,decision
+    assert decision["entry_diagnostics"]["rejection_code"]=="iv_out_of_range"
+    # Widening delta does not bypass lack of genuine bid/ask depth.
+    q=quote(now,data,bid_size=0,greeks=SimpleNamespace(
+        delta=.35,implied_volatility=rv*1.45))
+    proposed,decision=paper_candidate(
+        now,data,[q],equity=1000,settled=1000,peak=1000)
+    assert proposed is None
+    assert decision["entry_diagnostics"]["rejection_code"]=="missing_depth"

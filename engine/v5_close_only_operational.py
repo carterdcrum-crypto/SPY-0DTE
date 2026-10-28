@@ -24,6 +24,11 @@ from quantconnect.v5_core import quality_score
 
 PROFILE = "v5_close_only_unrestricted_research"
 MAX_PREMIUM_SPREAD = .03
+# Deliberate post-archive V5 production variant. The archived $867,017.60
+# reference used absolute delta 0.40-0.60; keep archival replay unchanged.
+V5_MIN_ABS_DELTA = .35
+V5_MAX_ABS_DELTA = .65
+V5_MAX_IV_RV = 1.5
 # Frozen from the $867,017.60 128-session V5 close-proxy study.
 V5_MIN_COMPLETED_BARS = 37
 V5_LATEST_ENTRY_MINUTES = 26
@@ -100,8 +105,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     if rv<=0:
         return None, {"state":"MISSING_REALIZED_VOLATILITY"}
     # Diagnostics use the EXACT SAME screening sequence as execution.
-    # They are observational only: do not loosen delta, spread, freshness,
-    # depth, or cash rules just to create an order.
+    # The delta gate is intentionally widened for this owner-selected V5
+    # variant; spread, freshness, depth, IV and cash gates stay unchanged.
     quotes=tuple(quotes)
     checks = {
         "wrong_expiration_or_side": 0, "untrusted_source": 0,
@@ -153,10 +158,10 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
                 if not (math.isfinite(delta) and math.isfinite(iv)):
                     reject("missing_greeks", sig, q)
                     continue
-                if not .40<=abs(delta)<=.60:
+                if not V5_MIN_ABS_DELTA <= abs(delta) <= V5_MAX_ABS_DELTA:
                     reject("delta_out_of_range", sig, q)
                     continue
-                if not (iv > 0 and iv / rv <= 1.5):
+                if not (iv > 0 and iv / rv <= V5_MAX_IV_RV):
                     reject("iv_out_of_range", sig, q)
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
@@ -188,7 +193,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "invalid_bid_ask": "Invalid option bid/ask prices",
         "missing_depth": "No executable size on both sides of the quote",
         "missing_greeks": "Option delta or implied volatility unavailable",
-        "delta_out_of_range": "Option delta outside 0.40–0.60",
+        "delta_out_of_range": "Option delta outside 0.35–0.65",
         "iv_out_of_range": "Option implied volatility exceeds the V5 threshold",
         "wide_spread": "Option bid/ask spread exceeds 3%",
         "insufficient_settled_cash": "Settled cash cannot cover one qualifying contract",
@@ -210,6 +215,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "rejection_counts":checks,
         "quotes_observed":len(quotes),
         "signals_found":len(setups),
+        "abs_delta_range":[V5_MIN_ABS_DELTA,V5_MAX_ABS_DELTA],
+        "max_iv_rv_ratio":V5_MAX_IV_RV,
         "risk_fraction":risk_fraction, "risk_opening_equity":round(opening,2),
         "risk_budget_usd":round(budget,2),
         "asof":now.isoformat(),

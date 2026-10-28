@@ -69,3 +69,20 @@ reasonable prediction of future account growth.
 
 This audit does not activate trading or authorize a Webull order. The
 autonomous LIVE owner switch and paper switch remain separate and unchanged.
+
+
+## 2026-10-28 owner-selected live/paper delta variant
+
+**Production was intentionally changed after the archived $867,017.60 run.**
+The original archive/backtest remains immutable at IV/RV <=1.5 and absolute
+delta 0.40–0.60. Current owner-selected V5 LIVE and PAPER use **IV/RV <=1.5
+and abs(delta) 0.35–0.65**, without changing the full-cash EOD drawdown budget,
+spread, fresh executable depth, account-cash, exit or V5 version lock.
+
+This is an **experimental variation**, NOT exact reproduction of the $867K
+archive. A separate nine-arm, repeatedly in-sample close-only historical
+sweep reported $930,011.50 modeled ending equity for the 0.35–0.65 variant
+versus $867,017.60 at baseline (121 versus 117 positions); **these quantities
+are not realizable-fill evidence** and could be overfit. The analysis is on
+`research/v5-iv-delta-sensitivity-2026-10-28`, documented in
+`docs/v5_iv_delta_sensitivity_2026_10_28.md` on that research branch.
