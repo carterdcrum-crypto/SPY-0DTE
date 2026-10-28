@@ -25,6 +25,9 @@ from .live_autonomy import execution_blocks, live_status, run_forever as run_liv
 from .live_autonomy_store import ARM_AUTONOMY, LiveAutonomyStore, autonomy_db_path
 from .runtime import start_worker
 from .v5_profile_lock import REQUIRED_PROFILE, profile_is_locked
+from .v5_close_only_operational import (
+    MAX_PREMIUM_SPREAD, V5_MIN_ABS_DELTA, V5_MAX_ABS_DELTA,
+)
 from .webull_live import (
     WebullLiveClient,
     WebullLiveError,
@@ -320,9 +323,9 @@ def check_live_execution(
                 continue
             if q.bid<=0 or q.ask<=q.bid or q.bid_size<1 or q.ask_size<1:
                 continue
-            if not .40 <= abs(float(q.greeks.delta)) <= .60:
+            if not V5_MIN_ABS_DELTA <= abs(float(q.greeks.delta)) <= V5_MAX_ABS_DELTA:
                 continue
-            if (q.ask-q.bid)/((q.ask+q.bid)/2) > .03:
+            if (q.ask-q.bid)/((q.ask+q.bid)/2) > MAX_PREMIUM_SPREAD:
                 continue
             _, expiry, option_type, strike = parse_occ_symbol(q.option_symbol)
             if expiry != eastern.date().isoformat():

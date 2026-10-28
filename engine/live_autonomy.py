@@ -18,6 +18,7 @@ from .live_risk import EASTERN
 from .paper_runner import execution_lock
 from .session_calendar import session_bounds
 from .v5_profile_lock import REQUIRED_PROFILE, profile_is_locked
+from .v5_close_only_operational import MAX_PREMIUM_SPREAD
 from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _number, _usd_asset, webull_env_status, production_credentials, selected_webull_account_id
 
 log = logging.getLogger("spy0dte.live")
@@ -564,7 +565,7 @@ class LiveExecutor:
             mid=(q.ask+q.bid)/2
             if (snapshot is None or snapshot.source!="webull_production"
                     or snapshot.timestamp_quality!="option_quote_timestamp"
-                    or mid<=0 or (q.ask-q.bid)/mid>.03
+                    or mid<=0 or (q.ask-q.bid)/mid>MAX_PREMIUM_SPREAD
                     or int(snapshot.bid_size)<1 or int(snapshot.ask_size)<1):
                 return {**common,"state":"RISK_BLOCKED",
                         "reason":"V5 requires fresh verified market depth and narrow spread"}

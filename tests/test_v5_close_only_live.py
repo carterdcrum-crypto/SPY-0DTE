@@ -201,3 +201,44 @@ def test_v5_035_065_delta_gate_and_15_iv_rv_limit():
         now,data,[q],equity=1000,settled=1000,peak=1000)
     assert proposed is None
     assert decision["entry_diagnostics"]["rejection_code"]=="missing_depth"
+
+
+
+def test_v5_max_spread_5pct_live_and_paper_share_quote_filter():
+    """Eligible 4-5% spreads pass; >5% fails; provenance/depth remain required."""
+    from engine.v5_close_only_operational import (
+        MAX_PREMIUM_SPREAD, V5_MAX_IV_RV, V5_MIN_ABS_DELTA, V5_MAX_ABS_DELTA,
+    )
+    assert MAX_PREMIUM_SPREAD == .05
+    assert V5_MAX_IV_RV == 1.5
+    assert (V5_MIN_ABS_DELTA, V5_MAX_ABS_DELTA) == (.35, .65)
+    data = bars()
+    now = data[-1].available_at + timedelta(seconds=1)
+    for fraction in (.035, .040, .049):
+        # Bid-ask fraction is computed as (ask-bid)/mid, not ask-bid/bid.
+        bid = .45
+        ask = bid * (2+fraction)/(2-fraction)
+        proposed, decision = paper_candidate(
+            now, data, [quote(now, data, bid=bid, ask=ask)],
+            equity=1000, settled=1000, peak=1000,
+        )
+        assert proposed is not None, (fraction, decision)
+        assert decision["entry_diagnostics"]["max_bid_ask_spread_fraction"] == .05
+
+    bid = .45
+    ask = bid * (2+.051)/(2-.051)
+    proposed, decision = paper_candidate(
+        now, data, [quote(now, data, bid=bid, ask=ask)],
+        equity=1000, settled=1000, peak=1000,
+    )
+    assert proposed is None, decision
+    assert decision["entry_diagnostics"]["rejection_code"] == "wide_spread"
+    assert "5%" in decision["reason"]
+
+    # Fresh executable depth is still required at the new threshold.
+    proposed, decision = paper_candidate(
+        now, data, [quote(now, data, bid=.45, ask=.47, bid_size=0)],
+        equity=1000, settled=1000, peak=1000,
+    )
+    assert proposed is None
+    assert decision["entry_diagnostics"]["rejection_code"] == "missing_depth"

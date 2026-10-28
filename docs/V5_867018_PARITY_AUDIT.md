@@ -86,3 +86,23 @@ versus $867,017.60 at baseline (121 versus 117 positions); **these quantities
 are not realizable-fill evidence** and could be overfit. The analysis is on
 `research/v5-iv-delta-sensitivity-2026-10-28`, documented in
 `docs/v5_iv_delta_sensitivity_2026_10_28.md` on that research branch.
+
+
+## 2026-10-28 owner-selected bid/ask spread gate variant
+
+Current V5 paper and live options entry gating uses **up to 5% bid/ask
+spread** (previously 3%), while keeping IV/RV <=1.5, absolute delta
+0.35–0.65, verified <=3-second quote timestamps, real bid/ask depth,
+settled-cash limitation, EOD drawdown throttling and the 18-minute exit.
+
+The original $867K archived replay remains explicitly associated with
+0.40–0.60 delta and 3% spread, and the later $930K archived variant with
+0.35–0.65 delta and 3% spread; neither number is a verified live outcome
+under the new 5% spread rule.
+
+An in-sample 128-session **close-only proxy** study on branch
+`research/v5-max-spread-sensitivity-2026-10-28` reported $1,808,494.60
+hypothetical ending equity at 5% from $1,000, **but implicitly assumed a
+single 25,612-contract fill with no actual displayed executable depth or
+market impact**. It is not proof of a live edge. Increasing acceptable
+option spreads can materially increase slippage and fill/exit risk.

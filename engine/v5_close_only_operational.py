@@ -23,7 +23,7 @@ from .session_calendar import session_close
 from quantconnect.v5_core import quality_score
 
 PROFILE = "v5_close_only_unrestricted_research"
-MAX_PREMIUM_SPREAD = .03
+MAX_PREMIUM_SPREAD = .05
 # Deliberate post-archive V5 production variant. The archived $867,017.60
 # reference used absolute delta 0.40-0.60; keep archival replay unchanged.
 V5_MIN_ABS_DELTA = .35
@@ -106,7 +106,8 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         return None, {"state":"MISSING_REALIZED_VOLATILITY"}
     # Diagnostics use the EXACT SAME screening sequence as execution.
     # The delta gate is intentionally widened for this owner-selected V5
-    # variant; spread, freshness, depth, IV and cash gates stay unchanged.
+    # variant; quote-spread cap is now owner-selected at 5%, while quote
+    # freshness, executable depth, IV and cash gates remain unchanged.
     quotes=tuple(quotes)
     checks = {
         "wrong_expiration_or_side": 0, "untrusted_source": 0,
@@ -195,7 +196,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "missing_greeks": "Option delta or implied volatility unavailable",
         "delta_out_of_range": "Option delta outside 0.35–0.65",
         "iv_out_of_range": "Option implied volatility exceeds the V5 threshold",
-        "wide_spread": "Option bid/ask spread exceeds 3%",
+        "wide_spread": "Option bid/ask spread exceeds 5%",
         "insufficient_settled_cash": "Settled cash cannot cover one qualifying contract",
     }
     blocking = "eligible" if choices else next(
@@ -217,6 +218,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "signals_found":len(setups),
         "abs_delta_range":[V5_MIN_ABS_DELTA,V5_MAX_ABS_DELTA],
         "max_iv_rv_ratio":V5_MAX_IV_RV,
+        "max_bid_ask_spread_fraction":MAX_PREMIUM_SPREAD,
         "risk_fraction":risk_fraction, "risk_opening_equity":round(opening,2),
         "risk_budget_usd":round(budget,2),
         "asof":now.isoformat(),
