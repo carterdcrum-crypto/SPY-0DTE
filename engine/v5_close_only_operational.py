@@ -10,6 +10,7 @@ No lookahead, fabricated OHLCV or AI decision models.
 from __future__ import annotations
 
 import math
+import os
 import statistics
 from datetime import datetime, timedelta
 from types import SimpleNamespace
@@ -28,6 +29,23 @@ MAX_PREMIUM_SPREAD = .03
 V5_MIN_COMPLETED_BARS = 37
 V5_LATEST_ENTRY_MINUTES = 26
 V5_MAX_HOLD_MINUTES = 18
+
+V5_BASELINE_IV_RV_LIMIT = 1.5
+
+
+def max_iv_rv_ratio_for_session(now: datetime) -> float:
+    """One-day operator exception, with automatic next-session rollback.
+
+    The only possible exception is 2.0 on the *exact* NY trading date
+    configured in V5_IV_RV_LIMIT_2_ET_DATE; every other date uses the
+    original 1.5.  This is shared by V5 PAPER and LIVE at decision time.
+    Quote provenance, 3-second freshness, displayed depth, delta, spread,
+    settled cash and EOD drawdown rules remain unchanged.
+    """
+    target_date = os.environ.get("V5_IV_RV_LIMIT_2_ET_DATE", "").strip()
+    return 2.0 if target_date and now.astimezone(ET).date().isoformat() == target_date else V5_BASELINE_IV_RV_LIMIT
+
+
 
 def _reference_frames(bars):
     """Observed SPY completed close and observed volume-derived RVOL only."""
@@ -103,6 +121,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
     # They are observational only: do not loosen delta, spread, freshness,
     # depth, or cash rules just to create an order.
     quotes=tuple(quotes)
+    max_iv_rv = max_iv_rv_ratio_for_session(now)
     checks = {
         "wrong_expiration_or_side": 0, "untrusted_source": 0,
         "stale_quote": 0, "invalid_bid_ask": 0,
@@ -156,7 +175,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
                 if not .40<=abs(delta)<=.60:
                     reject("delta_out_of_range", sig, q)
                     continue
-                if not (iv > 0 and iv / rv <= 1.5):
+                if not (iv > 0 and iv / rv <= max_iv_rv):
                     reject("iv_out_of_range", sig, q)
                     continue
                 spread=(ask-bid)/((ask+bid)/2)
@@ -209,6 +228,7 @@ def paper_candidate(now, bars, quotes, *, equity, settled, peak,
         "rejection_code":blocking,
         "rejection_counts":checks,
         "quotes_observed":len(quotes),
+        "iv_rv_ratio_limit":max_iv_rv,
         "signals_found":len(setups),
         "risk_fraction":risk_fraction, "risk_opening_equity":round(opening,2),
         "risk_budget_usd":round(budget,2),
