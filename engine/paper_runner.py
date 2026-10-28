@@ -13,6 +13,7 @@ from typing import Callable
 from .paper_account import PaperAccountStore
 from .paper_autotrader import PaperAutoSettings, SnapshotReader, _paper_db_path, _paper_starting_cash, _publish
 from .runtime import WorkerContext
+from .v5_profile_lock import REQUIRED_PROFILE
 
 log = logging.getLogger("spy0dte.paper.runner")
 
@@ -34,11 +35,11 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     # The PAPER worker has no broker order submission path. Its selected
     # profile is independent of LIVE_STRATEGY_PROFILE and legacy
     # SPY_STRATEGY_PROFILE, so concurrent LIVE V5 cannot disable PAPER.
-    paper_profile=os.environ.get("PAPER_STRATEGY_PROFILE","v4_original_3x").strip().lower()
-    if paper_profile not in ("v4_original_3x","v5_close_only_unrestricted_research"):
-        raise RuntimeError("Unknown paper strategy profile")
+    # No version-switching path: instantiate the archived V5 strategy only.
+    # If Railway is misconfigured, V5's entry gate pauses new simulated buys
+    # while its position manager continues handling any existing position.
+    paper_profile = REQUIRED_PROFILE
     from dataclasses import replace
-    from .v4_paper_trader import V4QualityPaperTrader
     from .live_market import LiveDataProvider
     from .webull_live import production_credentials
     from .market_data_factory import provider_from_env
@@ -60,11 +61,8 @@ def create_trader(mode_getter: Callable[[], str], *, delayed: bool):
     if "PAPER_MAX_CONTRACTS" not in os.environ:
         settings=replace(settings,maximum_contracts=100)
     settings=replace(settings,tick_seconds=max(2.,settings.tick_seconds))
-    if paper_profile=="v5_close_only_unrestricted_research":
-        from .v5_close_only_paper import V5CloseOnlyPaperTrader
-        trader_type=V5CloseOnlyPaperTrader
-    else:
-        trader_type=V4QualityPaperTrader
+    from .v5_close_only_paper import V5CloseOnlyPaperTrader
+    trader_type = V5CloseOnlyPaperTrader
     return trader_type(
         mode_getter=mode_getter,
         market_reader=SnapshotReader(Path(os.environ.get("COLLECTOR_DB_PATH", "/data/spy_0dte.sqlite"))),

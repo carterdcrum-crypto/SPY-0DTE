@@ -17,6 +17,7 @@ from .live_market import LiveDataProvider, LiveMarketReader, parse_occ_symbol, p
 from .live_risk import EASTERN
 from .paper_runner import execution_lock
 from .session_calendar import session_bounds
+from .v5_profile_lock import REQUIRED_PROFILE, profile_is_locked
 from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _number, _usd_asset, webull_env_status, production_credentials, selected_webull_account_id
 
 log = logging.getLogger("spy0dte.live")
@@ -437,6 +438,13 @@ class LiveExecutor:
             return {**common, **self._submit(order, symbol=position["symbol"], reason=reason,
                     signal_key=order.client_order_id, policy=policy, now=now, position_id=position["position_id"])}
 
+        # Once all owned positions have been reconciled/managed, fail closed
+        # for new entries if someone changes the deployment's V5 profile.
+        # Existing positions may still exit above; never strand an exit.
+        if not profile_is_locked("LIVE_STRATEGY_PROFILE"):
+            return {**common, "state": "PROFILE_LOCKED",
+                    "reason": "LIVE_STRATEGY_PROFILE does not match the locked V5 full-cash engine; no new orders"}
+
         from .one_shot_live_test import (
             TAG as TEST_TAG, TestConfig, used_before,
             eligible_option, broker_preview_permits,
@@ -623,15 +631,13 @@ def run_forever(mode_getter, context):
                     if executor is None or credentials != active_credentials or selection != active_account_id:
                         market = LiveMarketReader()
                         key, secret = credentials
-                        from .v4_live_strategy import V4QualityLiveStrategy
-                        profile=os.environ.get("LIVE_STRATEGY_PROFILE","v4_original_3x").strip().lower()
-                        if profile=="v5_close_only_unrestricted_research":
-                            from .v5_close_only_live_strategy import V5CloseOnlyLiveStrategy
-                            strategy=V5CloseOnlyLiveStrategy(market,path+".research")
-                        elif profile=="v4_original_3x":
-                            strategy=V4QualityLiveStrategy(market,path+".research")
-                        else:
-                            raise ValueError("unknown LIVE strategy profile; no broker orders")
+                        # This production application ALWAYS instantiates V5.
+                        # A mistaken Railway value must never select V4 or
+                        # another model. The tick-level lock blocks new buys
+                        # on mismatches while preserving managed exits.
+                        from .v5_close_only_live_strategy import V5CloseOnlyLiveStrategy
+                        profile = REQUIRED_PROFILE
+                        strategy = V5CloseOnlyLiveStrategy(market, path + ".research")
                         executor = LiveExecutor(store=store, broker=WebullLiveClient.from_env(), market=market,
                             provider=LiveDataProvider(key, secret),
                             strategy=strategy,

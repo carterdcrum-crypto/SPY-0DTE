@@ -14,6 +14,7 @@ from .v5_close_only_operational import (
 )
 from .v4_operational import FEE, SLIPPAGE_PER_SHARE
 from .v5_drawdown_sizing import observe_flat_session
+from .v5_profile_lock import profile_is_locked
 
 
 def manage_v5_position(trader,position,current,mode,eastern,quotes,released):
@@ -64,6 +65,11 @@ class V5CloseOnlyPaperTrader(V4QualityPaperTrader):
         released=self.account_store.settle_due(eastern.date())
         positions=self.account_store.positions()
         position=positions[0] if positions else None
+        if position is None and not profile_is_locked("PAPER_STRATEGY_PROFILE"):
+            # Refuse new paper entries; existing trades remain manageable.
+            return self._finish(current, {"state": "PROFILE_LOCKED", "mode": mode,
+                "reason": "PAPER_STRATEGY_PROFILE differs from locked V5 full-cash engine",
+                "last_action": None, "settled_released": released})
         # Original V4 positions stay on their original manager, unaffected by
         # setting the paper challenger profile while a position is open.
         if position is not None and position.get("strategy")!=PROFILE:

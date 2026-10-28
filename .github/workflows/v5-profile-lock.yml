@@ -1,0 +1,27 @@
+name: v5-profile-lock-tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/v5_profile_lock.py'
+      - 'engine/live_autonomy.py'
+      - 'engine/paper_runner.py'
+      - 'engine/v5_close_only_paper.py'
+      - 'engine/webull_live_api.py'
+      - 'engine/api_v2.py'
+      - 'tests/test_v5_profile_lock.py'
+      - '.github/workflows/v5-profile-lock.yml'
+  workflow_dispatch:
+
+jobs:
+  profile-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Verify V5 production lock
+        run: pytest -q tests/test_v5_profile_lock.py

@@ -24,6 +24,7 @@ from .paper_autotrader import automation_status
 from .live_autonomy import execution_blocks, live_status, run_forever as run_live
 from .live_autonomy_store import ARM_AUTONOMY, LiveAutonomyStore, autonomy_db_path
 from .runtime import start_worker
+from .v5_profile_lock import REQUIRED_PROFILE, profile_is_locked
 from .webull_live import (
     WebullLiveClient,
     WebullLiveError,
@@ -190,8 +191,11 @@ def status_payload() -> dict[str, Any]:
     payload["spy_chart_30m"] = spy_chart_30m()
     payload["spy_chart_5m"] = spy_chart_5m()
     payload["live_autonomy"] = live
-    v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
-    payload["live_strategy_profile"]="v5_close_only_unrestricted_research" if v5_unrestricted else "v4_original_3x"
+    # Report the actual hard-coded executor, never a misleading V4 fallback.
+    v5_unrestricted = True
+    payload["live_strategy_profile"] = REQUIRED_PROFILE
+    payload["live_strategy_profile_locked"] = profile_is_locked("LIVE_STRATEGY_PROFILE")
+    payload["paper_strategy_profile_locked"] = profile_is_locked("PAPER_STRATEGY_PROFILE")
     if live["configured"]:
         limits = LiveAutonomyStore(autonomy_db_path()).envelope(datetime.now(timezone.utc))
         if v5_unrestricted:
@@ -407,13 +411,12 @@ def set_live_autonomy(request: LiveAutonomyRequest, user: base.UserIdentity = De
     store = LiveAutonomyStore(autonomy_db_path())
     now = datetime.now(timezone.utc)
     if request.enabled:
-        v5_unrestricted=os.environ.get("LIVE_STRATEGY_PROFILE","").strip().lower()=="v5_close_only_unrestricted_research"
+        if not profile_is_locked("LIVE_STRATEGY_PROFILE"):
+            raise HTTPException(status_code=409, detail="V5 profile lock mismatch; fix Railway configuration before enabling Auto trade")
         saved_limits=api_v2._live_risk_store().snapshot()
-        if not v5_unrestricted and not saved_limits.is_complete:
-            raise HTTPException(status_code=400, detail="Save live limits in Settings before turning Auto trade on")
         try:
             store.enable(owner=user.subject, limits=saved_limits,
-                         unrestricted_v5=v5_unrestricted,
+                         unrestricted_v5=True,
                          confirmation=request.confirmation, now=now,
                          account_id=selected_webull_account_id())
         except ValueError as exc:

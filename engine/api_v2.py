@@ -18,6 +18,7 @@ from .paper_account import PaperAccountStore
 from .paper_autotrader import PaperAutoSettings, automation_status
 from .paper_runner import run_forever as run_paper_autotrader
 from .runtime import runtime_status, start_worker
+from .v5_profile_lock import REQUIRED_PROFILE, profile_is_locked
 from .session_calendar import session_status
 from .tradier_live import TradierLiveClient, TradierLiveError, tradier_env_status
 
@@ -220,6 +221,8 @@ def status_payload() -> dict[str, Any]:
             "last_signal": None, "last_action": None, "risk": None,
         }
     payload["runtime"] = runtime
+    payload["paper_strategy_profile"] = REQUIRED_PROFILE
+    payload["paper_strategy_profile_locked"] = profile_is_locked("PAPER_STRATEGY_PROFILE")
     payload["paper"] = paper
     payload["paper_automation"] = automation
     payload["paper_autonomy"] = _paper_autonomy_payload()
