@@ -215,7 +215,7 @@ def replay(paths, *, starting_cash=START_CASH):
         results[key] = result
     # Fail rather than publish if the locked $867k reference does not reproduce.
     baseline = results["baseline_iv1_5_delta40_60"]
-    assert abs(float(baseline["ending_equity"])-867017.60) < .02, (
+    assert abs(float(baseline["ending_equity_usd"])-867017.60) < .02, (
         "Historical $867017.60 baseline did not reproduce exactly: " +
         repr(baseline))
     assert len(dates) == 128, f"Expected 128 archived sessions, found {len(dates)}"
