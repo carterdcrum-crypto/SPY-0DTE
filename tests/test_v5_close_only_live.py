@@ -50,7 +50,8 @@ def test_close_only_unrestricted_proposal_has_no_fixed_three_contract_cap():
     assert d["full_premium_risk_usd"]<=1000
 
 
-def test_live_profile_generates_only_real_quote_verified_candidates():
+def test_live_profile_generates_only_real_quote_verified_candidates(monkeypatch, tmp_path):
+    monkeypatch.setenv("LIVE_AUTONOMY_DB_PATH",str(tmp_path/"autonomy.sqlite"))
     data=bars()
     now=data[-1].available_at+timedelta(seconds=1)
     q=quote(now,data)
@@ -94,7 +95,8 @@ def test_v5_live_existing_position_uses_price_hard_stop_and_observed_trail():
     assert reason=="v5_paper_stop_35pct"
 
 
-def test_v5_ignores_legacy_daily_stop_without_bypassing_broker_cash():
+def test_v5_ignores_legacy_daily_stop_without_bypassing_broker_cash(monkeypatch, tmp_path):
+    monkeypatch.setenv("LIVE_AUTONOMY_DB_PATH",str(tmp_path/"autonomy.sqlite"))
     data=bars()
     now=data[-1].available_at+timedelta(seconds=1)
     q=quote(now,data)
