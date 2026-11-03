@@ -411,8 +411,15 @@ class LiveExecutor:
                 from .v5_drawdown_sizing import observe_flat_session
                 observe_flat_session(
                     autonomy_db_path(), eastern.date(), account["equity"])
-            return {**common, "state": "PAUSED" if not policy["enabled"] or self.mode_getter() != "LIVE" else "ENTRY_WINDOW_CLOSED",
-                    "reason": "new entries paused; owned positions remain managed"}
+            if not policy["enabled"] or self.mode_getter() != "LIVE":
+                return {**common, "state": "PAUSED",
+                        "reason": "Auto Trade is off; owned positions remain managed"}
+            if eastern.time() < wall_time(9, 45):
+                return {**common, "state": "WAITING_ENTRY_WINDOW",
+                        "reason": "waiting for today's entry window to open"}
+            return {**common, "state": "ENTRY_WINDOW_CLOSED",
+                    "reason": ("V5 0DTE entry cutoff passed (3:34 PM ET); "
+                               "Auto Trade remains enabled for the next eligible session")}
         if not positions and (foreign or inventory):
             return {**common, "state": "UNMANAGED_POSITION", "reason": "account contains a position outside this automation"}
         if not positions and (daily is None or daily["halt_reason"]):
