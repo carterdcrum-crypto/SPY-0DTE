@@ -55,6 +55,11 @@ def _log_prior_entry_diagnostics() -> None:
                      AND data_blocker!=''
                    GROUP BY data_blocker ORDER BY 2 DESC LIMIT 5""", (since,)
             ).fetchall()
+            reasons = db.execute(
+                """SELECT reason, COUNT(*) FROM live_decisions
+                   WHERE timestamp>=? AND state='NO_EXECUTABLE_DEPTH_OR_FRESH_OPTION_QUOTE'
+                   GROUP BY reason ORDER BY 2 DESC LIMIT 12""", (since,)
+            ).fetchall()
             latest = db.execute(
                 """SELECT timestamp, state, reason FROM live_decisions
                    ORDER BY id DESC LIMIT 1"""
@@ -68,6 +73,9 @@ def _log_prior_entry_diagnostics() -> None:
         if blockers:
             log.warning("LIVE_DIAGNOSTIC prior_data_blockers=%s",
                         [(str(k)[:90], n) for k,n in blockers])
+        if reasons:
+            log.warning("LIVE_DIAGNOSTIC non_executable_reason_counts=%s",
+                        [(str(k)[:140], n) for k,n in reasons])
         if latest:
             log.warning("LIVE_DIAGNOSTIC previous=%s state=%s reason=%s",
                         latest[0], str(latest[1])[:80], str(latest[2])[:150])
