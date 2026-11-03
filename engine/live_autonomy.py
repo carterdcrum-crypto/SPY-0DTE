@@ -23,6 +23,58 @@ from .webull_live import WebullLiveClient, WebullLiveError, _balance_object, _nu
 
 log = logging.getLogger("spy0dte.live")
 _status_lock = threading.Lock()
+
+
+def _log_prior_entry_diagnostics() -> None:
+    """One-time, redacted audit summary; never reads broker keys or order payloads.
+
+    A healthy API and an enabled switch do not prove that V5 had eligible data.
+    The persisted audit explains why a session did not enter without altering
+    entry criteria, stored authorization, or position reconciliation.
+    """
+    import sqlite3
+    from collections import defaultdict
+    from pathlib import Path
+    from datetime import timedelta
+
+    path = Path(os.environ.get("LIVE_DECISION_AUDIT_DB_PATH", "/data/spy_live_decisions.sqlite"))
+    if not path.is_file():
+        log.warning("LIVE_DIAGNOSTIC audit_unavailable=missing")
+        return
+    try:
+        since = (datetime.now(timezone.utc) - timedelta(days=5)).isoformat()
+        with sqlite3.connect(f"file:{path.resolve()}?mode=ro", uri=True, timeout=3) as db:
+            rows = db.execute(
+                """SELECT substr(timestamp,1,10), state, COUNT(*)
+                   FROM live_decisions WHERE timestamp>=?
+                   GROUP BY 1,2 ORDER BY 1 DESC,3 DESC""", (since,)
+            ).fetchall()
+            blockers = db.execute(
+                """SELECT data_blocker, COUNT(*) FROM live_decisions
+                   WHERE timestamp>=? AND data_blocker IS NOT NULL
+                     AND data_blocker!=''
+                   GROUP BY data_blocker ORDER BY 2 DESC LIMIT 5""", (since,)
+            ).fetchall()
+            latest = db.execute(
+                """SELECT timestamp, state, reason FROM live_decisions
+                   ORDER BY id DESC LIMIT 1"""
+            ).fetchone()
+        by_day = defaultdict(list)
+        for day, state, count in rows:
+            by_day[day].append((str(state)[:70], count))
+        for day, counts in sorted(by_day.items()):
+            summary = ",".join(f"{state}:{n}" for state,n in counts[:10])
+            log.warning("LIVE_DIAGNOSTIC prior_day=%s state_counts=%s", day, summary)
+        if blockers:
+            log.warning("LIVE_DIAGNOSTIC prior_data_blockers=%s",
+                        [(str(k)[:90], n) for k,n in blockers])
+        if latest:
+            log.warning("LIVE_DIAGNOSTIC previous=%s state=%s reason=%s",
+                        latest[0], str(latest[1])[:80], str(latest[2])[:150])
+    except (sqlite3.Error, OSError, ValueError) as exc:
+        log.warning("LIVE_DIAGNOSTIC audit_unavailable=%s", type(exc).__name__)
+
+
 _status: dict[str, Any] = {"state": "STOPPED", "reason": "live worker has not started"}
 
 
@@ -610,6 +662,7 @@ class LiveExecutor:
 
 
 def run_forever(mode_getter, context):
+    _log_prior_entry_diagnostics()
     path = autonomy_db_path()
     with execution_lock(path):
         store = LiveAutonomyStore(path)
